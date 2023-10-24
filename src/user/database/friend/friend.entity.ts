@@ -3,7 +3,6 @@ import { ApiProperty } from "@nestjs/swagger";
 
 @Entity({ name: "friend_list" })
 export class Friend {
-    @ApiProperty()
     @PrimaryGeneratedColumn()
     id: number;
 

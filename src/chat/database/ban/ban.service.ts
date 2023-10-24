@@ -10,20 +10,28 @@ export class BanService {
         private banRepository: Repository<Ban>,
     ) {}
   
-    async readMuteList(channel: number): Promise<Ban[]> {
+    async readBanList(channel: number): Promise<Ban[]> {
         return (this.banRepository.find({ where: { channel } }));
     }
 
-    async createMuteInfo(ban: Partial<Ban>): Promise<Ban> {
-        return (this.banRepository.create(ban));
+    async createBanInfo(ban: Partial<Ban>): Promise<Ban> {
+        const newBan = this.banRepository.create(ban);
+        return (this.banRepository.save(newBan));
     }
 
-    async updateMutenfo(id: number, ban: Partial<Ban>): Promise<Ban> {
+    async updateBanInfo(id: number, ban: Partial<Ban>): Promise<Ban> {
         await this.banRepository.update(id, ban);
         return (this.banRepository.findOne({ where: { id } }));
     }
 
-    async deleteMutenfo(id: number): Promise<void> {
-        await this.banRepository.delete(id);
+    async deleteBanInfo(channel: number, user: number): Promise<void> {
+        const deleteBan = await this.banRepository.findOne({ where: { channel, user } });
+        if (!deleteBan)
+            return ;
+        await this.banRepository.remove(deleteBan);
+    }
+
+    async deleteBanList(channel: number): Promise<void> {
+        await this.banRepository.delete({ channel });
     }
 }

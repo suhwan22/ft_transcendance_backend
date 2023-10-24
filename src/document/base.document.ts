@@ -5,7 +5,7 @@ export class BaseApiDocumention {
 
     public initializeOptions() {
         return (this.builder
-                    .setTitle('Dear-Fear Ping-Pong')
+                    .setTitle('Deer-Fear Pong')
                     .setDescription('Api Document')
                     .setVersion('1.0')
                     .build());

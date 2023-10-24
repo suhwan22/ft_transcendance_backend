@@ -15,7 +15,8 @@ export class ChatLogService {
     }
 
     async createChatLogInfo(chatLog: Partial<ChatLog>): Promise<ChatLog> {
-        return (this.chatLogRepository.create(chatLog));
+        const newChatLog = this.chatLogRepository.create(chatLog);
+        return (this.chatLogRepository.save(newChatLog));
     }
 
     async updateCatLogInfo(id: number, chatLog: Partial<ChatLog>): Promise<ChatLog> {
@@ -23,7 +24,7 @@ export class ChatLogService {
         return (this.chatLogRepository.findOne({ where: { id } }));
     }
 
-    async deleteCatLogInfo(id: number): Promise<void> {
-        await this.chatLogRepository.delete(id);
+    async deleteCatLogList(channel: number): Promise<void> {
+        await this.chatLogRepository.delete({ channel });
     }
 }

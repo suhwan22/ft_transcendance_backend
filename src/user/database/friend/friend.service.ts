@@ -28,7 +28,7 @@ export class FriendService {
   }
 
   // 유저 친구 제거 메서드
-  async deleteFriendInfo(user: number, friend): Promise<void> {
+  async deleteFriendInfo(user: number, friend: number): Promise<void> {
     const deleteFriend = await this.friendRepository.findOne({ where: { user, friend} });
     if (!deleteFriend)
       return ;
