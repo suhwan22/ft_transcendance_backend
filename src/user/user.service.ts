@@ -13,4 +13,20 @@ export class UserService {
     private readonly blockService : BlockService,
   ) {}
 
+    async readFriendList(id: number): Promise<Friend[]> {
+      return this.friendService.readFriendList(id);
+    }
+
+    async createFriendInfo(friend: Friend): Promise<Friend> {
+      return this.friendService.createFriendInfo(friend);
+    }
+
+    async deleteFriendInfo(user: number, friend: number): Promise<void> {
+      await this.friendService.deleteFriendInfo(user, friend);
+    }
+
+    async deleteFriendList(user: number): Promise<void> {
+      await this.friendService.deleteFriendList(user);
+    }
+
 }
