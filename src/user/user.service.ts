@@ -13,20 +13,36 @@ export class UserService {
     private readonly blockService : BlockService,
   ) {}
 
-    async readFriendList(id: number): Promise<Friend[]> {
-      return this.friendService.readFriendList(id);
-    }
+  async readFriendList(user: number): Promise<Friend[]> {
+    return (this.friendService.readFriendList(user));
+  }
 
-    async createFriendInfo(friend: Friend): Promise<Friend> {
-      return this.friendService.createFriendInfo(friend);
-    }
+  async createFriendInfo(friend: Friend): Promise<Friend> {
+    return (this.friendService.createFriendInfo(friend));
+  }
 
-    async deleteFriendInfo(user: number, friend: number): Promise<void> {
-      await this.friendService.deleteFriendInfo(user, friend);
-    }
+  async deleteFriendInfo(user: number, friend: number): Promise<void> {
+    await this.friendService.deleteFriendInfo(user, friend);
+  }
 
-    async deleteFriendList(user: number): Promise<void> {
-      await this.friendService.deleteFriendList(user);
-    }
+  async deleteFriendList(user: number): Promise<void> {
+    await this.friendService.deleteFriendList(user);
+  }
+
+  async readBlockList(user: number): Promise<Block[]> {
+    return (this.blockService.readBlockList(user));
+  }
+
+  async createBlockInfo(block: Block): Promise<Block> {
+    return (this.blockService.createBlockInfo(block));
+  }
+
+  async deleteBlockInfo(user: number, target: number): Promise<void> {
+    await this.blockService.deleteBlockInfo(user, target);
+  }
+
+  async deleteBlockList(user: number): Promise<void> {
+    await this.blockService.deleteBlockList(user);
+  }
 
 }

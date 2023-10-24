@@ -17,7 +17,8 @@ export class BlockService {
 
     // 유저 블락 생성 메서드
     async createBlockInfo(block: Partial<Block>): Promise<Block> {
-        return (this.blockRepository.create(block));
+        const newBlock = this.blockRepository.create(block);
+        return (this.blockRepository.save(newBlock));
     }
 
     // 유저 블락 수정 메서드
@@ -27,7 +28,15 @@ export class BlockService {
     }
 
     // 유저 블락 제거 메서드
-    async deleteBlockInfo(id: number): Promise<void> {
-        await this.blockRepository.delete(id);
+    async deleteBlockInfo(user: number, target: number): Promise<void> {
+        const deleteFriend = await this.blockRepository.findOne({ where: { user, target } });
+        if (!deleteFriend)
+            return ;
+        await this.blockRepository.remove(deleteFriend);
+    }
+
+    // 유저 블락 전체제거 메서드
+    async deleteBlockList(user: number): Promise<void> {
+        await this.blockRepository.delete({ user });
     }
 }

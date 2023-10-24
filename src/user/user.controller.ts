@@ -8,19 +8,19 @@ export class UserController {
     constructor(private readonly userService: UserService) {}
 
     /** 
-     * 친구목록 API
-     **/
+     * 유저 친구 API
+     */
 
     // 친구목록 조회 API
     @Get('/friend/:id')
     async readFriendList(@Param('id') id: number): Promise<Friend[]> {
-        return this.userService.readFriendList(id);
+        return (this.userService.readFriendList(id));
     }
 
     // 친구 등록 API
     @Post('/friend')
     async createFriendInfo(@Body() friend: Friend): Promise<Friend> {
-        return this.userService.createFriendInfo(friend);
+        return (this.userService.createFriendInfo(friend));
     }
 
     // 친구 삭제 API
@@ -34,4 +34,33 @@ export class UserController {
     async deleteFriendList(@Param('id') user: number): Promise<void> {
         await this.userService.deleteFriendList(user);
     }
+
+    /** 
+     * 유저 차단 API
+     */
+
+    // 차단목록 조회 API
+    @Get('/block/:id')
+    async readBlockList(@Param('id') id: number): Promise<Block[]> {
+        return (this.userService.readBlockList(id));
+    }
+
+    // 차단 등록 API
+    @Post('/block')
+    async createBlockInfo(@Body() block: Block): Promise<Block> {
+        return (this.userService.createBlockInfo(block));
+    }
+
+    // 차단 해제 API
+    @Delete('/block')
+    async deleteBlockInfo(@Query('user') user: number, @Query('target') target: number): Promise<void> {
+        await this.userService.deleteBlockInfo(user, target);
+    }
+
+    // 차단 전체해제 API
+    @Delete('/block/:id')
+    async deleteBlockList(@Param('id') user: number): Promise<void> {
+        await this.userService.deleteBlockList(user);
+    }
+
 }

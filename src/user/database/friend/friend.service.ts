@@ -12,26 +12,27 @@ export class FriendService {
 
   // 유저 친구리스트 조회 메서드
   async readFriendList(user: number) : Promise<Friend[]> {
-    return this.friendRepository.find({ where: { user } });
+    return (this.friendRepository.find({ where: { user } }));
   }
 
   // 유저 친구 생성 메서드
   async createFriendInfo(friend: Partial<Friend>): Promise<Friend> {
-      return this.friendRepository.create(friend);
+    const newFriend = this.friendRepository.create(friend);
+    return (this.friendRepository.save(newFriend));
   }
 
   // 유저 친구 수정 메서드
   async updateFriendInfo(id: number, friend: Partial<Friend>): Promise<Friend> {
-      await this.friendRepository.update(id, friend);
-      return this.friendRepository.findOne({ where: { id } });
+    await this.friendRepository.update(id, friend);
+    return (this.friendRepository.findOne({ where: { id } }));
   }
 
   // 유저 친구 제거 메서드
   async deleteFriendInfo(user: number, friend): Promise<void> {
     const deleteFriend = await this.friendRepository.findOne({ where: { user, friend} });
-    try {
-      await this.friendRepository.remove(deleteFriend);
-    } catch (e) {}
+    if (!deleteFriend)
+      return ;
+    await this.friendRepository.remove(deleteFriend);
   }
 
   // 유저 전체 친구 삭제 메서드
