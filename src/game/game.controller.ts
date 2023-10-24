@@ -4,8 +4,11 @@ import { History } from './database/history/history.entity';
 
 @Controller('game')
 export class GameController {
-  constructor(private readonly gameService: GameService) {}
+  constructor(
+    private readonly gameService: GameService
+  ) {}
 
+/* History Part */
   //get all history
   @Get()
   async readAllHistory(): Promise<History[]> {
