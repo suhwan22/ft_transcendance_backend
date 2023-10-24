@@ -10,7 +10,7 @@ export class UsersController {
   //get all users
   @Get()
   async readAllPlayer(): Promise<Player[]> {
-    return this.usersService.readAllPlayer();
+    return (this.usersService.readAllPlayer());
   }
 
   //get user by id
@@ -20,19 +20,19 @@ export class UsersController {
     if (!user) {
       throw new NotFoundException('Player does not exist!');
     }
-    return user;
+    return (user);
   }
 
   //create user
   @Post()
   async createPlayer(@Body() user: Player): Promise<Player> {
-    return this.usersService.createPlayer(user);
+    return (this.usersService.createPlayer(user));
   }
 
   //update user
   @Put(':id')
   async updatePlayerInfo(@Param('id') id: number, @Body() user: Player): Promise<any> {
-    return this.usersService.updatePlayerInfo(id, user);
+    return (this.usersService.updatePlayerInfo(id, user));
   }
 
   //delete user
@@ -42,6 +42,6 @@ export class UsersController {
     if (!user) {
       throw new NotFoundException('Player does not exist!');
     }
-    return this.usersService.deletePlayer(id);
+    return (this.usersService.deletePlayer(id));
   }
 }
