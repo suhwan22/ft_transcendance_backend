@@ -1,7 +1,8 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { ChatsController } from './chats.controller';
 
-describe('ChatController', () => {
+
+describe('ChatsController', () => {
   let controller: ChatsController;
 
   beforeEach(async () => {
