@@ -5,7 +5,6 @@ import { UsersModule } from './users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
 import { GamesModule } from './games/games.module';
-import { UsersModule } from './users/users.module';
 import { ChatsModule } from './chats/chats.module';
 import { TestGameModule } from './test-game/test-game.module';
 

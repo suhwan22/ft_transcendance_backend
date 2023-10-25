@@ -9,7 +9,7 @@ import { UserGameRecord } from './entities/user-game-record.entity';
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
-  constructor(private readonly userService: UsersService) { }
+  constructor(private readonly usersService: UsersService) { }
   
   /** 
    * player API
@@ -93,7 +93,7 @@ export class UsersController {
       throw new NotFoundException('UserGameRecord does not exist!');
     }
     return (this.usersService.deleteUserGameRecord(id));
-    
+  }
   /** 
    * 유저 친구 API
    */
@@ -102,7 +102,7 @@ export class UsersController {
   @ApiOkResponse({ description: 'Ok', type: UserFriend, isArray: true })
   @Get('/friends/:userId')
   async readFriendList(@Param('userId') user: number): Promise<UserFriend[]> {
-    return (this.userService.readFriendList(user));
+    return (this.usersService.readFriendList(user));
   }
 
   @ApiOperation({ summary: '친구 등록 API' })
@@ -110,7 +110,7 @@ export class UsersController {
   @ApiCreatedResponse({ description: 'success', type: UserFriend })
   @Post('/friends')
   async createFriendInfo(@Body() friend: UserFriend): Promise<UserFriend> {
-    return (this.userService.createFriendInfo(friend));
+    return (this.usersService.createFriendInfo(friend));
   }
 
   @ApiOperation({ summary: '친구 삭제 API' })
@@ -119,7 +119,7 @@ export class UsersController {
   @ApiOkResponse({ description: 'Ok' })
   @Delete('/friends')
   async deleteFriendInfo(@Query('user') user: number, @Query('friend') friend: number): Promise<void> {
-    await this.userService.deleteFriendInfo(user, friend);
+    await this.usersService.deleteFriendInfo(user, friend);
   }
 
   /** 
@@ -130,7 +130,7 @@ export class UsersController {
   @ApiOkResponse({ description: 'Ok', type: UserFriend, isArray: true })
   @Get('/blocks/:userId')
   async readBlockList(@Param('userId') user: number): Promise<UserBlock[]> {
-    return (this.userService.readBlockList(user));
+    return (this.usersService.readBlockList(user));
   }
 
   @ApiOperation({ summary: '차단 등록 API' })
@@ -138,7 +138,7 @@ export class UsersController {
   @ApiCreatedResponse({ description: 'success', type: UserBlock })
   @Post('/blocks')
   async createBlockInfo(@Body() block: UserBlock): Promise<UserBlock> {
-    return (this.userService.createBlockInfo(block));
+    return (this.usersService.createBlockInfo(block));
   }
 
   @ApiOperation({ summary: '차단 해제 API' })
@@ -147,6 +147,6 @@ export class UsersController {
   @ApiOkResponse({ description: 'Ok' })
   @Delete('/blocks')
   async deleteBlockInfo(@Query('user') user: number, @Query('target') target: number): Promise<void> {
-    await this.userService.deleteBlockInfo(user, target);
+    await this.usersService.deleteBlockInfo(user, target);
   }
 }

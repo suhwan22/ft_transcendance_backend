@@ -10,10 +10,9 @@ import { UserGameRecord } from './entities/user-game-record.entity';
 @Module({
   imports: [
     TypeOrmModule.forFeature([UserFriend]),
-    TypeOrmModule.forFeature([UserBlock])],
+    TypeOrmModule.forFeature([UserBlock]),
     TypeOrmModule.forFeature([Player]),
-    TypeOrmModule.forFeature([UserGameRecord])
-  ],
+    TypeOrmModule.forFeature([UserGameRecord])],
   controllers: [UsersController],
   providers: [UsersService],
 })

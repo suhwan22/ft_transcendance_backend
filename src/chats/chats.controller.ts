@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, NotFoundException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Query, NotFoundException, Put } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { ChatsService } from './chats.service';
 import { ChatBan } from './entities/chat-ban.entity';
