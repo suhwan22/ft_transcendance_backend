@@ -3,6 +3,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
+import { UsersModule } from './users/users.module';
+import { ChatsModule } from './chats/chats.module';
+import { TestGameModule } from './test-game/test-game.module';
 
 @Module({
   imports: [
@@ -16,7 +19,10 @@ import { ConfigModule } from '@nestjs/config';
       database: process.env.PG_DB,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
-    })],
+    }),
+    UsersModule,
+    ChatsModule,
+    TestGameModule],
   controllers: [AppController],
   providers: [AppService],
 })
