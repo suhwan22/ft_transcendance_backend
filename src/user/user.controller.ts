@@ -37,13 +37,6 @@ export class UserController {
         await this.userService.deleteFriendInfo(user, friend);
     }
 
-    @ApiOperation({ summary: '친구 전체삭제 API'})
-    @ApiOkResponse({ description: 'Ok' })
-    @Delete('/friend/:userId')
-    async deleteFriendList(@Param('userId') user: number): Promise<void> {
-        await this.userService.deleteFriendList(user);
-    }
-
     /** 
      * 유저 차단 API
      */
@@ -71,12 +64,4 @@ export class UserController {
     async deleteBlockInfo(@Query('user') user: number, @Query('target') target: number): Promise<void> {
         await this.userService.deleteBlockInfo(user, target);
     }
-
-    @ApiOperation({ summary: '차단 전체해제 API'})
-    @ApiOkResponse({ description: 'Ok' })
-    @Delete('/block/:userId')
-    async deleteBlockList(@Param('userId') user: number): Promise<void> {
-        await this.userService.deleteBlockList(user);
-    }
-
 }

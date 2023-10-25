@@ -62,11 +62,4 @@ export class ChatController {
     async deleteBanInfo(@Query('channel') channel: number, @Query('user') user: number): Promise<void> {
         await (this.chatService.deleteBanInfo(channel, user));
     }
-
-    @ApiOperation({ summary: '채팅 밴 전체 해제 API'})
-    @ApiOkResponse({ description: 'Ok' })
-    @Delete('/ban/:channelId')
-    async deleteBanList(@Param('channelId') channel: number): Promise<void> {
-        await (this.chatService.deleteBanList(channel));
-    }
 }
