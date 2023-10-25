@@ -4,16 +4,16 @@ import { AppService } from './app.service';
 import { UsersModule } from './users/users.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { GameModule } from './game/game.module';
-import { ChannelModule } from './channel/channel.module';
-import { ChannelModule } from './channel/channel.module';
+import { GamesModule } from './games/games.module';
+import { ChatsModule } from './chats/chats.module';
 
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
     UsersModule,
-    GameModule,
+    GamesModule,
+    ChatsModule,
     TypeOrmModule.forRoot({
       type: process.env.DB_TYPE as any,
       host: process.env.PG_HOST,
@@ -24,7 +24,6 @@ import { ChannelModule } from './channel/channel.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
     }),
-    ChannelModule,
   ],
   controllers: [AppController],
   providers: [AppService],
