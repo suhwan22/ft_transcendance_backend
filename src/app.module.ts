@@ -3,8 +3,9 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ConfigModule } from '@nestjs/config';
-import { UserModule } from './user/user.module';
-import { ChatModule } from './chat/chat.module';
+import { UsersModule } from './users/users.module';
+import { ChatsModule } from './chats/chats.module';
+import { TestGameModule } from './test-game/test-game.module';
 
 @Module({
   imports: [
@@ -19,8 +20,9 @@ import { ChatModule } from './chat/chat.module';
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
     }),
-    UserModule,
-    ChatModule],
+    UsersModule,
+    ChatsModule,
+    TestGameModule],
   controllers: [AppController],
   providers: [AppService],
 })
