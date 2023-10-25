@@ -3,7 +3,7 @@ import { ChatBan } from './entities/chat-ban.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChatLog } from './entities/chat-log.entity';
 import { Repository } from 'typeorm';
-import { ChatMute } from './entities/cgat-mute.entity';
+import { ChatMute } from './entities/chat-mute.entity';
 
 @Injectable()
 export class ChatsService {

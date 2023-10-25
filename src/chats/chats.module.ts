@@ -3,7 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatsController } from './chats.controller';
 import { ChatsService } from './chats.service';
 import { ChatBan } from './entities/chat-ban.entity';
-import { ChatMute } from './entities/cgat-mute.entity';
+import { ChatMute } from './entities/chat-mute.entity';
 import { ChatLog } from './entities/chat-log.entity';
 
 @Module({
