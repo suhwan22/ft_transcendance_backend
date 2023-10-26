@@ -5,6 +5,7 @@ import { UserFriend } from './entities/user-friend.entity';
 import { ApiBody, ApiCreatedResponse, ApiOperation, ApiTags, ApiQuery, ApiOkResponse } from '@nestjs/swagger';
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
+import { UserDto } from './dtos/user.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -176,5 +177,12 @@ export class UsersController {
   @Delete('/blocks')
   async deleteBlockInfo(@Query('user') user: number, @Query('target') target: number): Promise<void> {
     await this.usersService.deleteBlockInfo(user, target);
+  }
+
+  @ApiOperation({ summary: 'user info 조회 API'})
+  @ApiOkResponse({ description: 'Ok', type: UserDto, isArray: true })
+  @Get(':userId')
+  async readUserInfo(@Param('userId') id: number): Promise<UserDto> {
+    return (this.usersService.readUserInfo(id));
   }
 }

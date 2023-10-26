@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { ChatMute } from './entities/chat-mute.entity';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity'
+import { ChannelListDto } from './dtos/channel-list.dto';
 
 @Injectable()
 export class ChatsService {
@@ -160,5 +161,23 @@ export class ChatsService {
 
   async deleteFriendList(channel: number): Promise<void> {
     await this.chatMuteRepository.delete({ channel });
+  }
+
+  async readChannelList(user: number): Promise<ChannelListDto> {
+    const channelListDto = new ChannelListDto();
+    const userChannelList = await this.channelMemberRepository.find({ where: { user }});
+    var id: number;
+    var config: ChannelConfig;
+    var channelList: { userId: number, name: string }[] = [];
+
+    for (const idx of userChannelList) {
+      id = idx.channel;
+      config = await this.channelConfigRepository.findOne({ where: { id } });
+      channelList.push({ userId: id, name: config.title });
+    }
+
+    channelListDto.channelList = channelList;
+    //dmList: { userId: number, name: string }[];
+    return (channelListDto);
   }
 }
