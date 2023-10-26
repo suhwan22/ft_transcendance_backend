@@ -1,5 +1,7 @@
 import { ChannelMember } from "../entities/channel-members.entity";
+import { ChatBan } from "../entities/chat-ban.entity";
 import { ChatLog } from "../entities/chat-log.entity";
+import { ChatMute } from "../entities/chat-mute.entity";
 
 export class ChatDto {
   id: number;
@@ -8,7 +10,7 @@ export class ChatDto {
   isPublic: boolean;
   chatLog: ChatLog[];
   memberList: ChannelMember[];
-  banList: object[];
-  muteList: object[];
+  banList: ChatBan[];
+  muteList: ChatMute[];
   date: Date;
 }
