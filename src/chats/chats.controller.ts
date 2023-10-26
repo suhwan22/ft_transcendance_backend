@@ -5,17 +5,18 @@ import { ChatBan } from './entities/chat-ban.entity';
 import { ChatLog } from './entities/chat-log.entity';
 import { ChannelMember } from './entities/channel-members.entity';
 import { ChannelConfig } from './entities/channel-config.entity';
+import { ChatDto } from './dtos/chat.dto';
 
 @ApiTags('Chats')
 @Controller('chats')
 export class ChatsController {
     constructor(private readonly chatsService: ChatsService) {}
 
-    @ApiOperation({ summary: '채팅내역 조회 API'})
-    @ApiOkResponse({ description: 'Ok', type: ChatLog, isArray: true })
-    @Get('/logs/:channelId')
-    async readChatLogList(@Param('channelId') channel: number): Promise<ChatLog[]> {
-        return (this.chatsService.readChatLogList(channel));
+    @ApiOperation({ summary: '채팅정보 조회 API'})
+    @ApiOkResponse({ description: 'Ok', type: ChatDto, isArray: true })
+    @Get('/:channelId')
+    async readChatInfo(@Param('channelId') channel: number): Promise<ChatDto> {
+      return (this.chatsService.readChatInfo(channel));
     }
 
     @ApiBody({ type: ChatLog })
@@ -57,7 +58,7 @@ export class ChatsController {
     @ApiQuery({ name: 'channel', type: 'number' })
     @ApiQuery({ name: 'user', type: 'number' })
     @Delete('/bans')
-    async deleteBanInfo(@Query('channel') channel: number, @Query('user') user: number): Promise<void> {
+    async deleteBanInfo(@Query('channel') channel: number, @Query('user') user: string): Promise<void> {
         await (this.chatsService.deleteBanInfo(channel, user));
     }
     //get all channelConfigs

@@ -2,12 +2,15 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GameHistory } from './entities/game-history.entity';
+import { UsersService } from 'src/users/users.service';
+import { UserGameRecord } from 'src/users/entities/user-game-record.entity';
 
 @Injectable()
 export class GamesService {
   constructor(
     @InjectRepository(GameHistory)
     private gameHistoryRepository: Repository<GameHistory>,
+    private usersService: UsersService,
   ) {}
 
   /* [C] gameHistory 생성 */
@@ -35,5 +38,22 @@ export class GamesService {
   /* [D] gameHistory 제거 */
   async deleteGameHistory(id: number): Promise<void> {
     await (this.gameHistoryRepository.delete(id));
+  }
+
+  /**
+   * 
+   * API SERVICE FUNCTION
+   * 
+   */
+
+  async readRankInfo(): Promise<UserGameRecord[]> {
+    const records = await this.usersService.readAllUserGameRecord();
+    records.sort((a, b) => {
+      if (a.score === b.score) {
+        return (b.win - a.win);
+      }
+      else return (b.score - a.score);
+    });
+    return (records);
   }
 }

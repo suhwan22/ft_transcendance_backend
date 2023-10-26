@@ -9,7 +9,7 @@ export class ChatMute {
   channel: number;
 
   @Column()
-  user: number;
+  user: string;
 
   @CreateDateColumn({ type: 'timestamptz' })
   date: Date;

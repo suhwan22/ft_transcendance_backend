@@ -12,7 +12,7 @@ export class ChatLog {
 
   @ApiProperty()
   @Column()
-  user: number;
+  user: string;
 
   @ApiProperty()
   @Column()

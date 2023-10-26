@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { ChatMute } from './entities/chat-mute.entity';
 import { ChannelMember } from './entities/channel-members.entity';
 import { ChannelConfig } from './entities/channel-config.entity'
+import { ChatDto } from './dtos/chat.dto';
 
 @Injectable()
 export class ChatsService {
@@ -60,6 +61,11 @@ export class ChatsService {
     return (this.channelMemberRepository.find());
   }
 
+  /* [R] 특정 채널 ChannelMember 조회 */
+  async readChannelMemberList(channel: number): Promise<ChannelMember[]> {
+    return (this.channelMemberRepository.find({ where: { channel } }));
+  }
+
   /* [R] 특정 ChannelMember 조회 */
   async readOneChannelMember(id: number): Promise<ChannelMember> {
     return (this.channelMemberRepository.findOne({ where: { id } }));
@@ -75,6 +81,8 @@ export class ChatsService {
   async deleteChannelMember(id: number): Promise<void> {
     await (this.channelMemberRepository.delete(id));
   }
+
+
 
   /** 
    * 
@@ -120,7 +128,7 @@ export class ChatsService {
       return (this.chatBanRepository.findOne({ where: { id } }));
   }
 
-  async deleteBanInfo(channel: number, user: number): Promise<void> {
+  async deleteBanInfo(channel: number, user: string): Promise<void> {
       const deleteBan = await this.chatBanRepository.findOne({ where: { channel, user } });
       if (!deleteBan)
           return ;
@@ -151,7 +159,7 @@ export class ChatsService {
     return (this.chatMuteRepository.findOne({ where: { id } }));
   }
 
-  async deleteMutenfo(channel: number, user: number): Promise<void> {
+  async deleteMutenfo(channel: number, user: string): Promise<void> {
     const deleteMute = await this.chatMuteRepository.findOne({ where: { channel, user} });
     if (!deleteMute)
       return ;
@@ -162,4 +170,26 @@ export class ChatsService {
     await this.chatMuteRepository.delete({ channel });
   }
 
+  /**
+   * 
+   * API SERVICE FUNCTION
+   * 
+   */
+
+  async readChatInfo(channel: number): Promise<ChatDto> {
+    const chatDto = new ChatDto();
+    const channelConfig = await this.readOneChannelConfig(channel);
+
+    chatDto.id = channelConfig.id;
+    chatDto.title = channelConfig.title;
+    chatDto.date = channelConfig.date;
+    chatDto.limitUser = channelConfig.limit;
+    chatDto.isPublic = channelConfig.public;
+    chatDto.chatLog = await this.readChatLogList(channel);
+    chatDto.memberList = await this.readChannelMemberList(channel);
+    chatDto.banList = await this.readBanList(channel);
+    chatDto.muteList = await this.readMuteList(channel);
+
+    return (chatDto);
+  }
 }

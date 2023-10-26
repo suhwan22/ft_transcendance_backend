@@ -12,5 +12,5 @@ export class ChatBan {
 
   @ApiProperty()
   @Column()
-  user: number;
+  user: string;
 }

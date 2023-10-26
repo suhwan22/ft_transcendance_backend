@@ -9,7 +9,7 @@ export class ChannelMember {
   channel: number;
 
   @Column()
-  user: number;
+  user: string;
 
   @Column()
   op: boolean;

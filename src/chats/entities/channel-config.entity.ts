@@ -6,6 +6,9 @@ export class ChannelConfig {
   id: number;
 
   @Column()
+  title: string;
+
+  @Column()
   password: string;
 
   @Column()

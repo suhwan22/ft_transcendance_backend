@@ -1,7 +1,10 @@
 import { Controller, Get, Post, Body, Put, Param, Delete, NotFoundException } from '@nestjs/common';
 import { GamesService } from './games.service';
 import { GameHistory } from './entities/game-history.entity';
+import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { UserGameRecord } from 'src/users/entities/user-game-record.entity';
 
+@ApiTags('Game')
 @Controller('game')
 export class GamesController {
   constructor(
@@ -45,5 +48,12 @@ export class GamesController {
       throw new NotFoundException('History does not exist!');
     }
     return (this.gamesService.deleteGameHistory(id));
+  }
+
+  @ApiOperation({ summary: '랭킹목록 조회 API' })
+  @ApiOkResponse({ description: 'Ok', type: UserGameRecord, isArray: true })
+  @Get('ranks')
+  async readRankInfo(): Promise<UserGameRecord[]> {
+    return (this.gamesService.readRankInfo());
   }
 }
