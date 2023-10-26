@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ChatLog } from './entities/chat-log.entity';
 import { Repository } from 'typeorm';
 import { ChatMute } from './entities/chat-mute.entity';
-import { ChannelMember } from './entities/channel-members.entity';
+import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity'
 
 @Injectable()
@@ -60,18 +60,18 @@ export class ChatsService {
     return (this.channelMemberRepository.find());
   }
 
-  /* [R] 특정 ChannelMember 조회 */
-  async readOneChannelMember(id: number): Promise<ChannelMember> {
-    return (this.channelMemberRepository.findOne({ where: { id } }));
+  /* [R] 특정 Channel{id}에 속한 Member 조회 */
+  async readOneChannelMember(channel: number): Promise<ChannelMember[]> {
+    return (this.channelMemberRepository.find({ where: { channel } }));
   }
 
-  /* [U] ChannelMember info 수정 */
+  /* [U] ChannelMember{id} info 수정 */
   async updateChannelMemberInfo(id: number, list: Partial<ChannelMember>): Promise<ChannelMember> {
     await this.channelMemberRepository.update(id, list);
     return (this.channelMemberRepository.findOne({ where: { id } }));
   }
 
-  /* [D] ChannelMember 제거 */
+  /* [D] ChannelMember{id} 제거 */
   async deleteChannelMember(id: number): Promise<void> {
     await (this.channelMemberRepository.delete(id));
   }
@@ -161,5 +161,4 @@ export class ChatsService {
   async deleteFriendList(channel: number): Promise<void> {
     await this.chatMuteRepository.delete({ channel });
   }
-
 }

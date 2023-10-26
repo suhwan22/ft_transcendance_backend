@@ -5,7 +5,7 @@ import { ChatsService } from './chats.service';
 import { ChatBan } from './entities/chat-ban.entity';
 import { ChatMute } from './entities/chat-mute.entity';
 import { ChatLog } from './entities/chat-log.entity';
-import { ChannelMember } from './entities/channel-members.entity';
+import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity';
 
 @Module({

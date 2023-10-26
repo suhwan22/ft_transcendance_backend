@@ -16,12 +16,16 @@ export class UsersController {
    */
   
   //get all player
+  @ApiOperation({ summary: '전체 Player목록 조회 API' })
+  @ApiOkResponse({ description: 'Ok', type: Player, isArray: true })
   @Get('players')
   async readAllPlayer(): Promise<Player[]> {
     return (this.usersService.readAllPlayer());
   }
 
   //get player by id
+  @ApiOperation({ summary: '특정 Player목록 조회 API' })
+  @ApiOkResponse({ description: 'Ok', type: Player })
   @Get('players/:id')
   async readOnePlayer(@Param('id') id: number): Promise<Player> {
     const user = await this.usersService.readOnePlayer(id);
@@ -32,18 +36,28 @@ export class UsersController {
   }
 
   //create player
+  @ApiOperation({ summary: 'Player 등록 API' })
+  @ApiBody({ type: Player })
+  @ApiCreatedResponse({ description: 'success', type: Player })
   @Post('players')
   async createPlayer(@Body() user: Player): Promise<Player> {
     return (this.usersService.createPlayer(user));
   }
 
   //update player
+  @ApiOperation({ summary: 'Player 수정 API' })
+  @ApiBody({ type: Player })
+  @ApiCreatedResponse({ description: 'success', type: Player })
   @Put('players/:id')
   async updatePlayerInfo(@Param('id') id: number, @Body() user: Player): Promise<any> {
     return (this.usersService.updatePlayerInfo(id, user));
   }
 
   //delete player
+  @ApiOperation({ summary: 'Player 삭제 API' })
+  // @ApiQuery({ name: 'user', type: 'number' })
+  // @ApiQuery({ name: 'friend', type: 'number' })
+  @ApiOkResponse({ description: 'Ok' })
   @Delete('players/:id')
   async deletePlayer(@Param('id') id: number): Promise<any> {
     const user = await this.usersService.readOnePlayer(id);
@@ -58,12 +72,16 @@ export class UsersController {
    */
   
   //get all usergamerecord
+  @ApiOperation({ summary: '전체 승점 list 조회 API' })
+  @ApiOkResponse({ description: 'Ok', type: UserGameRecord, isArray: true })
   @Get('game-records')
   async readAllUserGameRecord(): Promise<UserGameRecord[]> {
     return (this.usersService.readAllUserGameRecord());
   }
 
   //get usergamerecord by id
+  @ApiOperation({ summary: '특정 승점 list 조회 API' }) 
+  @ApiOkResponse({ description: 'Ok', type: UserGameRecord, isArray: true })
   @Get('game-records/:id')
   async readOneUserGameRecord(@Param('id') id: number): Promise<UserGameRecord> {
     const user = await this.usersService.readOneUserGameRecord(id);
@@ -74,18 +92,28 @@ export class UsersController {
   }
 
   //create usergamerecord
+  @ApiOperation({ summary: '승정 수정 API' })
+  @ApiBody({ type: UserGameRecord })
+  @ApiCreatedResponse({ description: 'success', type: UserGameRecord })
   @Post('game-records')
   async createUserGameRecord(@Body() user: UserGameRecord): Promise<UserGameRecord> {
     return (this.usersService.createUserGameRecord(user));
   }
 
   //update usergamerecord
+  @ApiOperation({ summary: '승점 수정 API' })
+  @ApiBody({ type: UserGameRecord })
+  @ApiCreatedResponse({ description: 'success', type: UserGameRecord })
   @Put('game-records/:id')
   async updateUserGameRecordInfo(@Param('id') id: number, @Body() user: UserGameRecord): Promise<any> {
     return (this.usersService.updateUserGameRecordInfo(id, user));
   }
 
   //delete usergamerecord
+  @ApiOperation({ summary: '승점 삭제 API' })
+  // @ApiQuery({ name: 'user', type: 'number' })
+  // @ApiQuery({ name: 'friend', type: 'number' })
+  @ApiOkResponse({ description: 'Ok' })
   @Delete('game-records/:id')
   async deleteUserGameRecord(@Param('id') id: number): Promise<any> {
     const user = await this.usersService.readOneUserGameRecord(id);
