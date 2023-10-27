@@ -13,6 +13,7 @@ import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 import { ChatBan } from 'src/chats/entities/chat-ban.entity';
 import { ChatLog } from 'src/chats/entities/chat-log.entity';
 import { ChatMute } from 'src/chats/entities/chat-mute.entity';
+import { FriendRequest } from './entities/friend-request.entity';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { ChatMute } from 'src/chats/entities/chat-mute.entity';
       ChatMute,
       ChatBan,
       ChannelMember,
-      ChannelConfig])],
+      ChannelConfig,
+      FriendRequest])],
   controllers: [UsersController],
   providers: [UsersService, ChatsService],
 })

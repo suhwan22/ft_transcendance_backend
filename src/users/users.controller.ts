@@ -7,6 +7,7 @@ import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserDto } from './dtos/user.dto';
 import { ChannelListDto } from './dtos/channel-list.dto';
+import { FriendRequest } from './entities/friend-request.entity';
 
 
 @ApiTags('Users')
@@ -125,6 +126,7 @@ export class UsersController {
     }
     return (this.usersService.deleteUserGameRecord(id));
   }
+
   /** 
    * 유저 친구 API
    */
@@ -179,6 +181,54 @@ export class UsersController {
   @Delete('/blocks')
   async deleteBlockInfo(@Query('user') user: number, @Query('target') target: number): Promise<void> {
     await this.usersService.deleteBlockInfo(user, target);
+  }
+
+  /** 
+   * 친구 요청 API
+   */
+
+  /* [C] FriendRequest 생성 */
+  @ApiOperation({ summary: '친구 요청 생성 API' })
+  @ApiBody({ type: FriendRequest })
+  @ApiCreatedResponse({ description: 'success', type: FriendRequest })
+  @Post('friend-requests')
+  async createFriendRequest(@Body() request: Partial<FriendRequest>): Promise<FriendRequest> {
+    console.log(request);
+    return this.usersService.createFriendRequest(request);
+  }
+
+  /* [R] 모든 FriendRequest 조회 */
+  @ApiOperation({ summary: '받은 친구 요청 목록 API' })
+  @ApiOkResponse({ description: 'Ok' , isArray: true})
+  @Get('friend-requests')
+  async readAllFriendRequest(): Promise<FriendRequest[]> {
+    return (this.usersService.readAllFriendRequest());
+  }
+
+  /* [R] 특정 recv{id}의 FriendRequest 조회 */
+  @ApiOperation({ summary: '받은 친구 요청 목록 API' })
+  @ApiOkResponse({ description: 'Ok' , isArray: true})
+  @Get('friend-requests-recv/:id')
+  async readRecvFriendRequest(recv: number): Promise<FriendRequest[]> {
+    return (this.usersService.readRecvFriendRequest( recv ));
+  }
+
+  /* [R] 특정 send{id}의 FriendRequest 조회 */
+  @ApiOperation({ summary: '보낸 친구 요청 목록 API' })
+  @ApiOkResponse({ description: 'Ok' , isArray: true})
+  @Get('friend-requests-sned/:id')
+  async readSendFriendRequest(send: number): Promise<FriendRequest[]> {
+    return (this.usersService.readSendFriendRequest( send ));
+  }
+
+  /* [D] FriendRequest 제거 */
+  @ApiOperation({ summary: '친구 요청 삭제 API' })
+  // @ApiQuery({ name: 'user', type: 'number' })
+  // @ApiQuery({ name: 'target', type: 'number' })
+  @ApiOkResponse({ description: 'Ok' })
+  @Delete('/friend-requests/:id')
+  async deleteFriendRequest(@Param('id') target: number): Promise<void> {
+    await this.usersService.deleteFriendRequest(target);
   }
 
   @ApiOperation({ summary: 'user info 조회 API'})

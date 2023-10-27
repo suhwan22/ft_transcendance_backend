@@ -9,6 +9,7 @@ import { UserDto } from './dtos/user.dto';
 import { ChannelListDto } from './dtos/channel-list.dto';
 import { ChatsService } from 'src/chats/chats.service';
 import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
+import { FriendRequest } from './entities/friend-request.entity';
 
 @Injectable()
 export class UsersService {
@@ -21,6 +22,8 @@ export class UsersService {
     private userBlockRepository: Repository<UserBlock>,
     @InjectRepository(UserFriend)
     private userFriendRepository: Repository<UserFriend>,
+    @InjectRepository(FriendRequest)
+    private friendRequestRepository: Repository<FriendRequest>,
     
     private readonly chatsService: ChatsService
   ) {}
@@ -162,6 +165,39 @@ export class UsersService {
   // 유저 블락 전체제거 메서드
   async deleteBlockList(user: number): Promise<void> {
     await this.userBlockRepository.delete({ user });
+  }
+
+  /**
+   * 
+   * FRIEND_REQUEST Table CURD
+   * 
+   */
+
+  /* [C] FriendRequest 생성 */
+  async createFriendRequest(request: Partial<FriendRequest>): Promise<FriendRequest> {
+    const newRequest = this.friendRequestRepository.create(request);
+    console.log(newRequest);
+    return (this.friendRequestRepository.save(newRequest));
+  }
+
+  /* [R] 모든 FriendRequest 조회 */
+  async readAllFriendRequest(): Promise<FriendRequest[]> {
+    return (this.friendRequestRepository.find());
+  }
+
+  /* [R] 특정 recv{id}의 FriendRequest 조회 */
+  async readRecvFriendRequest(recv: number): Promise<FriendRequest[]> {
+    return (this.friendRequestRepository.find({ where: { recv } }));
+  }
+
+  /* [R] 특정 send{id}의 FriendRequest 조회 */
+  async readSendFriendRequest(send: number): Promise<FriendRequest[]> {
+    return (this.friendRequestRepository.find({ where: { send } }));
+  }
+
+  /* [D] FriendRequest 제거 */
+  async deleteFriendRequest(id: number): Promise<void> {
+    await (this.friendRequestRepository.delete(id));
   }
 
   async readUserInfo(id: number): Promise<UserDto> {
