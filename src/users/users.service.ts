@@ -6,6 +6,9 @@ import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserBlock } from './entities/user-block.entity';
 import { UserFriend } from './entities/user-friend.entity';
 import { UserDto } from './dtos/user.dto';
+import { ChannelListDto } from './dtos/channel-list.dto';
+import { ChatsService } from 'src/chats/chats.service';
+import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
 
 @Injectable()
 export class UsersService {
@@ -18,6 +21,8 @@ export class UsersService {
     private userBlockRepository: Repository<UserBlock>,
     @InjectRepository(UserFriend)
     private userFriendRepository: Repository<UserFriend>,
+    
+    private readonly chatsService: ChatsService
   ) {}
 
   /**
@@ -184,5 +189,24 @@ export class UsersService {
     userDto.blockList = blocks;
     userDto.friendList = friends;
     return (userDto);
+  }
+
+  async readChannelList(user: number): Promise<ChannelListDto> {
+    const channelListDto = new ChannelListDto();
+    const userChannelList = await this.chatsService.readUserChannel(user);
+    var id: number;
+    var config: ChannelConfig;
+    var channelList: { userId: number, name: string }[] = [];
+
+    for (const idx of userChannelList) {
+      id = idx.channel;
+      console.log(id);
+      config = await this.chatsService.readOneChannelConfig(id);
+      channelList.push({ userId: id, name: config.title });
+    }
+
+    channelListDto.channelList = channelList;
+    //dmList: { userId: number, name: string }[];
+    return (channelListDto);
   }
 }

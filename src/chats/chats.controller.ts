@@ -5,19 +5,13 @@ import { ChatBan } from './entities/chat-ban.entity';
 import { ChatLog } from './entities/chat-log.entity';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity';
-import { ChannelListDto } from './dtos/channel-list.dto';
+import { ChannelListDto } from '../users/dtos/channel-list.dto';
 
 @ApiTags('Chats')
 @Controller('chats')
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) { }
 
-  @ApiOperation({ summary: 'player가 참여한 channel 조회 API'})
-  @ApiOkResponse({ description: 'Ok', type: ChannelListDto, isArray: true })
-  @Get('/:UserId')
-  async readChatInfo(@Param('UserId') id: number): Promise<ChannelListDto> {
-    return (this.chatsService.readChannelList(id));
-  }
 
   @ApiOperation({ summary: '채팅내역 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: ChatLog, isArray: true })
@@ -168,7 +162,7 @@ export class ChatsController {
   @ApiOkResponse({ description: 'Ok' })
   // @ApiQuery({ name: 'channel', type: 'number' })
   // @ApiQuery({ name: 'user', type: 'number' }) // 현재는 {id}로 만 제거되는 상태
-  @Delete('members:id')
+  @Delete('members/:id')
   async deleteChannelMember(@Param('id') id: number): Promise<any> {
     const user = await this.chatsService.readOneChannelMember(id);
     if (!user) {

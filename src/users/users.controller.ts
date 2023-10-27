@@ -6,6 +6,8 @@ import { ApiBody, ApiCreatedResponse, ApiOperation, ApiTags, ApiQuery, ApiOkResp
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserDto } from './dtos/user.dto';
+import { ChannelListDto } from './dtos/channel-list.dto';
+
 
 @ApiTags('Users')
 @Controller('users')
@@ -184,5 +186,12 @@ export class UsersController {
   @Get(':userId')
   async readUserInfo(@Param('userId') id: number): Promise<UserDto> {
     return (this.usersService.readUserInfo(id));
+  }
+
+  @ApiOperation({ summary: 'player가 참여한 channel 조회 API'})
+  @ApiOkResponse({ description: 'Ok', type: ChannelListDto, isArray: true })
+  @Get('/:userId/channels')
+  async readChatInfo(@Param('UserId') id: number): Promise<ChannelListDto> {
+    return (this.usersService.readChannelList(id));
   }
 }
