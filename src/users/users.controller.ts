@@ -5,6 +5,9 @@ import { UserFriend } from './entities/user-friend.entity';
 import { ApiBody, ApiCreatedResponse, ApiOperation, ApiTags, ApiQuery, ApiOkResponse } from '@nestjs/swagger';
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
+import { UserDto } from './dtos/user.dto';
+import { ChannelListDto } from './dtos/channel-list.dto';
+
 
 @ApiTags('Users')
 @Controller('users')
@@ -176,5 +179,19 @@ export class UsersController {
   @Delete('/blocks')
   async deleteBlockInfo(@Query('user') user: number, @Query('target') target: number): Promise<void> {
     await this.usersService.deleteBlockInfo(user, target);
+  }
+
+  @ApiOperation({ summary: 'user info 조회 API'})
+  @ApiOkResponse({ description: 'Ok', type: UserDto, isArray: true })
+  @Get(':userId')
+  async readUserInfo(@Param('userId') id: number): Promise<UserDto> {
+    return (this.usersService.readUserInfo(id));
+  }
+
+  @ApiOperation({ summary: 'player가 참여한 channel 조회 API'})
+  @ApiOkResponse({ description: 'Ok', type: ChannelListDto, isArray: true })
+  @Get('/:userId/channels')
+  async readChatInfo(@Param('UserId') id: number): Promise<ChannelListDto> {
+    return (this.usersService.readChannelList(id));
   }
 }

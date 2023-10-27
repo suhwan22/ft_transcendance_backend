@@ -5,6 +5,10 @@ import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserBlock } from './entities/user-block.entity';
 import { UserFriend } from './entities/user-friend.entity';
+import { UserDto } from './dtos/user.dto';
+import { ChannelListDto } from './dtos/channel-list.dto';
+import { ChatsService } from 'src/chats/chats.service';
+import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
 
 @Injectable()
 export class UsersService {
@@ -17,6 +21,8 @@ export class UsersService {
     private userBlockRepository: Repository<UserBlock>,
     @InjectRepository(UserFriend)
     private userFriendRepository: Repository<UserFriend>,
+    
+    private readonly chatsService: ChatsService
   ) {}
 
   /**
@@ -134,27 +140,73 @@ export class UsersService {
 
   // 유저 블락 생성 메서드
   async createBlockInfo(block: Partial<UserBlock>): Promise<UserBlock> {
-      const newBlock = this.userBlockRepository.create(block);
-      return (this.userBlockRepository.save(newBlock));
+    const newBlock = this.userBlockRepository.create(block);
+    return (this.userBlockRepository.save(newBlock));
   }
 
 
   // 유저 블락 수정 메서드
   async updateBlockInfo(id: number, block: Partial<UserBlock>): Promise<UserBlock> {
-      await this.userBlockRepository.update(id, block);
-      return (this.userBlockRepository.findOne({ where: { id } }));
+    await this.userBlockRepository.update(id, block);
+    return (this.userBlockRepository.findOne({ where: { id } }));
   }
 
   // 유저 블락 제거 메서드
   async deleteBlockInfo(user: number, target: number): Promise<void> {
-      const deleteFriend = await this.userBlockRepository.findOne({ where: { user, target } });
-      if (!deleteFriend)
-          return ;
-      await this.userBlockRepository.remove(deleteFriend);
+    const deleteFriend = await this.userBlockRepository.findOne({ where: { user, target } });
+    if (!deleteFriend)
+       return ;
+    await this.userBlockRepository.remove(deleteFriend);
   }
 
   // 유저 블락 전체제거 메서드
   async deleteBlockList(user: number): Promise<void> {
-      await this.userBlockRepository.delete({ user });
+    await this.userBlockRepository.delete({ user });
+  }
+
+  async readUserInfo(id: number): Promise<UserDto> {
+    const userDto = new UserDto();
+    const userInfo = await this.playerRepository.findOne({ where: { id }});
+    const blockList = await this.userBlockRepository.find({ where: { user: id }});
+    const friendList = await this.userFriendRepository.find({ where: { user: id }});
+
+    var blocks: { userId: number, name: string }[] = [];
+    var friends: { userId: number, name: string }[] = [];
+
+    for (const idx of blockList) {
+      blocks.push({ userId: idx.target, name: "temp" });
+    }
+
+    for (const idx of friendList) {
+      friends.push({ userId: idx.friend, name: "temp" });
+    }
+
+    userDto.id = userInfo.id;
+    userDto.name = userInfo.name;
+    userDto.avatar = userInfo.avatar;
+    //userDto.rank: number;
+    userDto.record = await this.readOneUserGameRecord(id);
+    userDto.blockList = blocks;
+    userDto.friendList = friends;
+    return (userDto);
+  }
+
+  async readChannelList(user: number): Promise<ChannelListDto> {
+    const channelListDto = new ChannelListDto();
+    const userChannelList = await this.chatsService.readUserChannel(user);
+    var id: number;
+    var config: ChannelConfig;
+    var channelList: { userId: number, name: string }[] = [];
+
+    for (const idx of userChannelList) {
+      id = idx.channel;
+      console.log(id);
+      config = await this.chatsService.readOneChannelConfig(id);
+      channelList.push({ userId: id, name: config.title });
+    }
+
+    channelListDto.channelList = channelList;
+    //dmList: { userId: number, name: string }[];
+    return (channelListDto);
   }
 }

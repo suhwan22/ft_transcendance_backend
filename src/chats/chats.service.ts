@@ -65,6 +65,11 @@ export class ChatsService {
     return (this.channelMemberRepository.find({ where: { channel } }));
   }
 
+  /* [R] 특정 User{id}에 속한 Member 조회 */
+  async readUserChannel(user: number): Promise<ChannelMember[]> {
+    return (this.channelMemberRepository.find({ where: { user } }));
+  }
+
   /* [U] ChannelMember{id} info 수정 */
   async updateChannelMemberInfo(id: number, list: Partial<ChannelMember>): Promise<ChannelMember> {
     await this.channelMemberRepository.update(id, list);

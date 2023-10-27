@@ -6,14 +6,27 @@ import { UserFriend } from './entities/user-friend.entity';
 import { UserBlock } from './entities/user-block.entity';
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
+import { ChatsModule } from 'src/chats/chats.module';
+import { ChatsService } from 'src/chats/chats.service';
+import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
+import { ChannelMember } from 'src/chats/entities/channel-member.entity';
+import { ChatBan } from 'src/chats/entities/chat-ban.entity';
+import { ChatLog } from 'src/chats/entities/chat-log.entity';
+import { ChatMute } from 'src/chats/entities/chat-mute.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([UserFriend]),
-    TypeOrmModule.forFeature([UserBlock]),
-    TypeOrmModule.forFeature([Player]),
-    TypeOrmModule.forFeature([UserGameRecord])],
+    ChatsModule,
+    TypeOrmModule.forFeature([ UserFriend,
+      UserBlock,
+      Player,
+      UserGameRecord,
+      ChatLog,
+      ChatMute,
+      ChatBan,
+      ChannelMember,
+      ChannelConfig])],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, ChatsService],
 })
 export class UsersModule {}
