@@ -6,12 +6,19 @@ import { ChatLog } from './entities/chat-log.entity';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity';
 import { ChannelListDto } from '../users/dtos/channel-list.dto';
+import { ChatDto } from './dtos/chat.dto';
 
 @ApiTags('Chats')
 @Controller('chats')
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) { }
 
+  @ApiOperation({ summary: '채팅정보 조회 API'})
+    @ApiOkResponse({ description: 'Ok', type: ChatDto, isArray: true })
+    @Get('/:channelId')
+    async readChatInfo(@Param('channelId') channel: number): Promise<ChatDto> {
+      return (this.chatsService.readChatInfo(channel));
+  }
 
   @ApiOperation({ summary: '채팅내역 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: ChatLog, isArray: true })
