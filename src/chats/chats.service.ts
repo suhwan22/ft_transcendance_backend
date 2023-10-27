@@ -6,6 +6,7 @@ import { Repository } from 'typeorm';
 import { ChatMute } from './entities/chat-mute.entity';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity'
+import { ChatDto } from './dtos/chat.dto';
 
 @Injectable()
 export class ChatsService {
@@ -165,5 +166,28 @@ export class ChatsService {
 
   async deleteFriendList(channel: number): Promise<void> {
     await this.chatMuteRepository.delete({ channel });
+  }
+
+  /**
+   * 
+   * API SERVICE FUNCTION
+   * 
+   */
+
+  async readChatInfo(channel: number): Promise<ChatDto> {
+    const chatDto = new ChatDto();
+    const channelConfig = await this.readOneChannelConfig(channel);
+
+    chatDto.id = channelConfig.id;
+    chatDto.title = channelConfig.title;
+    chatDto.date = channelConfig.date;
+    chatDto.limitUser = channelConfig.limit;
+    chatDto.isPublic = channelConfig.public;
+    chatDto.chatLog = await this.readChatLogList(channel);
+    chatDto.memberList = await this.readOneChannelMember(channel);
+    chatDto.banList = await this.readBanList(channel);
+    chatDto.muteList = await this.readMuteList(channel);
+
+    return (chatDto);
   }
 }
