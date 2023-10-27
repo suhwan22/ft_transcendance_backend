@@ -16,6 +16,7 @@ import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
 import { ChatsModule } from 'src/chats/chats.module';
 import { ChatsService } from 'src/chats/chats.service';
+import { FriendRequest } from 'src/users/entities/friend-request.entity';
 
 @Module({
   imports: [
@@ -30,7 +31,8 @@ import { ChatsService } from 'src/chats/chats.service';
                               ChatMute,
                               ChatBan,
                               ChannelMember,
-                              ChannelConfig])],
+                              ChannelConfig,
+                              FriendRequest])],
   controllers: [GamesController],
   providers: [GamesService, UsersService, ChatsService]
 })
