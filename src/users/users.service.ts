@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Player } from './entities/player.entity';
@@ -10,6 +10,7 @@ import { ChannelListDto } from './dtos/channel-list.dto';
 import { ChatsService } from 'src/chats/chats.service';
 import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
 import { FriendRequest } from './entities/friend-request.entity';
+import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 
 @Injectable()
 export class UsersService {
@@ -24,7 +25,8 @@ export class UsersService {
     private userFriendRepository: Repository<UserFriend>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
-    
+
+    @Inject(forwardRef(() => ChatsService))
     private readonly chatsService: ChatsService
   ) {}
 
@@ -227,22 +229,9 @@ export class UsersService {
     return (userDto);
   }
 
-  async readChannelList(user: number): Promise<ChannelListDto> {
-    const channelListDto = new ChannelListDto();
+  async readChannelList(userId: number): Promise<ChannelMember[]> {
+    const user = await this.readOnePlayer(userId);
     const userChannelList = await this.chatsService.readUserChannel(user);
-    var id: number;
-    var config: ChannelConfig;
-    var channelList: { userId: number, name: string }[] = [];
-
-    for (const idx of userChannelList) {
-      id = idx.channel;
-      console.log(id);
-      config = await this.chatsService.readOneChannelConfig(id);
-      channelList.push({ userId: id, name: config.title });
-    }
-
-    channelListDto.channelList = channelList;
-    //dmList: { userId: number, name: string }[];
-    return (channelListDto);
+    return (userChannelList);
   }
 }

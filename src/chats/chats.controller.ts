@@ -1,24 +1,25 @@
 import { Body, Controller, Delete, Get, Param, Post, Query, NotFoundException, Put } from '@nestjs/common';
-import { ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ChatsService } from './chats.service';
 import { ChatBan } from './entities/chat-ban.entity';
 import { ChatLog } from './entities/chat-log.entity';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity';
-import { ChannelListDto } from '../users/dtos/channel-list.dto';
-import { ChatDto } from './dtos/chat.dto';
+import { ChatLogRequestDto } from './dtos/chat-log.request.dto';
+import { ChatMuteBanRequestDto } from './dtos/chat-mute-ban.request.dto';
+import { ChannelMemberRequestDto } from './dtos/channel-member.request.dto';
+import { ChannelConfigRequestDto } from './dtos/channel-config.request.dto';
 
 @ApiTags('Chats')
 @Controller('chats')
 export class ChatsController {
   constructor(private readonly chatsService: ChatsService) { }
 
-  @ApiOperation({ summary: '채팅정보 조회 API'})
-    @ApiOkResponse({ description: 'Ok', type: ChatDto, isArray: true })
-    @Get('/:channelId')
-    async readChatInfo(@Param('channelId') channel: number): Promise<ChatDto> {
-      return (this.chatsService.readChatInfo(channel));
-  }
+  /**
+   * 
+   * 채팅 내역 API
+   * 
+   */
 
   @ApiOperation({ summary: '채팅내역 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: ChatLog, isArray: true })
@@ -27,23 +28,33 @@ export class ChatsController {
     return (this.chatsService.readChatLogList(channel));
   }
 
-  @ApiBody({ type: ChatLog })
+  @ApiBody({ type: ChatLogRequestDto })
   @ApiOperation({ summary: '채팅내역 저장 API' })
   @ApiCreatedResponse({ description: 'Created', type: ChatLog })
   @Post('/logs')
-  async createChatLogInfo(@Body() chatLog: ChatLog): Promise<ChatLog> {
+  async createChatLogInfo(@Body() chatLog: Partial<ChatLogRequestDto>): Promise<ChatLog> {
     return (this.chatsService.createChatLogInfo(chatLog));
+  }
+
+  @ApiBody({ type: ChatLogRequestDto })
+  @ApiOperation({ summary: '채팅내역 수정 API' })
+  @ApiCreatedResponse({ description: 'Created', type: ChatLog })
+  @Put('/logs/:id')
+  async updateChatLogInfo(@Param() id: number, @Body() chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
+    return (this.chatsService.updateCatLogInfo(id, chatLogRequest));
   }
 
   @ApiOperation({ summary: '채팅내역 삭제 API' })
   @ApiOkResponse({ description: 'Ok' })
-  @Delete('/logs/:channelId')
-  async deleteChatLogList(@Param('channelId') channel: number): Promise<void> {
-    await (this.chatsService.deleteCatLogList(channel));
+  @Delete('/logs/:id')
+  async deleteChatLogList(@Param('id') id: number): Promise<void> {
+    await (this.chatsService.deleteCatLogInfo(id));
   }
 
   /**
+   * 
    * 채팅 밴 API
+   * 
    */
 
   @ApiOperation({ summary: '채팅 밴 목록 조회 API' })
@@ -53,37 +64,35 @@ export class ChatsController {
     return (this.chatsService.readBanList(channel));
   }
 
-  @ApiBody({ type: ChatBan })
+  @ApiBody({ type: ChatMuteBanRequestDto })
   @ApiOperation({ summary: '채팅 밴 추가 API' })
   @ApiCreatedResponse({ description: 'success', type: ChatBan })
   @Post('/bans')
-  async createBanInfo(@Body() ban: ChatBan): Promise<ChatBan> {
+  async createBanInfo(@Body() ban: ChatMuteBanRequestDto): Promise<ChatBan> {
     return (this.chatsService.createBanInfo(ban));
   }
 
   @ApiOperation({ summary: '채팅 밴 해제 API' })
   @ApiOkResponse({ description: 'Ok' })
-  @ApiQuery({ name: 'channel', type: 'number' })
-  @ApiQuery({ name: 'user', type: 'number' })
   @Delete('/bans')
-  async deleteBanInfo(@Query('channel') channel: number, @Query('user') user: number): Promise<void> {
-    await (this.chatsService.deleteBanInfo(channel, user));
+  async deleteBanInfo(@Param('id') id: number): Promise<void> {
+    await (this.chatsService.deleteBanInfo(id));
   }
 
   /**
-   * channel configs API
+   * 
+   * 채팅 정보 API
+   * 
    */
 
-  //get all channelConfigs
-  @ApiOperation({ summary: '모든 channel 및 각 channel 옵션 조회 API' })
+  @ApiOperation({ summary: '모든 채팅정보 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: ChannelConfig, isArray: true })
   @Get('configs')
   async readAllChannelConfig(): Promise<ChannelConfig[]> {
     return (this.chatsService.readAllChannelConfig());
   }
 
-  //get channelConfigs by id
-  @ApiOperation({ summary: 'channel 및 해당 channel 옵션 조회 API' })
+  @ApiOperation({ summary: '채팅정보 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: ChannelConfig })
   @Get('configs/:id')
   async readOneChannelConfig(@Param('id') id: number): Promise<ChannelConfig> {
@@ -94,29 +103,24 @@ export class ChatsController {
     return (user);
   }
 
-  //create channelConfigs
-  @ApiBody({ type: ChannelConfig })
-  @ApiOperation({ summary: 'channel 추가 API' })
+  @ApiBody({ type: ChannelConfigRequestDto })
+  @ApiOperation({ summary: '채팅정보 생성 API' })
   @ApiCreatedResponse({ description: 'success', type: ChannelConfig })
   @Post('configs')
-  async createChannelConfig(@Body() user: ChannelConfig): Promise<ChannelConfig> {
+  async createChannelConfig(@Body() user: ChannelConfigRequestDto): Promise<ChannelConfig> {
     return (this.chatsService.createChannelConfig(user));
   }
 
-  //update channelConfigs
-  @ApiBody({ type: ChannelConfig })
-  @ApiOperation({ summary: 'chennel 옵션 변경 API' })
+  @ApiBody({ type: ChannelConfigRequestDto })
+  @ApiOperation({ summary: '채팅정보 수정 API' })
   @ApiCreatedResponse({ description: 'success', type: ChannelConfig })
   @Put('configs/:id')
-  async updateChannelConfigInfo(@Param('id') id: number, @Body() user: ChannelConfig): Promise<any> {
+  async updateChannelConfigInfo(@Param('id') id: number, @Body() user: ChannelConfigRequestDto): Promise<any> {
     return (this.chatsService.updateChannelConfigInfo(id, user));
   }
 
-  //delete channelConfigs
-  @ApiOperation({ summary: 'channel 제거 API' })
+  @ApiOperation({ summary: '채팅정보 삭제 API' })
   @ApiOkResponse({ description: 'Ok' })
-  // @ApiQuery({ name: 'channel', type: 'number' })
-  // @ApiQuery({ name: 'user', type: 'number' }) // 현재는 {id}로 만 제거되는 상태
   @Delete('configs/:id')
   async delete(@Param('id') id: number): Promise<any> {
     const user = await this.chatsService.readOneChannelConfig(id);
@@ -126,16 +130,20 @@ export class ChatsController {
     return (this.chatsService.deleteChannelConfig(id));
   }
 
-  //get all channelMembers
-  @ApiOperation({ summary: '모든 channel-member list 조회 API' })
+  /**
+   * 
+   * 채팅인원 API 
+   * 
+   */
+
+  @ApiOperation({ summary: '모든 채팅인원 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: ChannelMember, isArray: true })
   @Get('members')
   async readAllChannelMember(): Promise<ChannelMember[]> {
     return (this.chatsService.readAllChannelMember());
   }
 
-  //get channelMembers by id
-  @ApiOperation({ summary: '특정 channel에 속한 member 조회 API' })
+  @ApiOperation({ summary: '채팅인원 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: ChannelMember, isArray: true })
   @Get('members/:id')
   async readOneChannelMember(@Param('id') channel: number): Promise<ChannelMember[]> {
@@ -146,29 +154,16 @@ export class ChatsController {
     return (user);
   }
 
-  //create channelMembers
-  @ApiBody({ type: ChannelMember })
-  @ApiOperation({ summary: 'channel-member 추가 API' })
+  @ApiBody({ type: ChannelMemberRequestDto })
+  @ApiOperation({ summary: '채팅인원 추가 API' })
   @ApiCreatedResponse({ description: 'success', type: ChannelMember })
   @Post('members')
-  async createChannelMember(@Body() user: ChannelMember): Promise<ChannelMember> {
+  async createChannelMember(@Body() user: ChannelMemberRequestDto): Promise<ChannelMember> {
     return (this.chatsService.createChannelMember(user));
   }
 
-  //update channelMembers
-  @ApiBody({ type: ChannelMember })
-  @ApiOperation({ summary: 'channel-member 정보 변경 API' })
-  @ApiCreatedResponse({ description: 'success', type: ChannelMember })
-  @Put('members/:id')
-  async updateChannelMemberInfo(@Param('id') id: number, @Body() user: ChannelMember): Promise<any> {
-    return (this.chatsService.updateChannelMemberInfo(id, user));
-  }
-
-  //delete channelMembers
-  @ApiOperation({ summary: 'channel-member 제거 API' })
+  @ApiOperation({ summary: '채팅인원 제거 API' })
   @ApiOkResponse({ description: 'Ok' })
-  // @ApiQuery({ name: 'channel', type: 'number' })
-  // @ApiQuery({ name: 'user', type: 'number' }) // 현재는 {id}로 만 제거되는 상태
   @Delete('members/:id')
   async deleteChannelMember(@Param('id') id: number): Promise<any> {
     const user = await this.chatsService.readOneChannelMember(id);

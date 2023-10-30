@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
@@ -17,17 +17,17 @@ import { FriendRequest } from './entities/friend-request.entity';
 
 @Module({
   imports: [
-    ChatsModule,
+    forwardRef(() => ChatsModule),
     TypeOrmModule.forFeature([ UserFriend,
       UserBlock,
       Player,
       UserGameRecord,
+      FriendRequest,
       ChatLog,
       ChatMute,
       ChatBan,
       ChannelMember,
-      ChannelConfig,
-      FriendRequest])],
+      ChannelConfig,]),],
   controllers: [UsersController],
   providers: [UsersService, ChatsService],
 })
