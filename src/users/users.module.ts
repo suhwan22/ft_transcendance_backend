@@ -7,17 +7,20 @@ import { UserBlock } from './entities/user-block.entity';
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { ChatsModule } from 'src/chats/chats.module';
+import { GamesModule } from 'src/games/games.module';
 import { FriendRequest } from './entities/friend-request.entity';
 
 @Module({
   imports: [
     forwardRef(() => ChatsModule),
+    forwardRef(() => GamesModule),
     TypeOrmModule.forFeature([ 
       UserFriend,
       UserBlock,
       Player,
       UserGameRecord,
-      FriendRequest])],
+      FriendRequest
+      ])],
   controllers: [UsersController],
   providers: [UsersService],
   exports: [TypeOrmModule, UsersService]

@@ -7,6 +7,10 @@ import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserDto } from './dtos/user.dto';
 import { FriendRequest } from './entities/friend-request.entity';
+import { UserFriendRequestDto } from './dtos/user-friend.request.dto';
+import { UserBlockRequestDto } from './dtos/user-block.request.dto';
+import { UserGameRecordRequestDto } from './dtos/user-game-record.request.dto';
+import { PlayerRequestDto } from './dtos/player.request.dto';
 import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 
 
@@ -19,14 +23,6 @@ export class UsersController {
    * player API
    */
   
-  //get all player
-  @ApiOperation({ summary: '전체 Player목록 조회 API' })
-  @ApiOkResponse({ description: 'Ok', type: Player, isArray: true })
-  @Get('players')
-  async readAllPlayer(): Promise<Player[]> {
-    return (this.usersService.readAllPlayer());
-  }
-
   //get player by id
   @ApiOperation({ summary: '특정 Player목록 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: Player })
@@ -41,19 +37,19 @@ export class UsersController {
 
   //create player
   @ApiOperation({ summary: 'Player 등록 API' })
-  @ApiBody({ type: Player })
+  @ApiBody({ type: PlayerRequestDto })
   @ApiCreatedResponse({ description: 'success', type: Player })
   @Post('players')
-  async createPlayer(@Body() user: Player): Promise<Player> {
+  async createPlayer(@Body() user: PlayerRequestDto): Promise<Player> {
     return (this.usersService.createPlayer(user));
   }
 
   //update player
   @ApiOperation({ summary: 'Player 수정 API' })
-  @ApiBody({ type: Player })
+  @ApiBody({ type: PlayerRequestDto })
   @ApiCreatedResponse({ description: 'success', type: Player })
   @Put('players/:id')
-  async updatePlayerInfo(@Param('id') id: number, @Body() user: Player): Promise<any> {
+  async updatePlayerInfo(@Param('id') id: number, @Body() user: PlayerRequestDto): Promise<any> {
     return (this.usersService.updatePlayerInfo(id, user));
   }
 
@@ -85,7 +81,7 @@ export class UsersController {
 
   //get usergamerecord by id
   @ApiOperation({ summary: '특정 승점 list 조회 API' }) 
-  @ApiOkResponse({ description: 'Ok', type: UserGameRecord, isArray: true })
+  @ApiOkResponse({ description: 'Ok', type: UserGameRecord})
   @Get('game-records/:id')
   async readOneUserGameRecord(@Param('id') id: number): Promise<UserGameRecord> {
     const user = await this.usersService.readOneUserGameRecord(id);
@@ -96,12 +92,12 @@ export class UsersController {
   }
 
   //create usergamerecord
-  @ApiOperation({ summary: '승정 수정 API' })
-  @ApiBody({ type: UserGameRecord })
+  @ApiOperation({ summary: '승정 등록 API' })
+  @ApiBody({ type: UserGameRecordRequestDto })
   @ApiCreatedResponse({ description: 'success', type: UserGameRecord })
   @Post('game-records')
-  async createUserGameRecord(@Body() user: UserGameRecord): Promise<UserGameRecord> {
-    return (this.usersService.createUserGameRecord(user));
+  async createUserGameRecord(@Body() record: UserGameRecordRequestDto): Promise<UserGameRecord> {
+    return (this.usersService.createUserGameRecord(record));
   }
 
   //update usergamerecord
@@ -113,19 +109,19 @@ export class UsersController {
     return (this.usersService.updateUserGameRecordInfo(id, user));
   }
 
-  //delete usergamerecord
-  @ApiOperation({ summary: '승점 삭제 API' })
-  // @ApiQuery({ name: 'user', type: 'number' })
-  // @ApiQuery({ name: 'friend', type: 'number' })
-  @ApiOkResponse({ description: 'Ok' })
-  @Delete('game-records/:id')
-  async deleteUserGameRecord(@Param('id') id: number): Promise<any> {
-    const user = await this.usersService.readOneUserGameRecord(id);
-    if (!user) {
-      throw new NotFoundException('UserGameRecord does not exist!');
-    }
-    return (this.usersService.deleteUserGameRecord(id));
-  }
+  // //delete usergamerecord
+  // @ApiOperation({ summary: '승점 삭제 API' })
+  // // @ApiQuery({ name: 'user', type: 'number' })
+  // // @ApiQuery({ name: 'friend', type: 'number' })
+  // @ApiOkResponse({ description: 'Ok' })
+  // @Delete('game-records/:id')
+  // async deleteUserGameRecord(@Param('id') id: number): Promise<any> {
+  //   const user = await this.usersService.readOneUserGameRecord(id);
+  //   if (!user) {
+  //     throw new NotFoundException('UserGameRecord does not exist!');
+  //   }
+  //   return (this.usersService.deleteUserGameRecord(id));
+  // }
 
   /** 
    * 유저 친구 API
@@ -139,21 +135,21 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: '친구 등록 API' })
-  @ApiBody({ type: UserFriend })
+  @ApiBody({ type: UserFriendRequestDto })
   @ApiCreatedResponse({ description: 'success', type: UserFriend })
   @Post('/friends')
-  async createFriendInfo(@Body() friend: UserFriend): Promise<UserFriend> {
+  async createFriendInfo(@Body() friend: UserFriendRequestDto): Promise<UserFriend> {
     return (this.usersService.createFriendInfo(friend));
   }
 
-  @ApiOperation({ summary: '친구 삭제 API' })
-  @ApiQuery({ name: 'user', type: 'number' })
-  @ApiQuery({ name: 'friend', type: 'number' })
-  @ApiOkResponse({ description: 'Ok' })
-  @Delete('/friends')
-  async deleteFriendInfo(@Query('user') user: number, @Query('friend') friend: number): Promise<void> {
-    await this.usersService.deleteFriendInfo(user, friend);
-  }
+  // @ApiOperation({ summary: '친구 삭제 API' })
+  // @ApiQuery({ name: 'user', type: 'number' })
+  // @ApiQuery({ name: 'friend', type: 'number' })
+  // @ApiOkResponse({ description: 'Ok' })
+  // @Delete('/friends')
+  // async deleteFriendInfo(@Query('user') user: number, @Query('friend') friend: number): Promise<void> {
+  //   await this.usersService.deleteFriendInfo(user, friend);
+  // }
 
   /** 
    * 유저 차단 API
@@ -167,21 +163,21 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: '차단 등록 API' })
-  @ApiBody({ type: UserBlock })
+  @ApiBody({ type: UserBlockRequestDto })
   @ApiCreatedResponse({ description: 'success', type: UserBlock })
   @Post('/blocks')
-  async createBlockInfo(@Body() block: UserBlock): Promise<UserBlock> {
+  async createBlockInfo(@Body() block: UserBlockRequestDto): Promise<UserBlock> {
     return (this.usersService.createBlockInfo(block));
   }
 
-  @ApiOperation({ summary: '차단 해제 API' })
-  @ApiQuery({ name: 'user', type: 'number' })
-  @ApiQuery({ name: 'target', type: 'number' })
-  @ApiOkResponse({ description: 'Ok' })
-  @Delete('/blocks')
-  async deleteBlockInfo(@Query('user') user: number, @Query('target') target: number): Promise<void> {
-    await this.usersService.deleteBlockInfo(user, target);
-  }
+  // @ApiOperation({ summary: '차단 해제 API' })
+  // @ApiQuery({ name: 'user', type: 'number' })
+  // @ApiQuery({ name: 'target', type: 'number' })
+  // @ApiOkResponse({ description: 'Ok' })
+  // @Delete('/blocks')
+  // async deleteBlockInfo(@Query('user') user: number, @Query('target') target: number): Promise<void> {
+  //   await this.usersService.deleteBlockInfo(user, target);
+  // }
 
   /** 
    * 친구 요청 API
@@ -231,12 +227,13 @@ export class UsersController {
     await this.usersService.deleteFriendRequest(target);
   }
 
-  @ApiOperation({ summary: 'user info 조회 API'})
-  @ApiOkResponse({ description: 'Ok', type: UserDto, isArray: true })
-  @Get(':userId')
-  async readUserInfo(@Param('userId') userId: number): Promise<UserDto> {
-    return (this.usersService.readUserInfo(userId));
-  }
+  // @ApiOperation({ summary: 'user info 조회 API'})
+  // @ApiOkResponse({ description: 'Ok', type: UserDto, isArray: true })
+  // @Get(':userId')
+  // async readUserInfo(@Param('userId') id: number): Promise<UserDto> {
+  //   return (this.usersService.readUserInfo(id));
+  // }
+
 
   @ApiOperation({ summary: 'player가 참여한 channel 조회 API'})
   @ApiOkResponse({ description: 'Ok', type: ChannelMember, isArray: true })

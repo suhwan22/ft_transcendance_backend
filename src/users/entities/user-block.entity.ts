@@ -1,5 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Entity, PrimaryGeneratedColumn, Column, } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, } from "typeorm";
+import { Player } from "./player.entity";
 
 @Entity({ name: "block_list" })
 export class UserBlock {
@@ -10,7 +11,7 @@ export class UserBlock {
   @Column()
   user: number;
 
-  @ApiProperty()
-  @Column()
-  target: number;
+  @ApiProperty({ type: () => Player})
+  @ManyToOne( (type) => Player, (player) => player.blockList)
+  target: Player;
 }
