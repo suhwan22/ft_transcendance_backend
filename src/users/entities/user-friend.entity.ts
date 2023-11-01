@@ -1,5 +1,12 @@
-import { Entity, PrimaryGeneratedColumn, Column, } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
+import { Player } from "./player.entity";
+
+// class temp
+// {
+//   id: number;
+//   name: string;
+// };
 
 @Entity({ name: "friend_list" })
 export class UserFriend {
@@ -10,7 +17,7 @@ export class UserFriend {
   @Column()
   user: number;
 
-  @ApiProperty()
-  @Column()
-  friend: number;
+  @ApiProperty({ type: () => Player})
+  @ManyToOne( (type) => Player, (player) => player.friendList)
+  friend: Player;
 }
