@@ -57,7 +57,8 @@ export class UsersService {
     player.blockList = await this.readBlockList(id);
     player.gameRecord = await this.readOneUserGameRecord(id);
     player.gameHistory = await this.gamesService.readOneGameHistory(id);
-    delete player.gameRecord.user;
+    if (player.gameRecord !== null)
+      delete player.gameRecord.user;
     return (player);
   }
 
@@ -229,7 +230,6 @@ export class UsersService {
   /* [C] FriendRequest 생성 */
   async createFriendRequest(request: Partial<FriendRequest>): Promise<FriendRequest> {
     const newRequest = this.friendRequestRepository.create(request);
-    console.log(newRequest);
     return (this.friendRequestRepository.save(newRequest));
   }
 

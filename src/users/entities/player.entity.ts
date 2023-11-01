@@ -32,7 +32,6 @@ export class Player {
 
   @ApiProperty({ type: UserGameRecord})
   @OneToOne((type) => UserGameRecord)
-  @JoinColumn()
   gameRecord: UserGameRecord;
 
   @ApiProperty({ type: GameHistory, isArray: true })

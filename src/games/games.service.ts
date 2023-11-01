@@ -4,9 +4,7 @@ import { UserGameRecord } from 'src/users/entities/user-game-record.entity';
 import { UsersService } from 'src/users/users.service';
 import { Repository } from 'typeorm';
 import { GameHistory } from './entities/game-history.entity';
-import { UsersService } from 'src/users/users.service';
 import { GameHistoryRequestDto } from './dtos/game-history.request.dto';
-import { Player } from 'src/users/entities/player.entity';
 
 @Injectable()
 export class GamesService {
