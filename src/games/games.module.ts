@@ -4,10 +4,12 @@ import { GamesService } from './games.service';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { GameHistory } from './entities/game-history.entity';
 import { UsersModule } from 'src/users/users.module';
+import { ChatsModule } from 'src/chats/chats.module';
 
 @Module({
   imports: [
     forwardRef(() => (UsersModule)),
+    forwardRef(() => (ChatsModule)),
     TypeOrmModule.forFeature([
     GameHistory])],
   controllers: [GamesController],

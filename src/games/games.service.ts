@@ -1,5 +1,7 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { UserGameRecord } from 'src/users/entities/user-game-record.entity';
+import { UsersService } from 'src/users/users.service';
 import { Repository } from 'typeorm';
 import { GameHistory } from './entities/game-history.entity';
 import { UsersService } from 'src/users/users.service';
@@ -53,4 +55,21 @@ export class GamesService {
   // async deleteGameHistory(id: number): Promise<void> {
   //   await (this.gameHistoryRepository.delete(id));
   // }
+
+  /**
+   * 
+   * API SERVICE FUNCTION
+   * 
+   */
+
+  async readRankInfo(): Promise<UserGameRecord[]> {
+    const records = await this.usersService.readAllUserGameRecord();
+    records.sort((a, b) => {
+      if (a.score === b.score) {
+        return (b.win - a.win);
+      }
+      else return (b.score - a.score);
+    });
+    return (records);
+  }
 }

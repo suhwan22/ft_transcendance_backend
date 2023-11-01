@@ -15,6 +15,7 @@ import { UserFriendRequestDto } from './dtos/user-friend.request.dto';
 import { UserGameRecordRequestDto } from './dtos/user-game-record.request.dto';
 import { PlayerRequestDto } from './dtos/player.request.dto';
 import { GamesService } from 'src/games/games.service';
+import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 
 @Injectable()
 export class UsersService {
@@ -29,7 +30,7 @@ export class UsersService {
     private userFriendRepository: Repository<UserFriend>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
-    
+
     @Inject(forwardRef(() => ChatsService))
     private readonly chatsService: ChatsService,
     @Inject(forwardRef(() => GamesService))
@@ -279,22 +280,9 @@ export class UsersService {
   //   return (userDto);
   // }
 
-  async readChannelList(user: number): Promise<ChannelListDto> {
-    const channelListDto = new ChannelListDto();
+  async readChannelList(userId: number): Promise<ChannelMember[]> {
+    const user = await this.readOnePlayer(userId);
     const userChannelList = await this.chatsService.readUserChannel(user);
-    var id: number;
-    var config: ChannelConfig;
-    var channelList: { userId: number, name: string }[] = [];
-
-    for (const idx of userChannelList) {
-      id = idx.channel;
-      console.log(id);
-      config = await this.chatsService.readOneChannelConfig(id);
-      channelList.push({ userId: id, name: config.title });
-    }
-
-    channelListDto.channelList = channelList;
-    //dmList: { userId: number, name: string }[];
-    return (channelListDto);
+    return (userChannelList);
   }
 }

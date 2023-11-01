@@ -6,12 +6,12 @@ import { ApiBody, ApiCreatedResponse, ApiOperation, ApiTags, ApiQuery, ApiOkResp
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserDto } from './dtos/user.dto';
-import { ChannelListDto } from './dtos/channel-list.dto';
 import { FriendRequest } from './entities/friend-request.entity';
 import { UserFriendRequestDto } from './dtos/user-friend.request.dto';
 import { UserBlockRequestDto } from './dtos/user-block.request.dto';
 import { UserGameRecordRequestDto } from './dtos/user-game-record.request.dto';
 import { PlayerRequestDto } from './dtos/player.request.dto';
+import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 
 
 @ApiTags('Users')
@@ -234,10 +234,11 @@ export class UsersController {
   //   return (this.usersService.readUserInfo(id));
   // }
 
+
   @ApiOperation({ summary: 'player가 참여한 channel 조회 API'})
-  @ApiOkResponse({ description: 'Ok', type: ChannelListDto, isArray: true })
+  @ApiOkResponse({ description: 'Ok', type: ChannelMember, isArray: true })
   @Get('/:userId/channels')
-  async readChatInfo(@Param('UserId') id: number): Promise<ChannelListDto> {
-    return (this.usersService.readChannelList(id));
+  async readChatInfo(@Param('UserId') userId: number): Promise<ChannelMember[]> {
+    return (this.usersService.readChannelList(userId));
   }
 }

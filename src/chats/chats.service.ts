@@ -1,11 +1,17 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { ChatBan } from './entities/chat-ban.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { ChatLog } from './entities/chat-log.entity';
-import { Repository } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { ChatMute } from './entities/chat-mute.entity';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity'
+import { Player } from 'src/users/entities/player.entity';
+import { ChatLogRequestDto } from './dtos/chat-log.request.dto';
+import { UsersService } from 'src/users/users.service';
+import { ChatMuteBanRequestDto } from './dtos/chat-mute-ban.request.dto';
+import { ChannelMemberRequestDto } from './dtos/channel-member.request.dto';
+import { ChannelConfigRequestDto } from './dtos/channel-config.request.dto';
 
 @Injectable()
 export class ChatsService {
@@ -20,10 +26,20 @@ export class ChatsService {
     private chatBanRepository: Repository<ChatBan>,
     @InjectRepository(ChatMute)
     private chatMuteRepository: Repository<ChatMute>,
+
+    @Inject(forwardRef(() => UsersService))
+    private readonly usersService: UsersService,
+    private dataSource: DataSource
   ) {}
 
+  /** 
+   * 
+   * CHANNEL_CONFIG Table CURD 
+   * 
+   */
+
   /* [C] ChannelConfig 생성 */
-  async createChannelConfig(config: Partial<ChannelConfig>): Promise<ChannelConfig> {
+  async createChannelConfig(config: Partial<ChannelConfigRequestDto>): Promise<ChannelConfig> {
     const newchannelConfig = this.channelConfigRepository.create(config);
     return (this.channelConfigRepository.save(newchannelConfig));
   }
@@ -35,11 +51,16 @@ export class ChatsService {
 
   /* [R] 특정 ChannelConfig 조회 */
   async readOneChannelConfig(id: number): Promise<ChannelConfig> {
-    return (this.channelConfigRepository.findOne({ where: { id } }));
+    const channelConfig = await this.channelConfigRepository.findOne({ where: { id }})
+    channelConfig.banList = await this.readBanList(id);
+    channelConfig.chatLogs = await this.readChatLogList(id);
+    channelConfig.memberList = await this.readOneChannelMember(id);
+    channelConfig.muteList = await this.readMuteList(id);
+    return (channelConfig);
   }
 
   /* [U] ChannelConfig info 수정 */
-  async updateChannelConfigInfo(id: number, config: Partial<ChannelConfig>): Promise<ChannelConfig> {
+  async updateChannelConfigInfo(id: number, config: Partial<ChannelConfigRequestDto>): Promise<ChannelConfig> {
     await this.channelConfigRepository.update(id, config);
     return (this.channelConfigRepository.findOne({ where: { id } }));
   }
@@ -49,24 +70,50 @@ export class ChatsService {
     await (this.channelConfigRepository.delete(id));
   }
 
+  /** 
+   * 
+   * CHANNEL_MEMBER Table CURD 
+   * 
+   */
+
   /* [C] ChannelMember 생성 */
-  async createChannelMember(channelMember: Partial<ChannelMember>): Promise<ChannelMember> {
-    const newlist = this.channelMemberRepository.create(channelMember);
-    return (this.channelMemberRepository.save(newlist));
+  async createChannelMember(channelMemberReqeust: Partial<ChannelMemberRequestDto>): Promise<ChannelMember> {
+    const user = await this.usersService.readOnePlayer(channelMemberReqeust.userId);
+    const channel = await this.readOneChannelConfig(channelMemberReqeust.channelId);
+    const channelMember = {
+      user: user,
+      channel: channel,
+      op: channelMemberReqeust.op,
+    }
+    const newChannelMember = this.channelMemberRepository.create(channelMember);
+    return (this.channelMemberRepository.save(newChannelMember));
   }
 
   /* [R] 모든 ChannelMember 조회 */
   async readAllChannelMember(): Promise<ChannelMember[]> {
-    return (this.channelMemberRepository.find());
+    const channelMembers = await this.dataSource
+                                .getRepository(ChannelMember).createQueryBuilder('channel_member')
+                                .leftJoinAndSelect('channel_member.user', 'player')
+                                .leftJoinAndSelect('channel_member.channel', 'channel_config')
+                                .select(['channel_member.id', 'channel_member.op', 'player.id', 'player.name', 'channel_member.date'])
+                                .getMany();
+    return (channelMembers);
   }
 
   /* [R] 특정 Channel{id}에 속한 Member 조회 */
-  async readOneChannelMember(channel: number): Promise<ChannelMember[]> {
-    return (this.channelMemberRepository.find({ where: { channel } }));
+  async readOneChannelMember(channelId: number): Promise<ChannelMember[]> {
+    const channelMembers = await this.dataSource
+                                .getRepository(ChannelMember).createQueryBuilder('channel_member')
+                                .leftJoinAndSelect('channel_member.user', 'player')
+                                .leftJoinAndSelect('channel_member.channel', 'channel_config')
+                                .select(['channel_member.id', 'channel_member.op', 'player.id', 'player.name', 'channel_member.date'])
+                                .where('channel_config.id = :id', { id: channelId })
+                                .getMany();
+    return (channelMembers);
   }
 
   /* [R] 특정 User{id}에 속한 Member 조회 */
-  async readUserChannel(user: number): Promise<ChannelMember[]> {
+  async readUserChannel(user: Player): Promise<ChannelMember[]> {
     return (this.channelMemberRepository.find({ where: { user } }));
   }
 
@@ -87,22 +134,43 @@ export class ChatsService {
    * 
    */
 
-  async readChatLogList(channel: number): Promise<ChatLog[]> {
-    return (this.chatLogRepository.find({ where: { channel } }));
+  async readChatLogList(channelId: number): Promise<ChatLog[]> {
+    const chatLogs = await this.dataSource
+                                      .getRepository(ChatLog).createQueryBuilder('chat_log')
+                                      .leftJoinAndSelect('chat_log.user', 'player')
+                                      .leftJoinAndSelect('chat_log.channel', 'channel_config')
+                                      .select(['chat_log.id', 'chat_log.content', 'player.id', 'player.name', 'player.avatar', 'chat_log.date'])
+                                      .where('channel_config.id = :id', { id: channelId })
+                                      .getMany();
+    return (chatLogs);
   }
 
-  async createChatLogInfo(chatLog: Partial<ChatLog>): Promise<ChatLog> {
+  async createChatLogInfo(chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
+    const user = await this.usersService.readOnePlayer(chatLogRequest.userId);
+    const channel = await this.readOneChannelConfig(chatLogRequest.channelId);
+    const chatLog = {
+      user: user,
+      channel: channel,
+      content: chatLogRequest.content,
+    }
     const newChatLog = this.chatLogRepository.create(chatLog);
     return (this.chatLogRepository.save(newChatLog));
   }
 
-  async updateCatLogInfo(id: number, chatLog: Partial<ChatLog>): Promise<ChatLog> {
+  async updateCatLogInfo(id: number, chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
+    const user = await this.usersService.readOnePlayer(chatLogRequest.userId);
+    const channel = await this.readOneChannelConfig(chatLogRequest.channelId);
+    const chatLog = {
+      user: user,
+      channel: channel,
+      content: chatLogRequest.content,
+    }
     await this.chatLogRepository.update(id, chatLog);
     return (this.chatLogRepository.findOne({ where: { id } }));
   }
 
-  async deleteCatLogList(channel: number): Promise<void> {
-    await this.chatLogRepository.delete({ channel });
+  async deleteCatLogInfo(id: number): Promise<void> {
+    await this.chatLogRepository.delete({ id });
   }
 
   /** 
@@ -111,13 +179,26 @@ export class ChatsService {
    * 
    */
 
-  async readBanList(channel: number): Promise<ChatBan[]> {
-    return (this.chatBanRepository.find({ where: { channel } }));
+  async readBanList(channelId: number): Promise<ChatBan[]> {
+    const banList = await this.dataSource
+                                      .getRepository(ChatBan).createQueryBuilder('ban_list')  
+                                      .leftJoinAndSelect('ban_list.user', 'player')
+                                      .leftJoinAndSelect('ban_list.channel', 'channel_config')
+                                      .select(['ban_list.id', 'player.id', 'player.name'])
+                                      .where('channel_config.id = :id', { id: channelId })
+                                      .getMany();
+    return (banList);
   }
 
-  async createBanInfo(ban: Partial<ChatBan>): Promise<ChatBan> {
-      const newBan = this.chatBanRepository.create(ban);
-      return (this.chatBanRepository.save(newBan));
+  async createBanInfo(chatBanRequest: Partial<ChatMuteBanRequestDto>): Promise<ChatBan> {
+    const user = await this.usersService.readOnePlayer(chatBanRequest.userId);
+    const channel = await this.readOneChannelConfig(chatBanRequest.channelId);
+    const ban = {
+      user: user,
+      channel: channel,
+    }
+    const newBan = this.chatBanRepository.create(ban);
+    return (this.chatBanRepository.save(newBan));
   }
 
   async updateBanInfo(id: number, ban: Partial<ChatBan>): Promise<ChatBan> {
@@ -125,15 +206,11 @@ export class ChatsService {
       return (this.chatBanRepository.findOne({ where: { id } }));
   }
 
-  async deleteBanInfo(channel: number, user: number): Promise<void> {
-      const deleteBan = await this.chatBanRepository.findOne({ where: { channel, user } });
+  async deleteBanInfo(id: number): Promise<void> {
+      const deleteBan = await this.chatBanRepository.findOne({ where: { id } });
       if (!deleteBan)
           return ;
       await this.chatBanRepository.remove(deleteBan);
-  }
-
-  async deleteBanList(channel: number): Promise<void> {
-      await this.chatBanRepository.delete({ channel });
   }
 
   /**
@@ -142,11 +219,24 @@ export class ChatsService {
    * 
    */
 
-  async readMuteList(channel: number): Promise<ChatMute[]> {
-    return (this.chatMuteRepository.find({ where: { channel } }));
+  async readMuteList(channelId: number): Promise<ChatMute[]> {
+    const muteList = await this.dataSource
+                                .getRepository(ChatMute).createQueryBuilder('mute_list')  
+                                .leftJoinAndSelect('mute_list.user', 'player')
+                                .leftJoinAndSelect('mute_list.channel', 'channel_config')
+                                .select(['mute_list.id', 'player.id', 'player.name'])
+                                .where('channel_config.id = :id', { id: channelId })
+                                .getMany();
+    return (muteList);
   }
 
-  async createMuteInfo(mute: Partial<ChatMute>): Promise<ChatMute> {
+  async createMuteInfo(chatMuteRequest: Partial<ChatMuteBanRequestDto>): Promise<ChatMute> {
+    const user = await this.usersService.readOnePlayer(chatMuteRequest.userId);
+    const channel = await this.readOneChannelConfig(chatMuteRequest.channelId);
+    const mute = {
+      user: user,
+      channel: channel,
+    }
     const newMute = this.chatMuteRepository.create(mute);
     return (this.chatMuteRepository.save(newMute));
   }
@@ -156,14 +246,10 @@ export class ChatsService {
     return (this.chatMuteRepository.findOne({ where: { id } }));
   }
 
-  async deleteMutenfo(channel: number, user: number): Promise<void> {
-    const deleteMute = await this.chatMuteRepository.findOne({ where: { channel, user} });
+  async deleteMutenfo(id: number): Promise<void> {
+    const deleteMute = await this.chatMuteRepository.findOne({ where: { id } });
     if (!deleteMute)
       return ;
     await this.chatMuteRepository.remove(deleteMute);
-  }
-
-  async deleteFriendList(channel: number): Promise<void> {
-    await this.chatMuteRepository.delete({ channel });
   }
 }

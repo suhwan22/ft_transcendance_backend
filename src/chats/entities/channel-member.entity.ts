@@ -1,23 +1,29 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, } from "typeorm";
+import { Player } from "src/users/entities/player.entity";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, OneToOne, JoinColumn, ManyToOne, } from "typeorm";
+import { ChannelConfig } from "./channel-config.entity";
 
 @Entity({ name: "channel_member" })
 export class ChannelMember {
+  @ApiProperty()
   @PrimaryGeneratedColumn()
   id: number;
 
-  @ApiProperty()
-  @Column()
-  channel: number;
+  @ApiProperty({ type: () => ChannelConfig })
+  @ManyToOne(() => ChannelConfig, (channelConfig) => channelConfig.memberList)
+  @JoinColumn({ name: 'channel_id' })
+  channel: ChannelConfig;
 
   @ApiProperty()
-  @Column()
-  user: number;
+  @OneToOne(() => Player)
+  @JoinColumn({ name: 'user_id' })
+  user: Player;
 
   @ApiProperty()
   @Column()
   op: boolean;
 
+  @ApiProperty()
   @CreateDateColumn()
   date: Date;
 }
