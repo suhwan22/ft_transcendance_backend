@@ -17,7 +17,7 @@ export class GamesController {
   //get history by id
   @ApiOperation({ summary: '특정 게임 기록 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: GameHistory, isArray: true})
-  @Get('history/:id')
+  @Get('historys/:id')
   async readOneHistory(@Param('id') id: number): Promise<GameHistory[]> {
     const history = await this.gamesService.readOneGameHistory(id);
     if (!history) {
@@ -30,7 +30,7 @@ export class GamesController {
   @ApiBody({ type: GameHistoryRequestDto })
   @ApiOperation({ summary: '게임 기록 추가 API' })
   @ApiCreatedResponse({ description: 'success', type: GameHistory })
-  @Post('history')
+  @Post('historys')
   async createHistory(@Body() game: GameHistoryRequestDto): Promise<GameHistory> {
     return (this.gamesService.createGameHistory(game));
   }
@@ -39,7 +39,7 @@ export class GamesController {
   @ApiBody({ type: GameHistory })
   @ApiOperation({ summary: '게임 기록 내용 변경 API' })
   @ApiCreatedResponse({ description: 'success', type: GameHistory })
-  @Put('history/:id')
+  @Put('historys/:id')
   async updateGameHistoryInfo(@Param('id') id: number, @Body() game: GameHistory): Promise<any> {
     return (this.gamesService.updateGameHistoryInfo(id, game));
   }
