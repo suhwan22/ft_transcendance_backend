@@ -2,12 +2,15 @@ import { HttpService } from '@nestjs/axios';
 import { Injectable } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { firstValueFrom } from 'rxjs';
+import { PlayerRequestDto } from 'src/users/dtos/player.request.dto';
 import { Player } from 'src/users/entities/player.entity';
+import { UsersService } from 'src/users/users.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
+    private usersService: UsersService,
   ) {}
 
   async getJwtToken(user: Player) {
@@ -16,24 +19,23 @@ export class AuthService {
     return (token);
   }
 
-  async logIn(user) {
-    console.log(user.id);
-    console.log(user.login);
-    console.log(user.first_name);
-    console.log(user.last_name);
-    console.log(user.image);
-    return "success";
-    // const user = new Player();
-    // user.id = 1;
-    // user.name = 'sehjang';
-    // const token = await this.getJwtToken(user);
-    // return {
-    //   token: token,
-    //   domain: 'localhost',
-    //   path: '/',
-    //   httpOnly: true,
-    //   maxAge: 10 * 60 * 1000,
-    // };
+  async logIn(data) {
+    let user = await this.usersService.readOnePurePlayer(data.id);
+    if (!user) {
+      const newPlayer = { id: data.id,
+                          name: data.login,
+                          avatar: data.image.link,
+                          status: 1};
+      user = await this.usersService.createPlayer(newPlayer);
+    }
+    const token = await this.getJwtToken(user);
+    return {
+      token: token,
+      domain: 'localhost',
+      path: '/',
+      httpOnly: true,
+      maxAge: 10 * 60 * 1000,
+    };
   }
 
   async logOut() {
