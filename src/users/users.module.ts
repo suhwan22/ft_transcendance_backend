@@ -9,6 +9,7 @@ import { UserGameRecord } from './entities/user-game-record.entity';
 import { ChatsModule } from 'src/chats/chats.module';
 import { GamesModule } from 'src/games/games.module';
 import { FriendRequest } from './entities/friend-request.entity';
+import { UserToken } from './entities/user-token.entity';
 
 @Module({
   imports: [
@@ -19,7 +20,8 @@ import { FriendRequest } from './entities/friend-request.entity';
       UserBlock,
       Player,
       UserGameRecord,
-      FriendRequest
+      FriendRequest,
+      UserToken,
       ])],
   controllers: [UsersController],
   providers: [UsersService],

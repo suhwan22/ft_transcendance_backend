@@ -16,6 +16,8 @@ import { UserGameRecordRequestDto } from './dtos/user-game-record.request.dto';
 import { PlayerRequestDto } from './dtos/player.request.dto';
 import { GamesService } from 'src/games/games.service';
 import { ChannelMember } from 'src/chats/entities/channel-member.entity';
+import { UserToken } from './entities/user-token.entity';
+import { compare, hash } from 'bcrypt';
 
 @Injectable()
 export class UsersService {
@@ -30,13 +32,15 @@ export class UsersService {
     private userFriendRepository: Repository<UserFriend>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
+    @InjectRepository(UserToken)
+    private userTokenRepository: Repository<UserToken>,
 
     @Inject(forwardRef(() => ChatsService))
     private readonly chatsService: ChatsService,
     @Inject(forwardRef(() => GamesService))
     private readonly gamesService: GamesService,
     private dataSource: DataSource
-  ) {}
+  ) { }
 
   /**
    * 
@@ -51,8 +55,8 @@ export class UsersService {
   }
 
   /* [R] 특정 Player 조회 */
-  async readOnePlayer(id: number) : Promise<Player> {
-    const player = await this.playerRepository.findOne({where: { id }});
+  async readOnePlayer(id: number): Promise<Player> {
+    const player = await this.playerRepository.findOne({ where: { id } });
     player.friendList = await this.readFriendList(id);
     player.blockList = await this.readBlockList(id);
     player.gameRecord = await this.readOneUserGameRecord(id);
@@ -63,8 +67,8 @@ export class UsersService {
   }
 
   /* gamesService 용 readOnePlayer */
-  async readOnePurePlayer(id: number) : Promise<Player> {
-    const player = await this.playerRepository.findOne({where: { id }});
+  async readOnePurePlayer(id: number): Promise<Player> {
+    const player = await this.playerRepository.findOne({ where: { id } });
     return (player);
   }
 
@@ -104,14 +108,14 @@ export class UsersService {
   }
 
   /* [R] 특정 UserGameRecord 조회 */
-  async readOneUserGameRecord(user: number) : Promise<UserGameRecord> {
-    const recordList = await this.dataSource 
-                                      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
-                                      .leftJoinAndSelect('win_loss_record.user', 'user')
-                                      .select(['win_loss_record.id', 'user.id', 'user.name'
-                                      , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.score'])
-                                      .where('win_loss_record.user = :id', { id: user })
-                                      .getOne();
+  async readOneUserGameRecord(user: number): Promise<UserGameRecord> {
+    const recordList = await this.dataSource
+      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
+      .leftJoinAndSelect('win_loss_record.user', 'user')
+      .select(['win_loss_record.id', 'user.id', 'user.name'
+        , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.score'])
+      .where('win_loss_record.user = :id', { id: user })
+      .getOne();
     return (recordList)
   }
 
@@ -133,13 +137,13 @@ export class UsersService {
    */
 
   // 유저 친구리스트 조회 메서드
-  async readFriendList(user: number) : Promise<UserFriend[]> {
-    const friendList = await this.dataSource 
-                                      .getRepository(UserFriend).createQueryBuilder('friend_list')
-                                      .leftJoinAndSelect('friend_list.friend', 'friend')
-                                      .select(['friend_list.id', 'friend.id', 'friend.name'])
-                                      .where('friend_list.user = :id', { id: user })
-                                      .getMany();
+  async readFriendList(user: number): Promise<UserFriend[]> {
+    const friendList = await this.dataSource
+      .getRepository(UserFriend).createQueryBuilder('friend_list')
+      .leftJoinAndSelect('friend_list.friend', 'friend')
+      .select(['friend_list.id', 'friend.id', 'friend.name'])
+      .where('friend_list.user = :id', { id: user })
+      .getMany();
     return (friendList)
   }
 
@@ -180,13 +184,13 @@ export class UsersService {
    */
 
   // 유저 블락리스트 조회 메서드
-  async readBlockList(user: number) : Promise<UserBlock[]> {
-    const blockList = await this.dataSource 
-                                      .getRepository(UserBlock).createQueryBuilder('block_list')
-                                      .leftJoinAndSelect('block_list.target', 'target')
-                                      .select(['block_list.id', 'target.id', 'target.name'])
-                                      .where('block_list.user = :id', { id: user })
-                                      .getMany();
+  async readBlockList(user: number): Promise<UserBlock[]> {
+    const blockList = await this.dataSource
+      .getRepository(UserBlock).createQueryBuilder('block_list')
+      .leftJoinAndSelect('block_list.target', 'target')
+      .select(['block_list.id', 'target.id', 'target.name'])
+      .where('block_list.user = :id', { id: user })
+      .getMany();
     return (blockList)
   }
 
@@ -284,5 +288,34 @@ export class UsersService {
     const user = await this.readOnePlayer(userId);
     const userChannelList = await this.chatsService.readUserChannel(user);
     return (userChannelList);
+  }
+
+  async createUserToken(userId: number): Promise<UserToken> {
+    const userToken = { userId: userId, refreshToken: null };
+    const newUserToken = this.userTokenRepository.create(userToken);
+    return (this.userTokenRepository.save(newUserToken));
+  }
+
+  async updateUserToken(refreshToken: string, userId: number): Promise<UserToken> {
+    let hashToken = null;
+    if (refreshToken)
+      hashToken = await hash(refreshToken, 10);
+    this.userTokenRepository.update(userId, { refreshToken: hashToken });
+    return (this.readUserToken(userId));
+  }
+
+  async readUserToken(userId: number): Promise<UserToken> {
+    return (this.userTokenRepository.findOne({ where: { userId } }));
+  }
+
+  async deleteUserToken(userId: number): Promise<void> {
+    this.userTokenRepository.delete(userId);
+  }
+
+  async compareRefreshToken(refreshToken: string, id: number) {
+    const userToken = await this.readUserToken(id);
+    const isEqure = await compare(refreshToken, userToken.refreshToken);
+    if (isEqure)
+      return (this.readOnePurePlayer(id));
   }
 }

@@ -24,7 +24,7 @@ export class OAuth2Strategy extends PassportStrategy(Strategy, 'oauth') {
     try {
       const { data } = await lastValueFrom(req);
       if (!data) throw new DOMException();
-      return data;
+      return (data);
     } catch (error) {}
 
     throw new UnauthorizedException();
