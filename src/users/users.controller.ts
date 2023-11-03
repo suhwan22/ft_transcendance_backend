@@ -189,7 +189,6 @@ export class UsersController {
   @ApiCreatedResponse({ description: 'success', type: FriendRequest })
   @Post('friend-requests')
   async createFriendRequest(@Body() request: Partial<FriendRequest>): Promise<FriendRequest> {
-    console.log(request);
     return this.usersService.createFriendRequest(request);
   }
 
@@ -234,8 +233,7 @@ export class UsersController {
   //   return (this.usersService.readUserInfo(id));
   // }
 
-
-  @ApiOperation({ summary: 'player가 참여한 channel 조회 API'})
+  @ApiOperation({ summary: '유저 채팅방 리스트 조회 API'})
   @ApiOkResponse({ description: 'Ok', type: ChannelMember, isArray: true })
   @Get('/:userId/channels')
   async readChatInfo(@Param('UserId') userId: number): Promise<ChannelMember[]> {

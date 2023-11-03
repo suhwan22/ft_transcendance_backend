@@ -14,8 +14,8 @@ export class ChatBan {
   @JoinColumn({ name: 'channel_id' })
   channel: ChannelConfig;
 
-  @ApiProperty()
-  @OneToOne(() => Player)
+  @ApiProperty({ type: () => Player })
+  @ManyToOne(() => Player)
   @JoinColumn({ name: 'user_id' })
   user: Player;
 }

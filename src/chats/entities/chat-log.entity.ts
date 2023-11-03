@@ -14,7 +14,7 @@ export class ChatLog {
   @JoinColumn({ name: 'channel_id' })
   channel: ChannelConfig;
 
-  @ApiProperty()
+  @ApiProperty({ type: () => Player })
   @ManyToOne(() => Player)
   @JoinColumn({ name: 'user_id' })
   user: Player;
