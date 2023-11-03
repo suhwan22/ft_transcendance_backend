@@ -5,6 +5,7 @@ import { Request, Response } from 'express';
 import { OauthGuard } from './guards/oauth.guard';
 import { UsersService } from 'src/users/users.service';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
+import { Player } from 'src/users/entities/player.entity';
 
 @Controller('auth')
 export class AuthController {
@@ -13,12 +14,8 @@ export class AuthController {
     private usersService: UsersService,
     ) { }
 
-  @Get()
   @UseGuards(OauthGuard)
-  ftOauth() {}
-
   @Get('/login')
-  @UseGuards(OauthGuard)
   async login(@Req() request, @Res({ passthrough: true }) response: Response) {
     const user = await this.authService.getUserWithOauth(request.user);
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user);
@@ -31,13 +28,11 @@ export class AuthController {
     return (user);
   }
 
-  @UseGuards(JwtRefreshGuard)
+  @UseGuards(JwtAuthGuard)
   @Get('/logout')
   async logout(@Req() request, @Res({ passthrough: true }) response: Response) {
     const { accessOption, refreshOption } = await this.authService.removeCookieWithTokens();
-
-    await this.usersService.updateUserToken(null, request.user.id);
-
+    await this.usersService.updateUserToken(null, request.user.userId);
     response.cookie('Authentication', '', accessOption);
     response.cookie('Refresh', '', refreshOption);
   }
@@ -49,6 +44,7 @@ export class AuthController {
   }
 
   
+  @UseGuards(JwtRefreshGuard)
   @Get('refresh')
   async refresh(@Req() request, @Res({ passthrough: true }) response: Response) {
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user);
