@@ -147,11 +147,11 @@ export class ChatsController {
   @ApiOkResponse({ description: 'Ok', type: ChannelMember, isArray: true })
   @Get('members/:id')
   async readOneChannelMember(@Param('id') channel: number): Promise<ChannelMember[]> {
-    const user = await this.chatsService.readOneChannelMember(channel);
-    if (!user) {
+    const channelMembers = await this.chatsService.readOneChannelMember(channel);
+    if (!channelMembers) {
       throw new NotFoundException('ChannelMember does not exist!');
     }
-    return (user);
+    return (channelMembers);
   }
 
   @ApiBody({ type: ChannelMemberRequestDto })

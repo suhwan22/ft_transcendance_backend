@@ -61,6 +61,7 @@ export class UsersService {
     player.blockList = await this.readBlockList(id);
     player.gameRecord = await this.readOneUserGameRecord(id);
     player.gameHistory = await this.gamesService.readOneGameHistory(id);
+    player.channelList = await this.readChannelList(id);
     if (player.gameRecord !== null)
       delete player.gameRecord.user;
     return (player);
@@ -285,8 +286,7 @@ export class UsersService {
   // }
 
   async readChannelList(userId: number): Promise<ChannelMember[]> {
-    const user = await this.readOnePlayer(userId);
-    const userChannelList = await this.chatsService.readUserChannel(user);
+    const userChannelList = await this.chatsService.readUserChannelMemberWithUserId(userId);
     return (userChannelList);
   }
 

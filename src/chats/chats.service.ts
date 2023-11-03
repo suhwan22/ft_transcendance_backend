@@ -59,6 +59,10 @@ export class ChatsService {
     return (channelConfig);
   }
 
+  async readOnePureChannelConfig(id: number): Promise<ChannelConfig> {
+    return (await this.channelConfigRepository.findOne({ where: { id }}));
+  }
+
   /* [U] ChannelConfig info 수정 */
   async updateChannelConfigInfo(id: number, config: Partial<ChannelConfigRequestDto>): Promise<ChannelConfig> {
     await this.channelConfigRepository.update(id, config);
@@ -78,7 +82,7 @@ export class ChatsService {
 
   /* [C] ChannelMember 생성 */
   async createChannelMember(channelMemberReqeust: Partial<ChannelMemberRequestDto>): Promise<ChannelMember> {
-    const user = await this.usersService.readOnePlayer(channelMemberReqeust.userId);
+    const user = await this.usersService.readOnePurePlayer(channelMemberReqeust.userId);
     const channel = await this.readOneChannelConfig(channelMemberReqeust.channelId);
     const channelMember = {
       user: user,
@@ -113,8 +117,21 @@ export class ChatsService {
   }
 
   /* [R] 특정 User{id}에 속한 Member 조회 */
-  async readUserChannel(user: Player): Promise<ChannelMember[]> {
-    return (this.channelMemberRepository.find({ where: { user } }));
+  async readUserChannelMemberWithUserId(userId: number): Promise<ChannelMember[]> {
+    const channelMembers = await this.dataSource
+                                .getRepository(ChannelMember).createQueryBuilder('channel_member')
+                                .leftJoinAndSelect('channel_member.user', 'player')
+                                .leftJoinAndSelect('channel_member.channel', 'channel_config')
+                                .select(['channel_member.id', 
+                                        'player.id', 
+                                        'player.name', 
+                                        'channel_member.op', 
+                                        'channel_member.date', 
+                                        'channel_config.id', 
+                                        'channel_config.title'])
+                                .where('player.id = :id', { id: userId })
+                                .getMany();
+    return (channelMembers);
   }
 
   /* [U] ChannelMember{id} info 수정 */

@@ -14,8 +14,8 @@ export class ChannelMember {
   @JoinColumn({ name: 'channel_id' })
   channel: ChannelConfig;
 
-  @ApiProperty()
-  @OneToOne(() => Player)
+  @ApiProperty({ type: () => Player })
+  @ManyToOne(() => Player, (user) => user.channelList)
   @JoinColumn({ name: 'user_id' })
   user: Player;
 

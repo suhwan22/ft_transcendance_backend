@@ -4,6 +4,7 @@ import { UserFriend } from "./user-friend.entity";
 import { UserBlock } from "./user-block.entity";
 import { UserGameRecord } from "./user-game-record.entity";
 import { GameHistory } from "src/games/entities/game-history.entity";
+import { ChannelMember } from "src/chats/entities/channel-member.entity";
 
 @Entity({ name: "player" })
 export class Player {
@@ -30,6 +31,10 @@ export class Player {
   @ApiProperty({ type: UserBlock, isArray: true })
   @OneToMany((type) => UserBlock, (block) => block.target)
   blockList: UserBlock[];
+
+  @ApiProperty({ type: () => ChannelMember, isArray: true })
+  @OneToMany((type) => ChannelMember, (channelList) => channelList.user)
+  channelList: ChannelMember[];
 
   @ApiProperty({ type: UserGameRecord})
   @OneToOne((type) => UserGameRecord)
