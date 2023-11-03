@@ -1,5 +1,5 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, OneToOne, JoinColumn, } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToMany, OneToOne, JoinColumn, PrimaryColumn, } from "typeorm";
 import { UserFriend } from "./user-friend.entity";
 import { UserBlock } from "./user-block.entity";
 import { UserGameRecord } from "./user-game-record.entity";
@@ -7,7 +7,8 @@ import { GameHistory } from "src/games/entities/game-history.entity";
 
 @Entity({ name: "player" })
 export class Player {
-  @PrimaryGeneratedColumn()
+  @ApiProperty()
+  @PrimaryColumn()
   id: number;
 
   @ApiProperty()
@@ -15,8 +16,8 @@ export class Player {
   name: string;
   
   @ApiProperty()
-  @Column({ type: "bytea", nullable : true })
-  avatar: Buffer;
+  @Column({ nullable : true })
+  avatar: string;
 
   @ApiProperty()
   @Column()

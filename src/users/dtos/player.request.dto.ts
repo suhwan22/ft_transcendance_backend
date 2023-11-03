@@ -2,10 +2,13 @@ import { ApiProperty } from "@nestjs/swagger";
 
 export class PlayerRequestDto {
   @ApiProperty()
+  id: number;
+
+  @ApiProperty()
   name: string;
   
   @ApiProperty()
-  avatar: Buffer;
+  avatar: string;
 
   @ApiProperty()
   status: number;
