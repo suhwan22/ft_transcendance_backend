@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards, Get, Res, Req } from '@nestjs/common';
+import { Controller, Post, UseGuards, Get, Res, Req, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Request, Response } from 'express';
@@ -14,10 +14,24 @@ export class AuthController {
     private usersService: UsersService,
     ) { }
 
-  @UseGuards(OauthGuard)
-  @Get('/login')
-  async login(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const user = await this.authService.getUserWithOauth(request.user);
+  // @UseGuards(OauthGuard)
+  // @Get('/login')
+  // async login(@Req() request, @Res({ passthrough: true }) response: Response) {
+  //   const user = await this.authService.getUserWithOauth(request.user);
+  //   const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user);
+  //   const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user);
+    
+  //   await this.usersService.updateUserToken(refreshToken, user.id);
+
+  //   response.cookie('Authentication', accessToken, accessOption);
+  //   response.cookie('Refresh', refreshToken, refreshOption);
+  //   return (user);
+  // }
+  @Post('/login')
+  async login(@Body('code') code: string, @Res({ passthrough: true }) response: Response) {
+    const token = await this.authService.getAccessTokenWithOauth(code);
+    const oauthUser = await this.authService.getUserWithOauth(token);
+    const user = await this.authService.signUpUser(oauthUser);
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user);
     const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user);
     
