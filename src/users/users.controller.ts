@@ -1,18 +1,17 @@
-import { Controller, Get, Param, Body, Post, Delete, Query, Put, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Param, Body, Post, Delete, Put, NotFoundException, UseGuards } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { UserBlock } from './entities/user-block.entity';
 import { UserFriend } from './entities/user-friend.entity';
-import { ApiBody, ApiCreatedResponse, ApiOperation, ApiTags, ApiQuery, ApiOkResponse } from '@nestjs/swagger';
+import { ApiBody, ApiCreatedResponse, ApiOperation, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
-import { UserDto } from './dtos/user.dto';
 import { FriendRequest } from './entities/friend-request.entity';
 import { UserFriendRequestDto } from './dtos/user-friend.request.dto';
 import { UserBlockRequestDto } from './dtos/user-block.request.dto';
 import { UserGameRecordRequestDto } from './dtos/user-game-record.request.dto';
 import { PlayerRequestDto } from './dtos/player.request.dto';
 import { ChannelMember } from 'src/chats/entities/channel-member.entity';
-
+import { JwtTwoFactorAuthGuard } from 'src/auth/guards/jwt-2fa.guard';
 
 @ApiTags('Users')
 @Controller('users')
@@ -92,7 +91,7 @@ export class UsersController {
   }
 
   //create usergamerecord
-  @ApiOperation({ summary: '승정 등록 API' })
+  @ApiOperation({ summary: '승점 등록 API' })
   @ApiBody({ type: UserGameRecordRequestDto })
   @ApiCreatedResponse({ description: 'success', type: UserGameRecord })
   @Post('game-records')

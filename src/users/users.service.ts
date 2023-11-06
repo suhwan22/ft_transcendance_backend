@@ -16,7 +16,7 @@ import { UserGameRecordRequestDto } from './dtos/user-game-record.request.dto';
 import { PlayerRequestDto } from './dtos/player.request.dto';
 import { GamesService } from 'src/games/games.service';
 import { ChannelMember } from 'src/chats/entities/channel-member.entity';
-import { UserToken } from './entities/user-token.entity';
+import { UserAuth } from './entities/user-auth.entity';
 import { compare, hash } from 'bcrypt';
 
 @Injectable()
@@ -32,8 +32,8 @@ export class UsersService {
     private userFriendRepository: Repository<UserFriend>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
-    @InjectRepository(UserToken)
-    private userTokenRepository: Repository<UserToken>,
+    @InjectRepository(UserAuth)
+    private userAuthRepository: Repository<UserAuth>,
 
     @Inject(forwardRef(() => ChatsService))
     private readonly chatsService: ChatsService,
@@ -290,30 +290,35 @@ export class UsersService {
     return (userChannelList);
   }
 
-  async createUserToken(userId: number): Promise<UserToken> {
-    const userToken = { userId: userId, refreshToken: null };
-    const newUserToken = this.userTokenRepository.create(userToken);
-    return (this.userTokenRepository.save(newUserToken));
+  async createUserAuth(userId: number): Promise<UserAuth> {
+    const userAuth = { userId: userId, refreshToken: null, twoFactorAuthSecret: null };
+    const newUserAuth = this.userAuthRepository.create(userAuth);
+    return (this.userAuthRepository.save(newUserAuth));
   }
 
-  async updateUserToken(refreshToken: string, userId: number): Promise<UserToken> {
+  async updateRefreshToken(refreshToken: string, userId: number): Promise<UserAuth> {
     let hashToken = null;
     if (refreshToken)
       hashToken = await hash(refreshToken, 10);
-    this.userTokenRepository.update(userId, { refreshToken: hashToken });
-    return (this.readUserToken(userId));
+    this.userAuthRepository.update(userId, { refreshToken: hashToken });
+    return (this.readUserAuth(userId));
   }
 
-  async readUserToken(userId: number): Promise<UserToken> {
-    return (this.userTokenRepository.findOne({ where: { userId } }));
+  async updateTwoFactorAuthSecret(secret: string, userId: number): Promise<UserAuth> {
+    this.userAuthRepository.update(userId, { twoFactorAuthSecret: secret });
+    return (this.readUserAuth(userId));
+  }
+
+  async readUserAuth(userId: number): Promise<UserAuth> {
+    return (this.userAuthRepository.findOne({ where: { userId } }));
   }
 
   async deleteUserToken(userId: number): Promise<void> {
-    this.userTokenRepository.delete(userId);
+    this.userAuthRepository.delete(userId);
   }
 
   async compareRefreshToken(refreshToken: string, id: number) {
-    const userToken = await this.readUserToken(id);
+    const userToken = await this.readUserAuth(id);
     const isEqure = await compare(refreshToken, userToken.refreshToken);
     if (isEqure)
       return (this.readOnePurePlayer(id));
