@@ -7,7 +7,10 @@ import * as cookieParser from 'cookie-parser';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   app.use(cookieParser());
-  app.enableCors();
+  app.enableCors({
+    origin: 'http://localhost:5173',
+    credentials: true,
+  });
   const documentOptions = new BaseApiDocumention().initializeOptions();
   const document = SwaggerModule.createDocument(app, documentOptions);
   SwaggerModule.setup('api/docs',app, document);
