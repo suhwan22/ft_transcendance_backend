@@ -5,7 +5,10 @@ import { Request, Response } from 'express';
 import { UsersService } from 'src/users/users.service';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { JwtTwoFactorAuthGuard } from './guards/jwt-2fa.guard';
+import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CodeRequestDto } from './dtos/codeRequestDto';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor (
@@ -13,6 +16,9 @@ export class AuthController {
     private usersService: UsersService,
     ) { }
 
+  @ApiOperation({ summary: '로그인 API' })
+  @ApiBody({ type: CodeRequestDto })
+  @ApiOkResponse({ description: 'Ok'})
   @Post('/login')
   async login(@Body('code') code: string, @Res({ passthrough: true }) response: Response) {
     const token = await this.authService.getAccessTokenWithOauth(code);
@@ -28,8 +34,10 @@ export class AuthController {
     return ('login success');
   }
 
+  @ApiOperation({ summary: '로그아웃 API' })
+  @ApiOkResponse({ description: 'Ok' })
   @UseGuards(JwtAuthGuard)
-  @Get('/logout')
+  @Post('/logout')
   async logout(@Req() request, @Res({ passthrough: true }) response: Response) {
     const { accessOption, refreshOption } = await this.authService.removeCookieWithTokens();
     await this.usersService.updateRefreshToken(null, request.user.userId);
@@ -39,6 +47,8 @@ export class AuthController {
     return ('logout success');
   }
 
+  @ApiOperation({ summary: '토큰 재발급 API' })
+  @ApiOkResponse({ description: 'Ok' })
   @UseGuards(JwtRefreshGuard)
   @Get('refresh')
   async refresh(@Req() request, @Res({ passthrough: true }) response: Response) {
@@ -47,6 +57,9 @@ export class AuthController {
     return ('token refresh success');
   }
 
+  @ApiOperation({ summary: '2FA 구글 인증 OTP API' })
+  @ApiBody({ type: CodeRequestDto })
+  @ApiOkResponse({ description: 'Ok'})
   @UseGuards(JwtAuthGuard)
   @Post('2fa')
   async authenticateTwoFactorAuth(@Req() request,
@@ -62,6 +75,8 @@ export class AuthController {
     return ('2fa success');
   }
   
+  @ApiOperation({ summary: '2FA 구글 인증 등록 API' })
+  @ApiOkResponse({ description: 'Ok' })
   @UseGuards(JwtAuthGuard)
   @Post('2fa/generate')
   async getQrImageWithTwoFactorAuth(@Req() request: Request, @Res() response: Response) {
