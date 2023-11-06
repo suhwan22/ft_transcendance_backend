@@ -5,9 +5,9 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { HttpModule } from '@nestjs/axios';
-import { OAuth2Strategy } from './strategies/oauth.strategy';
 import { UsersModule } from 'src/users/users.module';
 import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
+import { JwtTFAStrategy } from './strategies/jwt-2fa.strategy';
 
 @Module({
   imports: [
@@ -20,7 +20,7 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
         }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy, OAuth2Strategy, JwtRefreshStrategy],
+  providers: [AuthService, JwtStrategy, JwtRefreshStrategy, JwtTFAStrategy],
   exports: [AuthService, JwtModule],
 })
 export class AuthModule {}
