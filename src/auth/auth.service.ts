@@ -115,7 +115,6 @@ export class AuthService {
     
     this.usersService.updateTwoFactorAuthSecret(secret, payload.userId);
 
-    console.log("secret: " + secret);
     return ({ secret, optAuthUrl });
   }
 

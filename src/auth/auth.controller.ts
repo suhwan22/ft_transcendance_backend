@@ -66,8 +66,6 @@ export class AuthController {
                                   @Body('code') code: string,
                                   @Res({ passthrough: true }) response: Response) {
     const check = await this.authService.isVaildTwoFactorAuthCode(code, request.user);
-    console.log(code);
-    console.log(check);
     if (!check)
       throw new UnauthorizedException('Invaild Authentication-Code');
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
