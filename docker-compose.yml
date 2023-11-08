@@ -7,6 +7,18 @@ services:
     ports:
       - '3000:3000'
     environment:
+      - DB_TYPE=postgres
+      - PG_USER=postgres
+      - PG_PASSWORD=postgres
+      - PG_DB=postgres
+      - PG_PORT=5432
+      - PG_HOST=db
+      - AUTH_URL=https://api.intra.42.fr/oauth/authorize?client_id=u-s4t2ud-a52635ac8449682c22179ea5e0431a5774a227ee77023467493b98e1df02b70b&redirect_uri=http%3A%2F%2Flocalhost%3A5173%2FLoading&response_type=code
+      - TOKEN_URL=https://api.intra.42.fr/oauth/token
+      - CLIENT_ID=u-s4t2ud-a52635ac8449682c22179ea5e0431a5774a227ee77023467493b98e1df02b70b
+      - CLIENT_SECRET=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
+      - CALLBACK_URL=http://localhost:5173/Loading
+      - GRANT_TYPE=authorization_code
     depends_on:
       - db
   db:
