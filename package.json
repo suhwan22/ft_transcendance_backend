@@ -27,8 +27,11 @@
     "@nestjs/jwt": "^10.1.1",
     "@nestjs/passport": "^10.0.2",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/platform-socket.io": "^10.2.8",
     "@nestjs/swagger": "^7.1.14",
     "@nestjs/typeorm": "^10.0.0",
+    "@nestjs/websockets": "^10.2.8",
+    "@types/socket.io": "^3.0.2",
     "bcrypt": "^5.1.1",
     "cookie-parser": "^1.4.6",
     "otplib": "^12.0.1",
@@ -39,7 +42,9 @@
     "qrcode": "^1.5.3",
     "reflect-metadata": "^0.1.13",
     "rxjs": "^7.8.1",
-    "typeorm": "^0.3.17"
+    "socket.io": "^4.7.2",
+    "typeorm": "^0.3.17",
+    "websockets": "^0.2.0"
   },
   "devDependencies": {
     "@nestjs/cli": "^10.0.0",
