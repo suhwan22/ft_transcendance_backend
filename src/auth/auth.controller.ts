@@ -31,7 +31,7 @@ export class AuthController {
 
     response.cookie('Authentication', accessToken, accessOption);
     response.cookie('Refresh', refreshToken, refreshOption);
-    return ('login success');
+    return (user);
   }
 
   @ApiOperation({ summary: '로그아웃 API' })
