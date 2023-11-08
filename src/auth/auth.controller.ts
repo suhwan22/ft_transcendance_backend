@@ -70,7 +70,8 @@ export class AuthController {
       throw new UnauthorizedException('Invaild Authentication-Code');
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
     response.cookie('TwoFactorAuth', accessToken, accessOption);
-    return ('2fa success');
+    const user = this.usersService.readOnePlayer(request.user.userId);
+    return (user);
   }
   
   @ApiOperation({ summary: '2FA 구글 인증 등록 API' })
