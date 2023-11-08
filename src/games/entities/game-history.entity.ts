@@ -1,6 +1,6 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Player } from "src/users/entities/player.entity";
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, ManyToOne, JoinColumn, } from "typeorm";
 
 @Entity({ name: "game_history" })
 export class GameHistory {
@@ -13,6 +13,7 @@ export class GameHistory {
 
   @ApiProperty({ type: () => Player})
   @ManyToOne( (type) => Player, (player) => player.gameHistory)
+  @JoinColumn({ name: 'opponent_id' })
   opponent: Player;
 
   @ApiProperty()
@@ -20,11 +21,11 @@ export class GameHistory {
   result: boolean;
 
   @ApiProperty()
-  @Column()
+  @Column({ name: "user_score"})
   userScore: number;
 
   @ApiProperty()
-  @Column()
+  @Column({ name: "opponent_score"})
   opponentScore: number;
 
   @CreateDateColumn()

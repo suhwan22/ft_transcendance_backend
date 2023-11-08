@@ -9,7 +9,7 @@ export class UserGameRecord {
 
   @ApiProperty({type: () => Player})
   @OneToOne(() => Player, (player) => player.gameRecord)
-  @JoinColumn()
+  @JoinColumn({ name: 'user_id' })
   user: Player;
 
   @ApiProperty()
