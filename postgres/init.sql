@@ -43,14 +43,16 @@ insert into win_loss_record (id, user_id, win, loss, score, date)
                     values (100006, 6, 5, 2, 3, now());
 
 -- init channel_config data
-insert into channel_config (id, title, password, public, "limit", date) 
-                    values (100001, 'chat1', 1234, true, 10, now());
-insert into channel_config (id, title, password, public, "limit", date) 
-                    values (100002, 'chat2', 1234, true, 10, now());
-insert into channel_config (id, title, password, public, "limit", date) 
-                    values (100003, 'chat3', 1234, false, 10, now());
-insert into channel_config (id, title, password, public, "limit", date) 
-                    values (100004, 'chat4', 1234, false, 2, now());
+insert into channel_config (id, title, password, public, "limit", dm, date) 
+                    values (100001, 'chat1', 1234, true, 10, false, now());
+insert into channel_config (id, title, password, public, "limit", dm, date) 
+                    values (100002, 'chat2', 1234, true, 10, false, now());
+insert into channel_config (id, title, password, public, "limit", dm, date) 
+                    values (100003, 'chat3', 1234, false, 10, false, now());
+insert into channel_config (id, title, password, public, "limit", dm, date) 
+                    values (100004, 'chat4', 1234, false, 2, false, now());
+insert into channel_config (id, title, password, public, "limit", dm, date) 
+                    values (100005, 'chat5', 1234, false, 2, true, now());
 
 -- init channel_member data
 insert into channel_member (id, channel_id, user_id, op, date) 

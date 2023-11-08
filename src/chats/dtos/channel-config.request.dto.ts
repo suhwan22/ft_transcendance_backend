@@ -14,5 +14,8 @@ export class ChannelConfigRequestDto {
   limit: number;
 
   @ApiProperty()
+  dm: boolean;
+
+  @ApiProperty()
   date: Date;
 }

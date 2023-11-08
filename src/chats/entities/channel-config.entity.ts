@@ -28,6 +28,10 @@ export class ChannelConfig {
   limit: number;
 
   @ApiProperty()
+  @Column()
+  dm: boolean;
+
+  @ApiProperty()
   @CreateDateColumn()
   date: Date;
 

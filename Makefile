@@ -8,7 +8,7 @@ init:
 	docker exec db su - postgres -c "psql -d postgres -f /init.sql"	
 
 fclean:
-	sudo docker compose -f ./docker-compose.yml down --rmi all --volumes
+	docker compose -f ./docker-compose.yml down --rmi all --volumes
 
 re:
 	make fclean
