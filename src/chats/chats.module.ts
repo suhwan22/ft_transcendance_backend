@@ -10,6 +10,7 @@ import { ChannelConfig } from './entities/channel-config.entity';
 import { GamesModule } from 'src/games/games.module';
 import { UsersModule } from 'src/users/users.module';
 import { ChatsGateway } from './chats.gateway';
+import { ChatsSocketService } from './chats-socket.service';
 
 @Module({
   imports: [
@@ -24,7 +25,7 @@ import { ChatsGateway } from './chats.gateway';
     ])
   ],
   controllers: [ChatsController],
-  providers: [ChatsService, ChatsGateway],
+  providers: [ChatsService, ChatsGateway, ChatsSocketService],
   exports: [TypeOrmModule, ChatsService]
 })
 export class ChatsModule {}
