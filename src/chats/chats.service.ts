@@ -163,8 +163,8 @@ export class ChatsService {
   }
 
   async createChatLogInfo(chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
-    const user = await this.usersService.readOnePlayer(chatLogRequest.userId);
-    const channel = await this.readOneChannelConfig(chatLogRequest.channelId);
+    const user = await this.usersService.readOnePurePlayer(chatLogRequest.userId);
+    const channel = await this.readOnePureChannelConfig(chatLogRequest.channelId);
     const chatLog = {
       user: user,
       channel: channel,
@@ -268,5 +268,19 @@ export class ChatsService {
     if (!deleteMute)
       return ;
     await this.chatMuteRepository.remove(deleteMute);
+  }
+
+  // 특정 유저가 특정 채팅방에 들어와 있는지 검사
+  async checkInChannelMember(channelId: number, userId: number): Promise<boolean> {
+    const channelMember = await this.dataSource
+                                    .getRepository(ChannelMember)
+                                    .createQueryBuilder('channel_member')
+                                    .select('*')
+                                    .where('channel_id = :id', { id: channelId })
+                                    .where('user_id = :id', { id: userId })
+                                    .getOne();
+    if (!channelMember)
+      return false;
+    return true;
   }
 }
