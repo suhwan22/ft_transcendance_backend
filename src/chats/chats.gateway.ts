@@ -49,6 +49,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendMessage')
   async onChat(client: Socket, message) {
+    // 뮤트인지
+    // 명령어 파싱
     if (client.data.roomId === 'room:lobby') {
       client.broadcast.emit('getMessage', {
         channelId: null,
@@ -57,7 +59,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       });
       return ;
     }
-    const log = this.chatsSocketService.sendMessage(client, message);
+    const log = await this.chatsSocketService.sendMessage(client, message);
     client.to(client.data.roomId).emit('sendMessage', log);  //전체에게 방송함
   }
 
@@ -65,6 +67,13 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('enterChatRoom')
   enterChatRoom(client: Socket, message) {
     const roomId = message.channelId;
+    console.log(typeof(message.userId));
+    // private 비번 확인
+    // 밴이면 못들어가
+    // 맴버 조회 있으면 그대로 없으면 추가
+    // ...
+
+
     //이미 접속해있는 방 일 경우 재접속 차단
     if (client.rooms.has(roomId)) {
       return;
@@ -77,7 +86,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatsSocketService.deleteChatRoom(client.data.roomId);
     }
 
-    //없는 방일 경우 새로 만듬
+    // channel 일 경우 새로 만듬
     if (!this.chatsSocketService.getChatRoom(roomId)) {
       return this.chatsSocketService.createChatRoom(client, message.channelId, message.userId);
     }

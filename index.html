@@ -34,11 +34,11 @@
       console.log(data);
     })
     function send() {
-      socket.emit('sendMessage', { userId: user.value, content: message.value });
+      socket.emit('sendMessage', { userId: parseInt(user.value), channelId: parseInt(channel.value), content: message.value });
       message.value = null;
     }
     function enter() {
-      socket.emit('enterChatRoom', { userId: user.value, channelId: channel.value });
+      socket.emit('enterChatRoom', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
     }
   </script>
 </body>

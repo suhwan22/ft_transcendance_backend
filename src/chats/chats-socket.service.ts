@@ -19,19 +19,19 @@ export class ChatsSocketService {
     };
   }
 
-  sendMessage(client: Socket, message) {
+  async sendMessage(client: Socket, message) {
     const chatLogRequest = {
-      channelId: client.data.roomId,
+      channelId: message.channelId,
       userId: message.userId,
       content: message.content
     }
-    this.chatsService.createChatLogInfo(chatLogRequest);
-    return (chatLogRequest);
+    const log = await this.chatsService.createChatLogInfo(chatLogRequest);
+    return (log);
   }
 
-  async createChatRoom(client: Socket, channelId: string, userId: string) {
-    const chat = await this.chatsService.readOnePureChannelConfig(parseInt(channelId));
-    const roomId = `${chat.id}`;
+  async createChatRoom(client: Socket, channelId: number, userId: number) {
+    const chat = await this.chatsService.readOnePureChannelConfig(channelId);
+    const roomId = channelId.toString();
     this.chatRoomList[roomId] = {
       roomId,
       cheifId: client.id,
@@ -47,7 +47,8 @@ export class ChatsSocketService {
     });
   }
 
-  async enterChatRoom(client: Socket, roomId: string, userId: string) {
+  async enterChatRoom(client: Socket, channelId: number, userId: number) {
+    const roomId = channelId.toString();
     client.data.roomId = roomId;
     client.rooms.clear();
     client.join(roomId);
@@ -59,10 +60,11 @@ export class ChatsSocketService {
     });
   }
 
-  exitChatRoom(client: Socket, roomId: string, userId: string) {
-    client.data.roomId = `room:lobby`;
+  exitChatRoom(client: Socket, channelId: number, userId: number) {
+    const roomId = channelId.toString();
     client.rooms.clear();
     client.join(`room:lobby`);
+    client.data.roomId = `room:lobby`;
     client.to(roomId).emit('getMessage', {
       id: null,
       nickname: '안내',
