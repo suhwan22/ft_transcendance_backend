@@ -105,6 +105,7 @@ export class AuthService {
       };
       user = await this.usersService.createPlayer(newPlayer);
       this.usersService.createUserAuth(user.id);
+      this.usersService.createUserSocket(user.id);
     }
     return (user);
   }

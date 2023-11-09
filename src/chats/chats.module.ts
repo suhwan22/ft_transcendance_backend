@@ -11,6 +11,7 @@ import { GamesModule } from 'src/games/games.module';
 import { UsersModule } from 'src/users/users.module';
 import { ChatsGateway } from './chats.gateway';
 import { ChatsSocketService } from './chats-socket.service';
+import { ChannelPassword } from './entities/channel-password.entity';
 
 @Module({
   imports: [
@@ -21,7 +22,8 @@ import { ChatsSocketService } from './chats-socket.service';
       ChannelMember,
       ChatBan,
       ChatLog,
-      ChatMute
+      ChatMute,
+      ChannelPassword
     ])
   ],
   controllers: [ChatsController],

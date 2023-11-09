@@ -18,6 +18,7 @@ import { GamesService } from 'src/games/games.service';
 import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 import { UserAuth } from './entities/user-auth.entity';
 import { compare, hash } from 'bcrypt';
+import { UserSocket } from './entities/user-socket.entity';
 
 @Injectable()
 export class UsersService {
@@ -34,6 +35,8 @@ export class UsersService {
     private friendRequestRepository: Repository<FriendRequest>,
     @InjectRepository(UserAuth)
     private userAuthRepository: Repository<UserAuth>,
+    @InjectRepository(UserSocket)
+    private userSocketRepository: Repository<UserSocket>,
 
     @Inject(forwardRef(() => ChatsService))
     private readonly chatsService: ChatsService,
@@ -296,6 +299,26 @@ export class UsersService {
   async readChannelList(userId: number): Promise<ChannelMember[]> {
     const userChannelList = await this.chatsService.readUserChannelMemberWithUserId(userId);
     return (userChannelList);
+  }
+
+  async readUserSocket(userId: number): Promise<UserSocket> {
+    const userSocket = await this.userSocketRepository.findOne({ where: { userId } });
+    return (userSocket);
+  }
+
+  async createUserSocket(userId: number): Promise<UserSocket> {
+    const userSocket = { userId: userId, socket: null };
+    const newUserSocket = this.userSocketRepository.create(userSocket);
+    return (this.userSocketRepository.save(newUserSocket));
+  }
+
+  async updateUserSocket(userId: number, socket: string): Promise<UserSocket> {
+    this.userSocketRepository.update(userId, { socket });
+    return (this.readUserSocket(userId));
+  }
+
+  async deleteUserSocket(userId: number): Promise<void> {
+    this.userSocketRepository.delete(userId);
   }
 
   async createUserAuth(userId: number): Promise<UserAuth> {

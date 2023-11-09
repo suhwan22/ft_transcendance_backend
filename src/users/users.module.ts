@@ -10,6 +10,7 @@ import { ChatsModule } from 'src/chats/chats.module';
 import { GamesModule } from 'src/games/games.module';
 import { FriendRequest } from './entities/friend-request.entity';
 import { UserAuth } from './entities/user-auth.entity';
+import { UserSocket } from './entities/user-socket.entity';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { UserAuth } from './entities/user-auth.entity';
       UserGameRecord,
       FriendRequest,
       UserAuth,
+      UserSocket
       ])],
   controllers: [UsersController],
   providers: [UsersService],

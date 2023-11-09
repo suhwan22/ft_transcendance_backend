@@ -17,10 +17,6 @@ export class ChannelConfig {
 
   @ApiProperty()
   @Column()
-  password: string;
-
-  @ApiProperty()
-  @Column()
   public: boolean;
 
   @ApiProperty()

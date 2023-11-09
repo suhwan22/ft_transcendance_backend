@@ -12,6 +12,8 @@ import { UsersService } from 'src/users/users.service';
 import { ChatMuteBanRequestDto } from './dtos/chat-mute-ban.request.dto';
 import { ChannelMemberRequestDto } from './dtos/channel-member.request.dto';
 import { ChannelConfigRequestDto } from './dtos/channel-config.request.dto';
+import { ChannelPassword } from './entities/channel-password.entity';
+import { compare, hash } from 'bcrypt';
 
 @Injectable()
 export class ChatsService {
@@ -26,6 +28,8 @@ export class ChatsService {
     private chatBanRepository: Repository<ChatBan>,
     @InjectRepository(ChatMute)
     private chatMuteRepository: Repository<ChatMute>,
+    @InjectRepository(ChannelPassword)
+    private channelPasswordRepository: Repository<ChannelPassword>,
 
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
@@ -40,8 +44,12 @@ export class ChatsService {
 
   /* [C] ChannelConfig 생성 */
   async createChannelConfig(config: Partial<ChannelConfigRequestDto>): Promise<ChannelConfig> {
+    const pass = config.password;
+    delete config.password;
     const newchannelConfig = this.channelConfigRepository.create(config);
-    return (this.channelConfigRepository.save(newchannelConfig));
+    const channelConfig = await this.channelConfigRepository.save(newchannelConfig);
+    this.createChannelPassword(channelConfig.id, pass);
+    return (channelConfig);
   }
 
   /* [R] 모든 ChannelConfig 조회 */
@@ -282,5 +290,36 @@ export class ChatsService {
     if (!channelMember)
       return false;
     return true;
+  }
+
+  async readChannelPassword(channelId: number): Promise<ChannelPassword> {
+    const userchannelPassword = await this.channelPasswordRepository.findOne({ where: { channelId } });
+    return (userchannelPassword);
+  }
+
+  async createChannelPassword(channelId: number, password: string): Promise<ChannelPassword> {
+    let hashPass = null;
+    if (password)
+      hashPass = await hash(password, 10);
+    const channelPassword = { channelId: channelId, password: hashPass };
+    const newChannelPassword = this.channelPasswordRepository.create(channelPassword);
+    return (this.channelPasswordRepository.save(newChannelPassword));
+  }
+
+  async updateChannelPassword(channelId: number, password: string): Promise<ChannelPassword> {
+    let hashPass = null;
+    if (password)
+      hashPass = await hash(password, 10);
+    this.channelPasswordRepository.update(channelId, { password: hashPass });
+    return (this.readChannelPassword(channelId));
+  }
+
+  async compareRefreshToken(password: string, channelId: number) {
+    const userPassword = await this.readChannelPassword(channelId);
+    return (await compare(password, userPassword));
+  }
+
+  async deleteChannelPassword(channelId: number): Promise<void> {
+    this.channelPasswordRepository.delete(channelId);
   }
 }
