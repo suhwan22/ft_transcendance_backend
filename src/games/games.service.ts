@@ -14,7 +14,7 @@ export class GamesService {
 
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
-  ) {}
+  ) { }
 
   /* [C] gameHistory 생성 */
 
@@ -32,14 +32,14 @@ export class GamesService {
   }
 
   /* [R] 특정 gameHistory 조회 */
-  async readOneGameHistory(user: number) : Promise<GameHistory[]> {
+  async readOneGameHistory(user: number): Promise<GameHistory[]> {
     const recordList = await this.gameHistoryRepository
-                                      .createQueryBuilder('game_history')
-                                      .leftJoinAndSelect('game_history.opponent', 'opponent')
-                                      .select(['game_history.id', 'game_history.result', 'game_history.userScore', 'game_history.opponentScore', 'game_history.date'
-                                              , 'opponent.id', 'opponent.name'])
-                                      .where('game_history.user = :id', { id: user })
-                                      .getMany();
+      .createQueryBuilder('game_history')
+      .leftJoinAndSelect('game_history.opponent', 'opponent')
+      .select(['game_history.id', 'game_history.result', 'game_history.userScore', 'game_history.opponentScore', 'game_history.date'
+        , 'opponent.id', 'opponent.name'])
+      .where('game_history.user = :id', { id: user })
+      .getMany();
     return (recordList)
   }
 
@@ -69,5 +69,15 @@ export class GamesService {
       else return (b.score - a.score);
     });
     return (records);
+  }
+
+  async getMyRank(userId: number) {
+    const records = await this.readRankInfo();
+    for (let i = 0; i < records.length; i++) {
+      if (records[i].user.id == userId) {
+        return (i + 1);
+      }
+    }
+    return (null);
   }
 }

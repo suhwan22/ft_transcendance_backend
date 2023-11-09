@@ -24,6 +24,8 @@ export class UserGameRecord {
   @Column()
   score: number;
 
+  rank: number;
+
   @CreateDateColumn()
   date: Date;
 }

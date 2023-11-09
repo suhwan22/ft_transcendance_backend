@@ -64,4 +64,11 @@ export class GamesController {
   async readRankInfo(): Promise<UserGameRecord[]> {
     return (this.gamesService.readRankInfo());
   }
+
+  @ApiOperation({ summary: '내 랭킹 조회 API' })
+  @ApiOkResponse({ description: 'Ok'})
+  @Get('ranks/:userId')
+  async getMyRank(@Param('userId') userId: number): Promise<number> {
+    return (this.gamesService.getMyRank(userId));
+  }
 }
