@@ -12,6 +12,20 @@ insert into player (id, name, avatar, status, date)
 insert into player (id, name, avatar, status, date) 
           values (6, 'frank', 'avatar', 0, now());
 
+-- init user_socket
+insert into user_socket (id, date) 
+          values (1, now());
+insert into user_socket (id, date) 
+          values (2, now());
+insert into user_socket (id, date) 
+          values (3, now());
+insert into user_socket (id, date) 
+          values (4, now());
+insert into user_socket (id, date) 
+          values (5, now());
+insert into user_socket (id, date) 
+          values (6, now());
+
 -- init friend_list data
 insert into friend_list (id, "user", friend_id) values (100001, 1, 2);
 insert into friend_list (id, "user", friend_id) values (100002, 1, 3);
@@ -43,16 +57,28 @@ insert into win_loss_record (id, user_id, win, loss, score, date)
                     values (100006, 6, 5, 2, 3, now());
 
 -- init channel_config data
-insert into channel_config (id, title, password, public, "limit", dm, date) 
-                    values (100001, 'chat1', 1234, true, 10, false, now());
-insert into channel_config (id, title, password, public, "limit", dm, date) 
-                    values (100002, 'chat2', 1234, true, 10, false, now());
-insert into channel_config (id, title, password, public, "limit", dm, date) 
-                    values (100003, 'chat3', 1234, false, 10, false, now());
-insert into channel_config (id, title, password, public, "limit", dm, date) 
-                    values (100004, 'chat4', 1234, false, 2, false, now());
-insert into channel_config (id, title, password, public, "limit", dm, date) 
-                    values (100005, 'chat5', 1234, false, 2, true, now());
+insert into channel_config (id, title, public, "limit", dm, date) 
+                    values (100001, 'chat1', true, 10, false, now());
+insert into channel_config (id, title, public, "limit", dm, date) 
+                    values (100002, 'chat2', true, 10, false, now());
+insert into channel_config (id, title, public, "limit", dm, date) 
+                    values (100003, 'chat3', false, 10, false, now());
+insert into channel_config (id, title, public, "limit", dm, date) 
+                    values (100004, 'chat4', false, 2, false, now());
+insert into channel_config (id, title, public, "limit", dm, date) 
+                    values (100005, 'chat5', false, 2, true, now());
+
+-- init channel_password data
+insert into channel_password (id, password, date) 
+                    values (100001, '1234', now());
+insert into channel_password (id, password, date) 
+                    values (100002, '1234', now());
+insert into channel_password (id, password, date) 
+                    values (100003, '1234', now());
+insert into channel_password (id, password, date) 
+                    values (100004, '1234', now());
+insert into channel_password (id, password, date) 
+                    values (100005, '1234', now());
 
 -- init channel_member data
 insert into channel_member (id, channel_id, user_id, op, date) 
