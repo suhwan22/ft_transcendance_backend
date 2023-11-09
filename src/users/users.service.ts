@@ -62,8 +62,10 @@ export class UsersService {
     player.gameRecord = await this.readOneUserGameRecord(id);
     player.gameHistory = await this.gamesService.readOneGameHistory(id);
     player.channelList = await this.readChannelList(id);
-    if (player.gameRecord !== null)
+    if (player.gameRecord !== null) {
       delete player.gameRecord.user;
+      player.gameRecord.rank = await this.gamesService.getMyRank(id);
+    }
     return (player);
   }
 
@@ -105,7 +107,13 @@ export class UsersService {
 
   /* [R] 모든 UserGameRecord 조회 */
   async readAllUserGameRecord(): Promise<UserGameRecord[]> {
-    return (this.recordRepository.find());
+    const recordList = await this.dataSource
+      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
+      .leftJoinAndSelect('win_loss_record.user', 'user')
+      .select(['win_loss_record.id', 'user.id', 'user.name'
+        , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.score'])
+      .getMany();
+    return (recordList)
   }
 
   /* [R] 특정 UserGameRecord 조회 */
