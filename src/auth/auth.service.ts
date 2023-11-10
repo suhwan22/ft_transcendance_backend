@@ -60,6 +60,10 @@ export class AuthService {
         httpOnly: true,
         maxAge: 0,
       },
+      userIdOption: {
+        httpOnly: true,
+        maxAge: 0,
+      }
     };
   }
 

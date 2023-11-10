@@ -21,6 +21,7 @@ export class AuthController {
   @ApiOkResponse({ description: 'Ok'})
   @Post('/login')
   async login(@Body('code') code: string, @Res({ passthrough: true }) response: Response) {
+    console.log("hell");
     const token = await this.authService.getAccessTokenWithOauth(code);
     const oauthUser = await this.authService.getUserWithOauth(token);
     const user = await this.authService.signUpUser(oauthUser);
@@ -31,6 +32,7 @@ export class AuthController {
 
     response.cookie('Authentication', accessToken, accessOption);
     response.cookie('Refresh', refreshToken, refreshOption);
+    response.cookie('user.id', user.id);
     return ('login success');
   }
 
@@ -39,11 +41,12 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('/logout')
   async logout(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessOption, refreshOption } = await this.authService.removeCookieWithTokens();
+    const { accessOption, refreshOption, userIdOption } = await this.authService.removeCookieWithTokens();
     await this.usersService.updateRefreshToken(null, request.user.userId);
     response.cookie('Authentication', '', accessOption);
     response.cookie('Refresh', '', refreshOption);
     response.cookie('TwoFactorAuth', '', accessOption);
+    response.cookie('user.id', '', userIdOption);
     return ('logout success');
   }
 
