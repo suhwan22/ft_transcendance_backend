@@ -148,13 +148,20 @@ export class ChatsService {
   }
 
   async readChannelMember(channelId: number, userId: number): Promise<ChannelMember> {
-    const channelMember = this.dataSource
-                              .getRepository(ChannelMember)
-                              .createQueryBuilder('channel_member')
-                              .select('*')
-                              .where('channel_id = :id', { id: channelId })
-                              .where('user_id = :id', { id: userId })
-                              .getOne();
+    const channelMember = await this.dataSource
+                                .getRepository(ChannelMember).createQueryBuilder('channel_member')
+                                .leftJoinAndSelect('channel_member.user', 'player')
+                                .leftJoinAndSelect('channel_member.channel', 'channel_config')
+                                .select(['channel_member.id', 
+                                        'player.id', 
+                                        'player.name', 
+                                        'channel_member.op', 
+                                        'channel_member.date', 
+                                        'channel_config.id', 
+                                        'channel_config.title'])
+                                .where('player.id = :id', { id: userId })
+                                .where('channel_config.id = :id', { id: channelId })
+                                .getOne();
     return (channelMember);
   }
 
@@ -192,6 +199,17 @@ export class ChatsService {
                                       .where('channel_config.id = :id', { id: channelId })
                                       .getMany();
     return (chatLogs);
+  }
+
+  async readChatLog(id: number): Promise<ChatLog> {
+    const chatLog = await this.dataSource
+                                .getRepository(ChatLog).createQueryBuilder('chat_log')
+                                .leftJoinAndSelect('chat_log.user', 'player')
+                                .leftJoinAndSelect('chat_log.channel', 'channel_config')
+                                .select(['chat_log.id', 'chat_log.content', 'player.id', 'player.name', 'player.avatar', 'chat_log.date'])
+                                .where('channel_config.id = :id', { id: id })
+                                .getOne();
+    return (chatLog);
   }
 
   async createChatLogInfo(chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {

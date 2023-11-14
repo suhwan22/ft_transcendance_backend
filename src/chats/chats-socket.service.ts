@@ -4,6 +4,7 @@ import { Socket } from 'socket.io';
 import { ChannelConfig } from "./entities/channel-config.entity";
 import { UsersService } from "src/users/users.service";
 import { ChatMute } from "./entities/chat-mute.entity";
+import { IoAdapter } from "@nestjs/platform-socket.io";
 
 
 @Injectable()
@@ -23,21 +24,32 @@ export class ChatsSocketService {
     };
   }
 
+  getInfoMessage(message: string) {
+    return ({
+      id: null,
+      user: { id: null, name: '정보', avatar: null, status: 0, date: null },
+      content: message,
+      date: new Date(),
+    });
+  }
+
   async sendMessage(client: Socket, message) {
+    let log;
+    const chatMute = await this.chatsService.readChatMute(message.channelId, message.userId);
+    if (chatMute && !this.checkMuteTime(chatMute)) {
+      log = this.getInfoMessage('채팅 금지로 인하여 일정 시간동안 채팅이 금지됩니다.');
+      client.emit('sendMessage', log);
+      return;
+    }
+    else if (chatMute && this.checkMuteTime(chatMute))
+      this.chatsService.deleteMutenfo(chatMute.id);
     const chatLogRequest = {
       channelId: message.channelId,
       userId: message.userId,
       content: message.content
     }
-    const chatMute = await this.chatsService.readChatMute(message.channelId, message.userId);
-    // mute
-    let log;
-    if (chatMute && this.checkMuteTime(chatMute)) {
-      log = {
-        
-      }
-    }
     log = await this.chatsService.createChatLogInfo(chatLogRequest);
+    delete log.channel;
     client.to(client.data.roomId).emit('sendMessage', log);  //전체에게 방송함
     return (log);
   }
@@ -53,11 +65,9 @@ export class ChatsSocketService {
     client.data.roomId = roomId;
     client.rooms.clear();
     client.join(roomId);
-    client.to(roomId).emit('getMessage', {
-      id: null,
-      nickname: '안내',
-      message: `"${userId}"님이 "${chat.title}"방에 접속하셨습니다.`,
-    });
+    const log = this.getInfoMessage('');
+    log.content = `"${userId}"님이 "${chat.title}"방에 접속하셨습니다.`;
+    client.to(roomId).emit('sendMessage', log);
   }
 
   async enterChatRoom(client: Socket, channelId: number, userId: number) {
@@ -66,11 +76,9 @@ export class ChatsSocketService {
     client.rooms.clear();
     client.join(roomId);
     const { chat } = this.getChatRoom(roomId);
-    client.to(roomId).emit('getMessage', {
-      id: null,
-      nickname: '안내',
-      message: `"${userId}"님이 "${chat.title}"방에 접속하셨습니다.`,
-    });
+    const log = this.getInfoMessage('');
+    log.content = `"${userId}"님이 "${chat.title}"방에 접속하셨습니다.`;
+    client.to(roomId).emit('sendMessage', log);
   }
 
   exitChatRoom(client: Socket, channelId: number, userId: number) {
@@ -78,11 +86,9 @@ export class ChatsSocketService {
     client.rooms.clear();
     client.join(`room:lobby`);
     client.data.roomId = `room:lobby`;
-    client.to(roomId).emit('getMessage', {
-      id: null,
-      nickname: '안내',
-      message: '"' + userId + '"님이 방에서 나갔습니다.',
-    });
+    const log = this.getInfoMessage('');
+    log.content = `"${userId}"님이 방에서 나가셨습니다.`;
+    client.to(roomId).emit('sendMessage', log);
   }
 
   getChatRoom(roomId: string): chatRoomListDTO {
@@ -111,50 +117,66 @@ export class ChatsSocketService {
   }
 
   // op
-  async commendOp(client: Socket, channelId: number, arg: string) {
+  async commendOp(client: Socket, channelId: number, target: string) {
     try {
-      const user = await this.usersService.readOnePurePlayerWithName(arg);
+      const user = await this.usersService.readOnePurePlayerWithName(target);
       const channelMember = await this.chatsService.readChannelMember(channelId, user.id);
       this.chatsService.updateChannelMemberOp(channelMember.id, false);
-      return ('success');
+      return (`"${target}"님에게 OP 권한을 부여 하였습니다.`);
     } catch (e) {
-      return ('failed');
+      return (`OP 권한 부여 실패`);
+    }
+  }
+
+  // kick
+  async commendKick(client: Socket, channelId: number, target: string) {
+    try {
+      // target이 채널맴버인지 확인
+      const roomId = channelId.toString();
+      const channelMembers = await this.chatsService.readOneChannelMember(channelId);
+      // 채널맴버, 소켓, 룸 삭제
+      const member = channelMembers.find((member) => member.user.name == target);
+      if (!member)
+        return ('채널 맴버가 아닙니다.');
+      const userSocket = await this.usersService.readUserSocket(member.user.id);
+      return (userSocket.socket);
+    } catch (e) {
+      return ('실패');
     }
   }
 
   // ban
-  async commendBan(client: Socket, channelId: number, arg: string) {
+  async commendBan(client: Socket, channelId: number, target: string) {
     try {
-      if (arg === undefined) {
+      if (target === undefined) {
         return (this.chatsService.readBanList(channelId));
       }
-      const user = await this.usersService.readOnePurePlayerWithName(arg);
+      const user = await this.usersService.readOnePurePlayerWithName(target);
       const chatBan = await this.chatsService.readChatBan(channelId, user.id);
       if (chatBan)
-        return ('failed: already exists');
+        return ('이미 밴 목록에 추가된 유저입니다.');
       const chatBanRequest = {
         channelId: channelId,
         userId: user.id
       }
       this.chatsService.createBanInfo(chatBanRequest);
       // 이미 들어가 있는 사람은 강퇴해야함
-      return ('success');
+      return ('밴 목록에 추가하였습니다.');
     } catch (e) {
-      console.log(e);
-      return ('failed');
+      return ('실패');
     }
   }
 
   // unban
-  async commendUnban(client: Socket, channelId: number, arg: string) {
-    if (arg === undefined)
-      return ('failed: /unban [username]');
-    const user = await this.usersService.readOnePurePlayerWithName(arg);
+  async commendUnban(client: Socket, channelId: number, target: string) {
+    if (target === undefined)
+      return ('양식오류: /unban [username]');
+    const user = await this.usersService.readOnePurePlayerWithName(target);
     const chatBan = await this.chatsService.readChatBan(channelId, user.id);
     if (!chatBan)
-      return ('failed: not exists');
+      return ('밴 목록에 해당하는 유저가 없습니다.');
     this.chatsService.deleteBanInfo(chatBan.id);
-    return ('success');
+    return ('밴 목록에서 제거하였습니다.');
   }
 
   checkMuteTime(chatMute: ChatMute) {
@@ -167,11 +189,11 @@ export class ChatsSocketService {
   }
 
   // mute
-  async commendMute(client: Socket, channelId: number, arg: string) {
+  async commendMute(client: Socket, channelId: number, target: string) {
     try {
-      if (arg === undefined)
-        return ('failed: /mute [username]');
-      const user = await this.usersService.readOnePurePlayerWithName(arg);
+      if (target === undefined)
+        return ('양식오류: /mute [username]');
+      const user = await this.usersService.readOnePurePlayerWithName(target);
       const chatMute = await this.chatsService.readChatMute(channelId, user.id);
       const chatMuteRequest = {
         channelId: channelId,
@@ -181,42 +203,41 @@ export class ChatsSocketService {
         if (this.checkMuteTime(chatMute)) {
           this.chatsService.deleteMutenfo(chatMute.id);
           this.chatsService.createMuteInfo(chatMuteRequest);
-          return ('success');
+          return ('해당 유저를 1분간 채팅 금지합니다.');
         }
-        return ('failed: already exists');
+        return ('이미 채팅 금지된 유저입니다.');
       }
       this.chatsService.createMuteInfo(chatMuteRequest);
-      return ('success');
+      return ('해당 유저를 1분간 채팅 금지합니다.');
     } catch (e) {
-      return ('failed');
+      return ('실패');
     }
-
   }
 
   // name
-  async commendName(client: Socket, channelId: number, arg: string) {
+  async commendName(client: Socket, channelId: number, target: string) {
     try {
-      if (arg == undefined)
-        return ('failed: /name [title]');
-      this.chatsService.updateChannelConfigWithTitle(channelId, arg);
+      if (target == undefined)
+        return ('양식오류: /name [title]');
+      this.chatsService.updateChannelConfigWithTitle(channelId, target);
       // 유저한테 다시 채널 리스트 뿌리는 로직 필요
       // 
-      return ('success');
+      return ('채팅방 이름을 변경하였습니다.');
     } catch (e) {
-      return ('failed');
+      return ('실패');
     }
   }
 
   // password
-  async commendPassword(client: Socket, channelId: number, arg: string) {
+  async commendPassword(client: Socket, channelId: number, target: string) {
     try {
       let password = null;
-      if (arg !== undefined)
-        password = arg;
+      if (target !== undefined)
+        password = target;
       this.chatsService.updateChannelPassword(channelId, password);
-      return ('success');
+      return ('비밀번호가 성공적으로 변경되었습니다.');
     } catch (e) {
-      return ('failed');
+      return ('실패');
     }
   }
 
@@ -257,11 +278,9 @@ export class ChatsSocketService {
         error = true;
         break;
     }
-    client.emit('sendMessage', {
-      channelId: client.data.roomId,
-      user: '정보',
-      content: log,
-    });
+    const msg = this.getInfoMessage('');
+    msg.content = log;
+    client.emit('sendMessage', msg);
     if (error) return (false);
     return (true);
   }
@@ -270,12 +289,10 @@ export class ChatsSocketService {
     const { roomId } = client.data;
     const channelId = parseInt(roomId);
     const channelMember = await this.chatsService.readChannelMember(channelId, message.userId);
+
     if (!channelMember.op) {
-      client.emit('sendMessage', {
-        channelId: client.data.roomId,
-        user: '정보',
-        content: 'failed: OP permission is required',
-      });
+      const msg = this.getInfoMessage('OP 권한이 필요합니다.');
+      client.emit('sendMessage', msg);
     }
     return (channelMember.op);
   }

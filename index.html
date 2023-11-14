@@ -8,6 +8,8 @@
   <div>
     channelId: <input id="channel" type="text" />
     <button onclick="enter()">enter room</button>
+    <button onclick="regist()">regist socket</button>
+	<button onclick="kick()">kick </button>
   </div>
   <div>
     userId: <input id="user" type="text" />
@@ -32,7 +34,20 @@
     });
     socket.on('getMessage', function (data) {
       console.log(data);
-    })
+    });
+	socket.on('KICK', function () {
+	  console.log('heelo');
+	  socket.emit('QUIT');
+	});
+	
+	function kick() {
+	  socket.emit('KICK', { channelId: 100001, target: 'bread' });
+	}
+
+    function regist() {
+      socket.emit('REGIST', parseInt(user.value));
+    }
+
     function send() {
       socket.emit('sendMessage', { userId: parseInt(user.value), channelId: parseInt(channel.value), content: message.value });
       message.value = null;

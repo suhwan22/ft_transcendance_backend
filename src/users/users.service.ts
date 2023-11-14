@@ -310,6 +310,11 @@ export class UsersService {
     return (userSocket);
   }
 
+  async readUserSocketWithSocket(socket: string): Promise<UserSocket> {
+    const userSocket = await this.userSocketRepository.findOne({ where: { socket } });
+    return (userSocket);
+  }
+
   async createUserSocket(userId: number): Promise<UserSocket> {
     const userSocket = { userId: userId, socket: null };
     const newUserSocket = this.userSocketRepository.create(userSocket);
