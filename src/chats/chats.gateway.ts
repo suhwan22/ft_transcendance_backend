@@ -49,25 +49,26 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('sendMessage')
   async onChat(client: Socket, message) {
-    // 뮤트인지
-    // 명령어 파싱
     if (client.data.roomId === 'room:lobby') {
       client.broadcast.emit('getMessage', {
         channelId: null,
         userId: message.userId,
         content: message.content,
       });
-      return ;
+      return;
+    }
+    if (message.content.charAt(0) === '/') {
+      if ((await this.chatsSocketService.checkOpUser(client, message)))
+        this.chatsSocketService.execCommend(client, message);
+      return;
     }
     const log = await this.chatsSocketService.sendMessage(client, message);
-    client.to(client.data.roomId).emit('sendMessage', log);  //전체에게 방송함
   }
 
   //채팅방 들어가기
   @SubscribeMessage('enterChatRoom')
   enterChatRoom(client: Socket, message) {
     const roomId = message.channelId;
-    console.log(typeof(message.userId));
     // private 비번 확인
     // 밴이면 못들어가
     // 맴버 조회 있으면 그대로 없으면 추가

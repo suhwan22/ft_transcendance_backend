@@ -77,6 +77,11 @@ export class ChatsService {
     return (this.channelConfigRepository.findOne({ where: { id } }));
   }
 
+  async updateChannelConfigWithTitle(id: number, title: string): Promise<ChannelConfig> {
+    await this.channelConfigRepository.update(id, { title: title});
+    return (this.channelConfigRepository.findOne({ where: { id } }));
+  }
+
   /* [D] ChannelConfig 제거 */
   async deleteChannelConfig(id: number): Promise<void> {
     await (this.channelConfigRepository.delete(id));
@@ -142,10 +147,29 @@ export class ChatsService {
     return (channelMembers);
   }
 
+  async readChannelMember(channelId: number, userId: number): Promise<ChannelMember> {
+    const channelMember = this.dataSource
+                              .getRepository(ChannelMember)
+                              .createQueryBuilder('channel_member')
+                              .select('*')
+                              .where('channel_id = :id', { id: channelId })
+                              .where('user_id = :id', { id: userId })
+                              .getOne();
+    return (channelMember);
+  }
+
   /* [U] ChannelMember{id} info 수정 */
   async updateChannelMemberInfo(id: number, list: Partial<ChannelMember>): Promise<ChannelMember> {
     await this.channelMemberRepository.update(id, list);
     return (this.channelMemberRepository.findOne({ where: { id } }));
+  }
+
+  async updateChannelMemberOp(id: number, op: boolean): Promise<ChannelMember> {
+    let changeOp = true;
+    if (op)
+      changeOp = false;
+    await this.channelMemberRepository.update(id, { op: changeOp });
+    return (this.channelMemberRepository.findOne({ where: { id }}));
   }
 
   /* [D] ChannelMember{id} 제거 */
@@ -203,16 +227,32 @@ export class ChatsService {
    * BAN_LIST Table CURD
    * 
    */
-
+  test() {
+    console.log('aa');
+    return ('aa');
+  }
   async readBanList(channelId: number): Promise<ChatBan[]> {
     const banList = await this.dataSource
-                                      .getRepository(ChatBan).createQueryBuilder('ban_list')  
-                                      .leftJoinAndSelect('ban_list.user', 'player')
-                                      .leftJoinAndSelect('ban_list.channel', 'channel_config')
-                                      .select(['ban_list.id', 'player.id', 'player.name'])
-                                      .where('channel_config.id = :id', { id: channelId })
-                                      .getMany();
+                              .getRepository(ChatBan).createQueryBuilder('ban_list')  
+                              .leftJoinAndSelect('ban_list.user', 'player')
+                              .leftJoinAndSelect('ban_list.channel', 'channel_config')
+                              .select(['ban_list.id', 'player.id', 'player.name'])
+                              .where('channel_config.id = :id', { id: channelId })
+                              .getMany();
+   
     return (banList);
+  }
+
+  async readChatBan(channelId: number, userId: number): Promise<ChatBan> {
+    const chatBan = await this.dataSource
+                  .getRepository(ChatBan).createQueryBuilder('ban_list')  
+                  .leftJoinAndSelect('ban_list.user', 'player')
+                  .leftJoinAndSelect('ban_list.channel', 'channel_config')
+                  .select(['ban_list.id', 'player.id', 'player.name'])
+                  .where('channel_config.id = :id', { id: channelId })
+                  .where('player.id = :id', { id: userId })
+                  .getOne();
+    return (chatBan);
   }
 
   async createBanInfo(chatBanRequest: Partial<ChatMuteBanRequestDto>): Promise<ChatBan> {
@@ -249,10 +289,23 @@ export class ChatsService {
                                 .getRepository(ChatMute).createQueryBuilder('mute_list')  
                                 .leftJoinAndSelect('mute_list.user', 'player')
                                 .leftJoinAndSelect('mute_list.channel', 'channel_config')
-                                .select(['mute_list.id', 'player.id', 'player.name'])
+                                .select(['mute_list.id', 'player.id', 'player.name', 'mute_list.date'])
                                 .where('channel_config.id = :id', { id: channelId })
                                 .getMany();
     return (muteList);
+  }
+
+  async readChatMute(channelId: number, userId: number) {
+    const chatMute = await this.dataSource
+                              .getRepository(ChatMute).createQueryBuilder('mute_list')  
+                              .leftJoinAndSelect('mute_list.user', 'player')
+                              .leftJoinAndSelect('mute_list.channel', 'channel_config')
+                              .select(['mute_list.id', 'player.id', 'player.name', 'mute_list.date'])
+                              .where('channel_config.id = :id', { id: channelId })
+                              .where('player.id = :id', { id: userId })
+                              .getOne();
+    return (chatMute);
+    
   }
 
   async createMuteInfo(chatMuteRequest: Partial<ChatMuteBanRequestDto>): Promise<ChatMute> {
@@ -280,13 +333,7 @@ export class ChatsService {
 
   // 특정 유저가 특정 채팅방에 들어와 있는지 검사
   async checkInChannelMember(channelId: number, userId: number): Promise<boolean> {
-    const channelMember = await this.dataSource
-                                    .getRepository(ChannelMember)
-                                    .createQueryBuilder('channel_member')
-                                    .select('*')
-                                    .where('channel_id = :id', { id: channelId })
-                                    .where('user_id = :id', { id: userId })
-                                    .getOne();
+    const channelMember = await this.readChannelMember(channelId, userId);
     if (!channelMember)
       return false;
     return true;
