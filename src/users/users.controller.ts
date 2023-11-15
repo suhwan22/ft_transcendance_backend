@@ -233,6 +233,7 @@ export class UsersController {
   //   return (this.usersService.readUserInfo(id));
   // }
 
+
   @ApiOperation({ summary: '참여 가능 채팅방 리스트 조회 API'})
   @ApiOkResponse({ description: 'Ok', type: ChannelConfig, isArray: true })
   @Get('/:userId/channels/other')

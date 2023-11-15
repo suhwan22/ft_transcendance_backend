@@ -77,6 +77,10 @@ export class UsersService {
     const player = await this.playerRepository.findOne({ where: { id } });
     return (player);
   }
+  async   readOnePurePlayerWithName(name: string): Promise<Player> {
+    const player = await this.playerRepository.findOne({ where: { name } });
+    return (player);
+  }
 
   /* [U] Player info 수정 */
   async updatePlayerInfo(id: number, player: Partial<Player>): Promise<Player> {
@@ -329,6 +333,11 @@ export class UsersService {
 
   async readUserSocket(userId: number): Promise<UserSocket> {
     const userSocket = await this.userSocketRepository.findOne({ where: { userId } });
+    return (userSocket);
+  }
+
+  async readUserSocketWithSocket(socket: string): Promise<UserSocket> {
+    const userSocket = await this.userSocketRepository.findOne({ where: { socket } });
     return (userSocket);
   }
 
