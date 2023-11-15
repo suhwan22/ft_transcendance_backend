@@ -67,6 +67,10 @@ export class ChatsService {
     return (channelConfig);
   }
 
+  async readChannelConfigListWhereDm(dm: boolean): Promise<ChannelConfig[]> {
+    return (await this.channelConfigRepository.find({ where: { dm }}));
+  }
+
   async readOnePureChannelConfig(id: number): Promise<ChannelConfig> {
     return (await this.channelConfigRepository.findOne({ where: { id }}));
   }
