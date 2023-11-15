@@ -235,7 +235,8 @@ export class UsersController {
   @ApiOperation({ summary: '유저 채팅방 리스트 조회 API'})
   @ApiOkResponse({ description: 'Ok', type: ChannelMember, isArray: true })
   @Get('/:userId/channels')
-  async readChatInfo(@Param('UserId') userId: number): Promise<ChannelMember[]> {
+  async readChatInfo(@Param('userId') userId: number): Promise<ChannelMember[]> {
+    console.log(userId);
     return (this.usersService.readChannelList(userId));
   }
 }

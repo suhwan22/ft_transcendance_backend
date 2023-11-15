@@ -102,11 +102,12 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('INFO_CH_LIST')
   async sendChannelList(client: Socket, userId: number) {
+    this.chatsSocketService.sendChannelList(client, userId);
   }
 
   @SubscribeMessage('INFO_CH_MEMBER')
   async sendChannelMember(client: Socket, channelId: number) {
-    //this.chatsSocketService.sendChannelMember(client,channelId);
+    this.chatsSocketService.sendChannelMember(client,channelId);
   }
 
   @SubscribeMessage('MSG')
@@ -116,6 +117,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('JOIN')
   async joinClient(client: Socket, message) {
+    // 
 
   }
 

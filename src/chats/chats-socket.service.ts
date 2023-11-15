@@ -38,7 +38,7 @@ export class ChatsSocketService {
     const chatMute = await this.chatsService.readChatMute(message.channelId, message.userId);
     if (chatMute && !this.checkMuteTime(chatMute)) {
       log = this.getInfoMessage('채팅 금지로 인하여 일정 시간동안 채팅이 금지됩니다.');
-      client.emit('sendMessage', log);
+      client.emit('MSG', log);
       return;
     }
     else if (chatMute && this.checkMuteTime(chatMute))
@@ -50,7 +50,7 @@ export class ChatsSocketService {
     }
     log = await this.chatsService.createChatLogInfo(chatLogRequest);
     delete log.channel;
-    client.to(client.data.roomId).emit('sendMessage', log);  //전체에게 방송함
+    client.to(client.data.roomId).emit('MSG', log);  //전체에게 방송함
     return (log);
   }
 
@@ -146,6 +146,13 @@ export class ChatsSocketService {
     const roomId = channelId.toString();
     const updateMembers = await this.chatsService.readOneChannelMember(channelId);
     client.to(roomId).emit('INFO_CH_MEMBER', updateMembers);
+  }
+
+  async sendChannelList(client: Socket, userId: number) {
+    const otherList = await this.chatsService.readChannelListWithoutUser(userId);
+    const meList = await this.chatsService.readChannelListWithUser(userId);
+    const channelList = { other: otherList, me: meList };
+    client.emit('INFO_CH_LIST', channelList);
   }
 
   // ban
