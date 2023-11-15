@@ -5,6 +5,7 @@ import {
   WebSocketServer,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  ConnectedSocket,
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
@@ -120,28 +121,30 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('QUIT')
   async quitClient(client: Socket, message) {
+    // 해당 클라이언트 룸을 로비로 변경
     console.log('quit');
   }
 
   @SubscribeMessage('KICK')
-  async kickClient(client: Socket, message) {
-    const roomId = message.channelId.toString();
-    const msg = await this.chatsSocketService.commendKick(client, message.channelId, message.target);
-    console.log(msg);
-    console.log(roomId);
-    client.to(roomId).to(msg).emit('KICK');
+  async kickClient(@ConnectedSocket() client: Socket, @MessageBody() data) {
+    const msg = await this.chatsSocketService.commendKick(client, data.channelId, data.target);
+    this.chatsSocketService.sendChannelMember(client, data.channelId);
+    const log = this.chatsSocketService.getInfoMessage(msg);
+    client.emit('MSG', log);
   }
 
   @SubscribeMessage('BAN')
   async banClient(client: Socket, message) {
     const msg = await this.chatsSocketService.commendBan(client, message.channelId, message.target);
-    client.emit("MSG", msg);
+    const log = this.chatsSocketService.getInfoMessage(msg);
+    client.emit("MSG", log);
   }
 
   @SubscribeMessage('UNBAN')
   async unbanClient(client: Socket, message) {
     const msg = await this.chatsSocketService.commendUnban(client, message.channelId, message.target);
-    client.emit("MSG", msg);
+    const log = this.chatsSocketService.getInfoMessage(msg);
+    client.emit("MSG", log);
   }
 
 

@@ -112,7 +112,14 @@ export class ChatsService {
                                 .getRepository(ChannelMember).createQueryBuilder('channel_member')
                                 .leftJoinAndSelect('channel_member.user', 'player')
                                 .leftJoinAndSelect('channel_member.channel', 'channel_config')
-                                .select(['channel_member.id', 'channel_member.op', 'player.id', 'player.name', 'channel_member.date'])
+                                .select(['channel_member.id', 
+                                'channel_member.op', 
+                                'player.id', 
+                                'player.name', 
+                                'player.status', 
+                                'channel_member.date', 
+                                'channel_config.id', 
+                                'channel_config.title'])
                                 .getMany();
     return (channelMembers);
   }
@@ -123,7 +130,14 @@ export class ChatsService {
                                 .getRepository(ChannelMember).createQueryBuilder('channel_member')
                                 .leftJoinAndSelect('channel_member.user', 'player')
                                 .leftJoinAndSelect('channel_member.channel', 'channel_config')
-                                .select(['channel_member.id', 'channel_member.op', 'player.id', 'player.name', 'channel_member.date'])
+                                .select(['channel_member.id', 
+                                'channel_member.op', 
+                                'player.id', 
+                                'player.name', 
+                                'player.status', 
+                                'channel_member.date', 
+                                'channel_config.id', 
+                                'channel_config.title'])
                                 .where('channel_config.id = :id', { id: channelId })
                                 .getMany();
     return (channelMembers);
@@ -138,6 +152,7 @@ export class ChatsService {
                                 .select(['channel_member.id', 
                                         'player.id', 
                                         'player.name', 
+                                        'player.status', 
                                         'channel_member.op', 
                                         'channel_member.date', 
                                         'channel_config.id', 

@@ -131,25 +131,28 @@ export class ChatsSocketService {
   // kick
   async commendKick(client: Socket, channelId: number, target: string) {
     try {
-      // target이 채널맴버인지 확인
-      const roomId = channelId.toString();
       const channelMembers = await this.chatsService.readOneChannelMember(channelId);
-      // 채널맴버, 소켓, 룸 삭제
       const member = channelMembers.find((member) => member.user.name == target);
       if (!member)
         return ('채널 맴버가 아닙니다.');
-      const userSocket = await this.usersService.readUserSocket(member.user.id);
-      return (userSocket.socket);
+      await this.chatsService.deleteChannelMember(member.id);
+      return (`${target} 님을 강퇴하였습니다.`);
     } catch (e) {
       return ('실패');
     }
+  }
+
+  async sendChannelMember(client: Socket, channelId: number) {
+    const roomId = channelId.toString();
+    const updateMembers = await this.chatsService.readOneChannelMember(channelId);
+    client.to(roomId).emit('INFO_CH_MEMBER', updateMembers);
   }
 
   // ban
   async commendBan(client: Socket, channelId: number, target: string) {
     try {
       if (target === undefined) {
-        return (this.chatsService.readBanList(channelId));
+        return ('양식오류: /ban [username]');
       }
       const user = await this.usersService.readOnePurePlayerWithName(target);
       const chatBan = await this.chatsService.readChatBan(channelId, user.id);
@@ -160,7 +163,15 @@ export class ChatsSocketService {
         userId: user.id
       }
       this.chatsService.createBanInfo(chatBanRequest);
-      // 이미 들어가 있는 사람은 강퇴해야함
+
+      // 이미 채팅방에 있으면 강퇴
+      const channelMembers = await this.chatsService.readOneChannelMember(channelId);
+      const member = channelMembers.find((member) => member.user.name == target);
+      if (member) {
+        this.commendKick(client, channelId, target);
+        this.sendChannelMember(client, channelId);
+      }
+
       return ('밴 목록에 추가하였습니다.');
     } catch (e) {
       return ('실패');
