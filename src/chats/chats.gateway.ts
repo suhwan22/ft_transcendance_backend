@@ -97,9 +97,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let log;
 
     //이미 접속해있는 방 일 경우 재접속 차단
-    if (client.rooms.has(roomId)) {
-      console.log('already connect room');
-      //왜 이거 작동을 안해...
+    console.log(client.data.roomId, roomId.toString());
+    if (client.data.roomId === roomId.toString()) {
       return;
     }
     console.log('in1?');
@@ -163,6 +162,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatsSocketService.deleteChatRoom(client.data.roomId);
       // 외래키 되어있는거 어떻게 지우지?.. channel_config와 channel_member 지워야함
     }
+    // 외래키로 되어있는거 가각 다 지우고나서 config 지우면 될듯
     //channel_member 지워야함
     this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
   }

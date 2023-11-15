@@ -61,6 +61,9 @@ export class ChatsSocketService {
     this.connectChatRoom(client, channelId, userId);
 
     const { chat } = this.getChatRoom(roomId);
+
+    // memlist 동기화 하는거 추가 해야함
+    // channellist 동기화 하는거 추가 해야함
     
     client.to(roomId).emit('JOIN', {
       id: null,
