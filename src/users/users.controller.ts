@@ -12,6 +12,7 @@ import { UserGameRecordRequestDto } from './dtos/user-game-record.request.dto';
 import { PlayerRequestDto } from './dtos/player.request.dto';
 import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 import { JwtTwoFactorAuthGuard } from 'src/auth/guards/jwt-2fa.guard';
+import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
 
 @ApiTags('Users')
 @Controller('users')
@@ -235,7 +236,7 @@ export class UsersController {
   @ApiOperation({ summary: '유저 채팅방 리스트 조회 API'})
   @ApiOkResponse({ description: 'Ok', type: ChannelMember, isArray: true })
   @Get('/:userId/channels')
-  async readChatInfo(@Param('UserId') userId: number): Promise<ChannelMember[]> {
-    return (this.usersService.readChannelList(userId));
+  async readChatInfo(@Param('userId') userId: number): Promise<ChannelConfig[]> {
+    return (this.usersService.readChannelListWithoutUser(userId));
   }
 }

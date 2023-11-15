@@ -301,6 +301,11 @@ export class UsersService {
     return (userChannelList);
   }
 
+  async readChannelListWithoutUser(userId: number) {
+    const channelList = await this.chatsService.readChannelConfigListWhereDm(false);
+    return (channelList);
+  }
+
   async readUserSocket(userId: number): Promise<UserSocket> {
     const userSocket = await this.userSocketRepository.findOne({ where: { userId } });
     return (userSocket);

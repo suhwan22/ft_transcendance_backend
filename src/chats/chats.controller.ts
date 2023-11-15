@@ -172,4 +172,6 @@ export class ChatsController {
     }
     return (this.chatsService.deleteChannelMember(id));
   }
+
 }
+
