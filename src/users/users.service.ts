@@ -191,7 +191,7 @@ export class UsersService {
 
   /**
    * 
-   * BAN_LIST Table CURD
+   * BLOCK_LIST Table CURD
    * 
    */
 
