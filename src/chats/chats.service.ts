@@ -178,8 +178,8 @@ export class ChatsService {
                                         'channel_member.date', 
                                         'channel_config.id', 
                                         'channel_config.title'])
-                                .where('player.id = :id', { id: userId })
-                                .where('channel_config.id = :id', { id: channelId })
+                                .where('player.id = :userId', { userId: userId })
+                                .andWhere('channel_config.id = :channelId', { channelId: channelId })
                                 .getOne();
     return (channelMember);
   }
@@ -282,8 +282,8 @@ export class ChatsService {
                   .leftJoinAndSelect('ban_list.user', 'player')
                   .leftJoinAndSelect('ban_list.channel', 'channel_config')
                   .select(['ban_list.id', 'player.id', 'player.name'])
-                  .where('channel_config.id = :id', { id: channelId })
-                  .where('player.id = :id', { id: userId })
+                  .where('channel_config.id = :channelId', { channelId: channelId })
+                  .andWhere('player.id = :userId', { userId: userId })
                   .getOne();
     return (chatBan);
   }
@@ -334,8 +334,8 @@ export class ChatsService {
                               .leftJoinAndSelect('mute_list.user', 'player')
                               .leftJoinAndSelect('mute_list.channel', 'channel_config')
                               .select(['mute_list.id', 'player.id', 'player.name', 'mute_list.date'])
-                              .where('channel_config.id = :id', { id: channelId })
-                              .where('player.id = :id', { id: userId })
+                              .where('channel_config.id = :channelId', { channelId: channelId })
+                              .andWhere('player.id = :userId', { userId: userId })
                               .getOne();
     return (chatMute);
     

@@ -104,17 +104,9 @@ export class ChatsSocketService {
     delete this.chatRoomList[roomId];
   }
 
-  // ?
-  async commandHelp(client: Socket, channelId: number, arg: string) {
-    return ('명령어리스트\n' +
-      '/op 유저명: 해당 유저에게 op 권한을 부여합니다.\n' +
-      '/ban 유저명: 해당 유저에게 ban을 부여합니다.\n' +
-      '/ban: 현재 채팅방의 밴 목록을 출력합니다.\n' +
-      '/unban 유저명: 해당 유저에게 부여된 ban을 해제합니다.\n' +
-      '/mute 유저명: 해당 유저에게 채팅금지를 부여합니다.(1분)\n' +
-      '/name 채널명: 현재 채팅방의 이름을 변경합니다.\n' +
-      '/password: 현재 채팅방의 비밀번호를 해제합니다.\n' +
-      '/password 비밀번호: 현재 채팅방의 비밀번호를 변경합니다.');
+  async isOpUser(channelId: number, userId: number) {
+    const channelMember = await this.chatsService.readChannelMember(channelId, userId);
+    return (channelMember.op);
   }
 
   // op
@@ -242,7 +234,7 @@ export class ChatsSocketService {
       if (!blocked)
         return ('차단 목록에 해당하는 유저가 없습니다.');
       this.usersService.deleteBlockInfo(blocked.id);
-      return ('밴 목록에서 제거하였습니다.');
+      return ('차단 목록에서 제거하였습니다.');
     }
     catch (e) {
       return ('실패');
@@ -320,9 +312,6 @@ export class ChatsSocketService {
       error = true;
     }
     switch (cmd[0]) {
-      case '/?':
-        log = await this.commandHelp(client, channelId, cmd[1]);
-        break;
       case '/op':
         log = await this.commandOp(client, channelId, cmd[1]);
         break;
