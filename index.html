@@ -27,6 +27,9 @@
     <input id="message" type="text" />
     <button onclick="send()">send test</button>
   </div>
+  <div>
+    <button onclick="quit()">quit room</button>
+  </div>
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
     crossorigin="anonymous"></script>
@@ -48,6 +51,15 @@
         socket.emit('JOIN', { channelId: -1 });
       }
     });
+    socket.on('JOIN', function (data) {
+      console.log(data);
+    })
+    socket.on('LOADCHAT', function (data) {
+      console.log(data);
+    })
+    socket.on('QUIT', function (data) {
+      console.log(data);
+    })
     socket.on('BAN', function (data) {
       console.log(data);
     });
@@ -85,7 +97,10 @@
       message.value = null;
     }
     function enter() {
-      socket.emit('enterChatRoom', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
+      socket.emit('JOIN', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
+    }
+    function quit() {
+      socket.emit('QUIT', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
     }
   </script>
 </body>
