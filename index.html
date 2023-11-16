@@ -8,9 +8,20 @@
   <div>
     channelId: <input id="channel" type="text" />
     <button onclick="enter()">enter room</button>
+    <button onclick="regist()">regist socket</button>
   </div>
   <div>
     userId: <input id="user" type="text" />
+  </div>
+  <div>
+    target: <input id="target" type="text" />
+    <button onclick="kick()">kick </button>
+    <button onclick="ban()">ban </button>
+    <button onclick="unban()">unban </button>
+    <button onclick="mute()">mute </button>
+    <button onclick="op()">op </button>
+    <button onclick="block()">block </button>
+    <button onclick="unblock()">unblock </button>
   </div>
   <div>
     <input id="message" type="text" />
@@ -22,19 +33,55 @@
   <script>
     const channel = document.getElementById('channel');
     const user = document.getElementById('user');
+    const target = document.getElementById('target');
     const message = document.getElementById('message');
     const socket = io('http://localhost:3131');
-    socket.on('users', function (data) {
-      console.log('Connected', data);
-    });
-    socket.on('sendMessage', async function (data) {
+
+    socket.on('MSG', async function (data) {
       console.log(await data);
     });
-    socket.on('getMessage', function (data) {
+    socket.on('INFO_CH_MEMBER', function (data) {
       console.log(data);
-    })
+      const a = data.find((member) => member.user.id === parseInt(user.value));
+      if (!a) {
+        console.log("강퇴되었습니다.");
+        socket.emit('JOIN', { channelId: -1 });
+      }
+    });
+    socket.on('BAN', function (data) {
+      console.log(data);
+    });
+    socket.on('BLOCK', function (data) {
+      console.log(data);
+    });
+
+    function kick() {
+      socket.emit('KICK', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
+    function ban() {
+      socket.emit('BAN', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
+    function unban() {
+      socket.emit('UNBAN', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
+    function mute() {
+      socket.emit('MUTE', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
+    function op() {
+      socket.emit('OP', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
+    function block() {
+      socket.emit('BLOCK', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
+    function unblock() {
+      socket.emit('UNBLOCK', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
+    function regist() {
+      socket.emit('REGIST', parseInt(user.value));
+    }
+
     function send() {
-      socket.emit('sendMessage', { userId: parseInt(user.value), channelId: parseInt(channel.value), content: message.value });
+      socket.emit('MSG', { userId: parseInt(user.value), channelId: parseInt(channel.value), content: message.value });
       message.value = null;
     }
     function enter() {

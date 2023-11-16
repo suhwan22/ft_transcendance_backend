@@ -77,6 +77,10 @@ export class UsersService {
     const player = await this.playerRepository.findOne({ where: { id } });
     return (player);
   }
+  async   readOnePurePlayerWithName(name: string): Promise<Player> {
+    const player = await this.playerRepository.findOne({ where: { name } });
+    return (player);
+  }
 
   /* [U] Player info 수정 */
   async updatePlayerInfo(id: number, player: Partial<Player>): Promise<Player> {
@@ -208,7 +212,7 @@ export class UsersService {
 
   // 유저 블락 생성 메서드
   async createBlockInfo(blockRequest: Partial<UserBlockRequestDto>): Promise<UserBlock> {
-    const target = await this.readOnePlayer(blockRequest.target);
+    const target = await this.readOnePurePlayer(blockRequest.target);
     const block = {
       user: blockRequest.user,
       target: target
@@ -224,13 +228,13 @@ export class UsersService {
     return (this.userBlockRepository.findOne({ where: { id } }));
   }
 
-  // // 유저 블락 제거 메서드
-  // async deleteBlockInfo(user: number, target: number): Promise<void> {
-  //   const deleteFriend = await this.userBlockRepository.findOne({ where: { user, target } });
-  //   if (!deleteFriend)
-  //      return ;
-  //   await this.userBlockRepository.remove(deleteFriend);
-  // }
+  // 유저 블락 제거 메서드
+  async deleteBlockInfo(id: number): Promise<void> {
+    const deleteFriend = await this.userBlockRepository.findOne({ where: { id } });
+    if (!deleteFriend)
+       return ;
+    await this.userBlockRepository.remove(deleteFriend);
+  }
 
   // 유저 블락 전체제거 메서드
   async deleteBlockList(user: number): Promise<void> {
@@ -301,8 +305,39 @@ export class UsersService {
     return (userChannelList);
   }
 
+  async readChannelListWithoutUser(userId: number) {
+    const channelList = await this.chatsService.readChannelConfigListWhereDm(false);
+    const userChannelList = await this.chatsService.readUserChannelMemberWithUserId(userId);
+
+    for (let j = 0; j < channelList.length; j++) {
+      for (let i = 0; i < userChannelList.length; i++) {
+        if (userChannelList[i].channel.id === channelList[j].id) {
+          delete channelList[j];
+          break;
+        }
+      }
+    }
+    let list = channelList.filter((e) => e !== null);
+    return (list);
+  }
+
+  async readChannelListWithUser(userId: number) {
+    const userChannelList = await this.chatsService.readUserChannelMemberWithUserId(userId);
+    let arr = [];
+    for (let i = 0; i < userChannelList.length; i++) {
+      const channelId = userChannelList[i].channel.id;
+      arr.push(await this.chatsService.readOnePureChannelConfig(channelId));
+    }
+    return (arr);
+  }
+
   async readUserSocket(userId: number): Promise<UserSocket> {
     const userSocket = await this.userSocketRepository.findOne({ where: { userId } });
+    return (userSocket);
+  }
+
+  async readUserSocketWithSocket(socket: string): Promise<UserSocket> {
+    const userSocket = await this.userSocketRepository.findOne({ where: { socket } });
     return (userSocket);
   }
 

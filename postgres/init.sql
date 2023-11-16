@@ -84,7 +84,7 @@ insert into channel_password (id, password, date)
 insert into channel_member (id, channel_id, user_id, op, date) 
                     values (100001, 100001, 1, true, now());
 insert into channel_member (id, channel_id, user_id, op, date) 
-                    values (100002, 100001, 2, true, now());
+                    values (100002, 100001, 2, false, now());
 insert into channel_member (id, channel_id, user_id, op, date) 
                     values (100003, 100001, 3, true, now());
 insert into channel_member (id, channel_id, user_id, op, date) 
