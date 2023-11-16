@@ -129,14 +129,24 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('KICK')
   async kickClient(@ConnectedSocket() client: Socket, @MessageBody() data) {
+    if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
+      const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
+      client.emit('MSG', log);
+      return ;
+    }
     const msg = await this.chatsSocketService.commandKick(client, data.channelId, data.target);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit('MSG', log);
   }
 
   @SubscribeMessage('BAN')
-  async banClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commandBan(client, message.channelId, message.target);
+  async banClient(client: Socket, data) {
+    if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
+      const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
+      client.emit('MSG', log);
+      return ;
+    }
+    const msg = await this.chatsSocketService.commandBan(client, data.channelId, data.target);
     if (msg) {
       const log = this.chatsSocketService.getInfoMessage(msg);
       client.emit("MSG", log);
@@ -144,8 +154,13 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('UNBAN')
-  async unbanClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commandUnban(client, message.channelId, message.target);
+  async unbanClient(client: Socket, data) {
+    if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
+      const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
+      client.emit('MSG', log);
+      return ;
+    }
+    const msg = await this.chatsSocketService.commandUnban(client, data.channelId, data.target);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit("MSG", log);
   }
@@ -161,27 +176,42 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('UNBLOCK')
-  async unblockClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commandUnblock(client, message.channelId, message.userId, message.target);
+  async unblockClient(client: Socket, data) {
+    const msg = await this.chatsSocketService.commandUnblock(client, data.channelId, data.userId, data.target);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit("MSG", log);
   }
 
   @SubscribeMessage('MUTE')
-  async muteClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commandMute(client, message.channelId, message.target);
+  async muteClient(client: Socket, data) {
+    if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
+      const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
+      client.emit('MSG', log);
+      return ;
+    }
+    const msg = await this.chatsSocketService.commandMute(client, data.channelId, data.target);
     client.emit("MSG", msg);
   }
 
   @SubscribeMessage('PASS')
-  async updatePasswordWithChannel(client: Socket, message) {
-    const msg = await this.chatsSocketService.commandPassword(client, message.channelId, message.target);
+  async updatePasswordWithChannel(client: Socket, data) {
+    if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
+      const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
+      client.emit('MSG', log);
+      return ;
+    }
+    const msg = await this.chatsSocketService.commandPassword(client, data.channelId, data.target);
     client.emit("MSG", msg);
   }
 
   @SubscribeMessage('OP')
-  async setOpClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commandOp(client, message.channelId, message.target);
+  async setOpClient(client: Socket, data) {
+    if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
+      const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
+      client.emit('MSG', log);
+      return ;
+    }
+    const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
     client.emit("MSG", msg);
   }
 }

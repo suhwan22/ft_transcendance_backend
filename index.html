@@ -56,19 +56,19 @@
     });
 
     function kick() {
-      socket.emit('KICK', { channelId: parseInt(channel.value), target: target.value });
+      socket.emit('KICK', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
     }
     function ban() {
-      socket.emit('BAN', { channelId: parseInt(channel.value), target: target.value });
+      socket.emit('BAN', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
     }
     function unban() {
-      socket.emit('UNBAN', { channelId: parseInt(channel.value), target: target.value });
+      socket.emit('UNBAN', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
     }
     function mute() {
-      socket.emit('MUTE', { channelId: parseInt(channel.value), target: target.value });
+      socket.emit('MUTE', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
     }
     function op() {
-      socket.emit('OP', { channelId: parseInt(channel.value), target: target.value });
+      socket.emit('OP', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
     }
     function block() {
       socket.emit('BLOCK', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
