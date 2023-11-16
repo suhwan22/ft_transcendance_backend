@@ -212,7 +212,7 @@ export class UsersService {
 
   // 유저 블락 생성 메서드
   async createBlockInfo(blockRequest: Partial<UserBlockRequestDto>): Promise<UserBlock> {
-    const target = await this.readOnePlayer(blockRequest.target);
+    const target = await this.readOnePurePlayer(blockRequest.target);
     const block = {
       user: blockRequest.user,
       target: target
@@ -228,13 +228,13 @@ export class UsersService {
     return (this.userBlockRepository.findOne({ where: { id } }));
   }
 
-  // // 유저 블락 제거 메서드
-  // async deleteBlockInfo(user: number, target: number): Promise<void> {
-  //   const deleteFriend = await this.userBlockRepository.findOne({ where: { user, target } });
-  //   if (!deleteFriend)
-  //      return ;
-  //   await this.userBlockRepository.remove(deleteFriend);
-  // }
+  // 유저 블락 제거 메서드
+  async deleteBlockInfo(id: number): Promise<void> {
+    const deleteFriend = await this.userBlockRepository.findOne({ where: { id } });
+    if (!deleteFriend)
+       return ;
+    await this.userBlockRepository.remove(deleteFriend);
+  }
 
   // 유저 블락 전체제거 메서드
   async deleteBlockList(user: number): Promise<void> {

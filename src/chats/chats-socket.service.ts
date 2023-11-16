@@ -192,8 +192,6 @@ export class ChatsSocketService {
   // unban
   async commandUnban(client: Socket, channelId: number, target: string) {
     try {
-      if (target === undefined)
-        return ('양식오류: /unban [username]');
       const user = await this.usersService.readOnePurePlayerWithName(target);
       if (!user)
         return ('존재하지 않는 유저입니다.');
@@ -201,6 +199,49 @@ export class ChatsSocketService {
       if (!chatBan)
         return ('밴 목록에 해당하는 유저가 없습니다.');
       this.chatsService.deleteBanInfo(chatBan.id);
+      return ('밴 목록에서 제거하였습니다.');
+    }
+    catch (e) {
+      return ('실패');
+    }
+  }
+
+  // block
+  async commandBlock(client: Socket, channelId: number, userId: number, target: string) {
+    try {
+      const userBlocks = await this.usersService.readBlockList(userId);
+      if (target === '') {
+        client.emit("BLOCK", userBlocks);
+        return (null);
+      }
+      const user = await this.usersService.readOnePurePlayerWithName(target);
+      if (!user)
+        return ('존재하지 않는 유저입니다.');
+      const blocked = userBlocks.find((e) => e.target.name === target);
+      if (blocked)
+        return ('이미 차단 목록에 추가된 유저입니다.');
+
+      const userBlockRequest = {
+        user: userId,
+        target: user.id
+      }
+      this.usersService.createBlockInfo(userBlockRequest);
+      return ('차단 목록에 추가하였습니다.');
+    } catch (e) {
+      return ('실패');
+    }
+  }
+  // unblock
+  async commandUnblock(client: Socket, channelId: number, userId: number, target: string) {
+    try {
+      const userBlocks = await this.usersService.readBlockList(userId);
+      const user = await this.usersService.readOnePurePlayerWithName(target);
+      if (!user)
+        return ('존재하지 않는 유저입니다.');
+      const blocked = userBlocks.find((e) => e.target.name === target);
+      if (!blocked)
+        return ('차단 목록에 해당하는 유저가 없습니다.');
+      this.usersService.deleteBlockInfo(blocked.id);
       return ('밴 목록에서 제거하였습니다.');
     }
     catch (e) {
@@ -220,8 +261,6 @@ export class ChatsSocketService {
   // mute
   async commandMute(client: Socket, channelId: number, target: string) {
     try {
-      if (target === undefined)
-        return ('양식오류: /mute [username]');
       const user = await this.usersService.readOnePurePlayerWithName(target);
       if (!user)
         return ('존재하지 않는 유저입니다.');
@@ -248,8 +287,6 @@ export class ChatsSocketService {
   // name
   async commandName(client: Socket, channelId: number, target: string) {
     try {
-      if (target == undefined)
-        return ('양식오류: /name [title]');
       this.chatsService.updateChannelConfigWithTitle(channelId, target);
       // 유저한테 다시 채널 리스트 뿌리는 로직 필요
       // 

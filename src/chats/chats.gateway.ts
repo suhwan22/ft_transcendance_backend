@@ -153,11 +153,18 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('BLOCK')
   async blockClient(client: Socket, message) {
+    const msg = await this.chatsSocketService.commandBlock(client, message.channelId, message.userId, message.target);
+    if (msg) {
+      const log = this.chatsSocketService.getInfoMessage(msg);
+      client.emit("MSG", log);
+    }
   }
 
   @SubscribeMessage('UNBLOCK')
   async unblockClient(client: Socket, message) {
-
+    const msg = await this.chatsSocketService.commandUnblock(client, message.channelId, message.userId, message.target);
+    const log = this.chatsSocketService.getInfoMessage(msg);
+    client.emit("MSG", log);
   }
 
   @SubscribeMessage('MUTE')

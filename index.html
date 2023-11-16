@@ -20,6 +20,8 @@
     <button onclick="unban()">unban </button>
     <button onclick="mute()">mute </button>
     <button onclick="op()">op </button>
+    <button onclick="block()">block </button>
+    <button onclick="unblock()">unblock </button>
   </div>
   <div>
     <input id="message" type="text" />
@@ -49,6 +51,9 @@
     socket.on('BAN', function (data) {
       console.log(data);
     });
+    socket.on('BLOCK', function (data) {
+      console.log(data);
+    });
 
     function kick() {
       socket.emit('KICK', { channelId: parseInt(channel.value), target: target.value });
@@ -65,7 +70,12 @@
     function op() {
       socket.emit('OP', { channelId: parseInt(channel.value), target: target.value });
     }
-
+    function block() {
+      socket.emit('BLOCK', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
+    function unblock() {
+      socket.emit('UNBLOCK', { channelId: parseInt(channel.value), userId: parseInt(user.value), target: target.value });
+    }
     function regist() {
       socket.emit('REGIST', parseInt(user.value));
     }
