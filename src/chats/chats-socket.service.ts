@@ -38,7 +38,7 @@ export class ChatsSocketService {
     const chatMute = await this.chatsService.readChatMute(message.channelId, message.userId);
     if (chatMute && !this.checkMuteTime(chatMute)) {
       log = this.getInfoMessage('채팅 금지로 인하여 일정 시간동안 채팅이 금지됩니다.');
-      client.emit('MSG', log);
+      client.emit('NOTICE', log);
       return;
     }
     else if (chatMute && this.checkMuteTime(chatMute))
@@ -88,11 +88,9 @@ export class ChatsSocketService {
     // memlist 동기화 하는거 추가 해야함
     // channellist 동기화 하는거 추가 해야함
     
-    client.to(roomId).emit('JOIN', {
-      id: null,
-      nickname: '안내',
-      message: `${player.name}님이 ${chat.title}방에 입장하셨습니다.`,
-    });
+    
+    const log = this.getInfoMessage(`${player.name}님이 ${chat.title}방에 입장하셨습니다.`);
+    client.to(roomId).emit('NOTICE', log);
   }
 
   async createAndEnterChatRoom(client: Socket, channelId: number, userId: number) {
@@ -112,12 +110,8 @@ export class ChatsSocketService {
 
     const { chat } = this.getChatRoom(roomId);
     
-    // 알림 메시지는 NOTICE 프로토콜로 전송하도록 수정
-    client.to(roomId).emit('JOIN', {
-      id: null,
-      nickname: '안내',
-      message: `${player.name}님이 ${chat.title}방에 입장하셨습니다.`,
-    });
+    const log = this.getInfoMessage(`${player.name}님이 ${chat.title}방에 입장하셨습니다.`);
+    client.to(roomId).emit('NOTICE', log);
   }
 
   async connectChatRoom(client: Socket, channelId: number, userId: number) {
@@ -136,12 +130,8 @@ export class ChatsSocketService {
   async exitChatRoom(client: Socket, channelId: number, userId: number) {
     const player = await this.usersService.readOnePurePlayer(userId);
     const roomId = channelId.toString();
-    // 알림 메시지는 NOTICE 프로토콜로 전송하도록 수정
-    client.to(roomId).emit('QUIT', {
-      id: null,
-      nickname: '안내',
-      message: `${player.name}님이 퇴장하셨습니다.`,
-    });
+    const log = this.getInfoMessage(`${player.name}님이 퇴장하셨습니다.`);
+    client.to(roomId).emit('NOTICE', log);
     client.data.roomId = 'room:lobby';
     client.leave(roomId);
     client.rooms.clear();

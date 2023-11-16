@@ -51,6 +51,9 @@
         socket.emit('EXIT', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
       }
     });
+    socket.on('NOTICE', function (data) {
+      console.log(data);
+    })
     socket.on('JOIN', function (data) {
       console.log(data);
     })
