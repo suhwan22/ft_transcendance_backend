@@ -104,8 +104,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 혹시 없는 channel에 join하려는 경우, client 에러임
     const channel = await this.chatsService.readOneChannelConfig(message.channelId);
     if (!channel){
-      log = '존재하지 않는 channel입니다.';
-      client.emit('JOIN', log);
+      const log = this.chatsSocketService.getInfoMessage('존재하지 않는 channel입니다.');
+      client.emit('NOTICE', log);
       return ;
     }
 
@@ -129,23 +129,23 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     //ban list 확인
     const banUser = await this.chatsService.readBanUser(message.channelId, message.userId);
     if (banUser) {
-      log = '해당 channel의 ban list에 등록 되어있어 입장이 불가합니다.';
-      client.emit('JOIN', log);
+      const log = this.chatsSocketService.getInfoMessage('해당 channel의 ban list에 등록 되어있어 입장이 불가합니다.');
+      client.emit('NOTICE', log);
       return;
     }
 
     // 비번 확인
     if (channel.public === false && !await this.chatsService.comparePassword(message.password, message.channelId)) {
-      log = '비밀번호가 일치하지 않습니다.';
-      client.emit('JOIN', log);
+      const log = this.chatsSocketService.getInfoMessage('비밀번호가 일치하지 않습니다.');
+      client.emit('NOTICE', log);
       return;
     }
 
     //인원 수 확인
     const current = await this.chatsService.readOnePureChannelMember(message.channelId);
     if (channel.limit === current.length) {
-      log = '방이 가득 찼습니다.';
-      client.emit('JOIN', log);
+      const log = this.chatsSocketService.getInfoMessage('방이 가득 찼습니다.');
+      client.emit('NOTICE', log);
       return;
     }
 
@@ -219,25 +219,25 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async kickClient(@ConnectedSocket() client: Socket, @MessageBody() data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
-      client.emit('MSG', log);
+      client.emit('NOTICE', log);
       return ;
     }
     const msg = await this.chatsSocketService.commandKick(client, data.channelId, data.target);
     const log = this.chatsSocketService.getInfoMessage(msg);
-    client.emit('MSG', log);
+    client.emit('NOTICE', log);
   }
 
   @SubscribeMessage('BAN')
   async banClient(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
-      client.emit('MSG', log);
+      client.emit('NOTICE', log);
       return ;
     }
     const msg = await this.chatsSocketService.commandBan(client, data.channelId, data.target);
     if (msg) {
       const log = this.chatsSocketService.getInfoMessage(msg);
-      client.emit("MSG", log);
+      client.emit("NOTICE", log);
     }
   }
 
@@ -245,12 +245,12 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async unbanClient(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
-      client.emit('MSG', log);
+      client.emit('NOTICE', log);
       return ;
     }
     const msg = await this.chatsSocketService.commandUnban(client, data.channelId, data.target);
     const log = this.chatsSocketService.getInfoMessage(msg);
-    client.emit("MSG", log);
+    client.emit("NOTICE", log);
   }
 
 
@@ -259,7 +259,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const msg = await this.chatsSocketService.commandBlock(client, message.channelId, message.userId, message.target);
     if (msg) {
       const log = this.chatsSocketService.getInfoMessage(msg);
-      client.emit("MSG", log);
+      client.emit("NOTICE", log);
     }
   }
 
@@ -267,39 +267,39 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async unblockClient(client: Socket, data) {
     const msg = await this.chatsSocketService.commandUnblock(client, data.channelId, data.userId, data.target);
     const log = this.chatsSocketService.getInfoMessage(msg);
-    client.emit("MSG", log);
+    client.emit("NOTICE", log);
   }
 
   @SubscribeMessage('MUTE')
   async muteClient(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
-      client.emit('MSG', log);
+      client.emit('NOTICE', log);
       return ;
     }
     const msg = await this.chatsSocketService.commandMute(client, data.channelId, data.target);
-    client.emit("MSG", msg);
+    client.emit("NOTICE", msg);
   }
 
   @SubscribeMessage('PASS')
   async updatePasswordWithChannel(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
-      client.emit('MSG', log);
+      client.emit('NOTICE', log);
       return ;
     }
     const msg = await this.chatsSocketService.commandPassword(client, data.channelId, data.target);
-    client.emit("MSG", msg);
+    client.emit("NOTICE", msg);
   }
 
   @SubscribeMessage('OP')
   async setOpClient(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getInfoMessage("OP 권한이 필요합니다.");
-      client.emit('MSG', log);
+      client.emit('NOTICE', log);
       return ;
     }
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
-    client.emit("MSG", msg);
+    client.emit("NOTICE", msg);
   }
 }
