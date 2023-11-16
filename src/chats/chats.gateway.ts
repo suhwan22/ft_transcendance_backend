@@ -130,7 +130,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('KICK')
   async kickClient(@ConnectedSocket() client: Socket, @MessageBody() data) {
     const msg = await this.chatsSocketService.commandKick(client, data.channelId, data.target);
-    this.chatsSocketService.sendChannelMember(client, data.channelId);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit('MSG', log);
   }
@@ -138,8 +137,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('BAN')
   async banClient(client: Socket, message) {
     const msg = await this.chatsSocketService.commandBan(client, message.channelId, message.target);
-    const log = this.chatsSocketService.getInfoMessage(msg);
-    client.emit("MSG", log);
+    if (msg) {
+      const log = this.chatsSocketService.getInfoMessage(msg);
+      client.emit("MSG", log);
+    }
   }
 
   @SubscribeMessage('UNBAN')

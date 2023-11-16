@@ -7,6 +7,7 @@ delete from block_list;
 delete from ban_list;
 delete from chat_log;
 delete from channel_member;
+delete from channel_password;
 delete from channel_config;
 delete from friend_request;
 delete from auth_list;

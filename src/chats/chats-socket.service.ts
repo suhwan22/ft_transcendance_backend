@@ -5,6 +5,7 @@ import { ChannelConfig } from "./entities/channel-config.entity";
 import { UsersService } from "src/users/users.service";
 import { ChatMute } from "./entities/chat-mute.entity";
 import { IoAdapter } from "@nestjs/platform-socket.io";
+import { ChatBan } from "./entities/chat-ban.entity";
 
 
 @Injectable()
@@ -67,7 +68,7 @@ export class ChatsSocketService {
     client.join(roomId);
     const log = this.getInfoMessage('');
     log.content = `"${userId}"님이 "${chat.title}"방에 접속하셨습니다.`;
-    client.to(roomId).emit('sendMessage', log);
+    client.to(roomId).emit('MSG', log);
   }
 
   async enterChatRoom(client: Socket, channelId: number, userId: number) {
@@ -78,7 +79,7 @@ export class ChatsSocketService {
     const { chat } = this.getChatRoom(roomId);
     const log = this.getInfoMessage('');
     log.content = `"${userId}"님이 "${chat.title}"방에 접속하셨습니다.`;
-    client.to(roomId).emit('sendMessage', log);
+    client.to(roomId).emit('MSG', log);
   }
 
   exitChatRoom(client: Socket, channelId: number, userId: number) {
@@ -88,7 +89,7 @@ export class ChatsSocketService {
     client.data.roomId = `room:lobby`;
     const log = this.getInfoMessage('');
     log.content = `"${userId}"님이 방에서 나가셨습니다.`;
-    client.to(roomId).emit('sendMessage', log);
+    client.to(roomId).emit('MSG', log);
   }
 
   getChatRoom(roomId: string): chatRoomListDTO {
@@ -136,6 +137,7 @@ export class ChatsSocketService {
       if (!member)
         return ('채널 맴버가 아닙니다.');
       await this.chatsService.deleteChannelMember(member.id);
+      this.sendChannelMember(client, channelId);
       return (`${target} 님을 강퇴하였습니다.`);
     } catch (e) {
       return ('실패');
@@ -158,10 +160,13 @@ export class ChatsSocketService {
   // ban
   async commandBan(client: Socket, channelId: number, target: string) {
     try {
-      if (target === undefined) {
-        return ('양식오류: /ban [username]');
+      if (target === '') {
+        client.emit("BAN", await this.chatsService.readBanList(channelId));
+        return (null);
       }
       const user = await this.usersService.readOnePurePlayerWithName(target);
+      if (!user)
+        return ('존재하지 않는 유저입니다.');
       const chatBan = await this.chatsService.readChatBan(channelId, user.id);
       if (chatBan)
         return ('이미 밴 목록에 추가된 유저입니다.');
@@ -176,7 +181,6 @@ export class ChatsSocketService {
       const member = channelMembers.find((member) => member.user.name == target);
       if (member) {
         this.commandKick(client, channelId, target);
-        this.sendChannelMember(client, channelId);
       }
 
       return ('밴 목록에 추가하였습니다.');
@@ -187,14 +191,21 @@ export class ChatsSocketService {
 
   // unban
   async commandUnban(client: Socket, channelId: number, target: string) {
-    if (target === undefined)
-      return ('양식오류: /unban [username]');
-    const user = await this.usersService.readOnePurePlayerWithName(target);
-    const chatBan = await this.chatsService.readChatBan(channelId, user.id);
-    if (!chatBan)
-      return ('밴 목록에 해당하는 유저가 없습니다.');
-    this.chatsService.deleteBanInfo(chatBan.id);
-    return ('밴 목록에서 제거하였습니다.');
+    try {
+      if (target === undefined)
+        return ('양식오류: /unban [username]');
+      const user = await this.usersService.readOnePurePlayerWithName(target);
+      if (!user)
+        return ('존재하지 않는 유저입니다.');
+      const chatBan = await this.chatsService.readChatBan(channelId, user.id);
+      if (!chatBan)
+        return ('밴 목록에 해당하는 유저가 없습니다.');
+      this.chatsService.deleteBanInfo(chatBan.id);
+      return ('밴 목록에서 제거하였습니다.');
+    }
+    catch (e) {
+      return ('실패');
+    }
   }
 
   checkMuteTime(chatMute: ChatMute) {
@@ -212,6 +223,8 @@ export class ChatsSocketService {
       if (target === undefined)
         return ('양식오류: /mute [username]');
       const user = await this.usersService.readOnePurePlayerWithName(target);
+      if (!user)
+        return ('존재하지 않는 유저입니다.');
       const chatMute = await this.chatsService.readChatMute(channelId, user.id);
       const chatMuteRequest = {
         channelId: channelId,
@@ -298,7 +311,7 @@ export class ChatsSocketService {
     }
     const msg = this.getInfoMessage('');
     msg.content = log;
-    client.emit('sendMessage', msg);
+    client.emit('MSG', msg);
     if (error) return (false);
     return (true);
   }
@@ -310,7 +323,7 @@ export class ChatsSocketService {
 
     if (!channelMember.op) {
       const msg = this.getInfoMessage('OP 권한이 필요합니다.');
-      client.emit('sendMessage', msg);
+      client.emit('MSG', msg);
     }
     return (channelMember.op);
   }

@@ -264,10 +264,6 @@ export class ChatsService {
    * BAN_LIST Table CURD
    * 
    */
-  test() {
-    console.log('aa');
-    return ('aa');
-  }
   async readBanList(channelId: number): Promise<ChatBan[]> {
     const banList = await this.dataSource
                               .getRepository(ChatBan).createQueryBuilder('ban_list')  
