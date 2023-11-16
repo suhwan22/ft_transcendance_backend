@@ -56,7 +56,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     if (message.content.charAt(0) === '/') {
       if ((await this.chatsSocketService.checkOpUser(client, message)))
-        this.chatsSocketService.execCommend(client, message);
+        this.chatsSocketService.execCommand(client, message);
       return;
     }
     const log = await this.chatsSocketService.sendMessage(client, message);
@@ -129,7 +129,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('KICK')
   async kickClient(@ConnectedSocket() client: Socket, @MessageBody() data) {
-    const msg = await this.chatsSocketService.commendKick(client, data.channelId, data.target);
+    const msg = await this.chatsSocketService.commandKick(client, data.channelId, data.target);
     this.chatsSocketService.sendChannelMember(client, data.channelId);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit('MSG', log);
@@ -137,14 +137,14 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('BAN')
   async banClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commendBan(client, message.channelId, message.target);
+    const msg = await this.chatsSocketService.commandBan(client, message.channelId, message.target);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit("MSG", log);
   }
 
   @SubscribeMessage('UNBAN')
   async unbanClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commendUnban(client, message.channelId, message.target);
+    const msg = await this.chatsSocketService.commandUnban(client, message.channelId, message.target);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit("MSG", log);
   }
@@ -161,19 +161,19 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MUTE')
   async muteClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commendMute(client, message.channelId, message.target);
+    const msg = await this.chatsSocketService.commandMute(client, message.channelId, message.target);
     client.emit("MSG", msg);
   }
 
   @SubscribeMessage('PASS')
   async updatePasswordWithChannel(client: Socket, message) {
-    const msg = await this.chatsSocketService.commendPassword(client, message.channelId, message.target);
+    const msg = await this.chatsSocketService.commandPassword(client, message.channelId, message.target);
     client.emit("MSG", msg);
   }
 
   @SubscribeMessage('OP')
   async setOpClient(client: Socket, message) {
-    const msg = await this.chatsSocketService.commendOp(client, message.channelId, message.target);
+    const msg = await this.chatsSocketService.commandOp(client, message.channelId, message.target);
     client.emit("MSG", msg);
   }
 }

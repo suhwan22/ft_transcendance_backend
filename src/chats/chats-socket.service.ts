@@ -104,7 +104,7 @@ export class ChatsSocketService {
   }
 
   // ?
-  async commendHelp(client: Socket, channelId: number, arg: string) {
+  async commandHelp(client: Socket, channelId: number, arg: string) {
     return ('명령어리스트\n' +
       '/op 유저명: 해당 유저에게 op 권한을 부여합니다.\n' +
       '/ban 유저명: 해당 유저에게 ban을 부여합니다.\n' +
@@ -117,7 +117,7 @@ export class ChatsSocketService {
   }
 
   // op
-  async commendOp(client: Socket, channelId: number, target: string) {
+  async commandOp(client: Socket, channelId: number, target: string) {
     try {
       const user = await this.usersService.readOnePurePlayerWithName(target);
       const channelMember = await this.chatsService.readChannelMember(channelId, user.id);
@@ -129,7 +129,7 @@ export class ChatsSocketService {
   }
 
   // kick
-  async commendKick(client: Socket, channelId: number, target: string) {
+  async commandKick(client: Socket, channelId: number, target: string) {
     try {
       const channelMembers = await this.chatsService.readOneChannelMember(channelId);
       const member = channelMembers.find((member) => member.user.name == target);
@@ -149,14 +149,14 @@ export class ChatsSocketService {
   }
 
   async sendChannelList(client: Socket, userId: number) {
-    const otherList = await this.chatsService.readChannelListWithoutUser(userId);
-    const meList = await this.chatsService.readChannelListWithUser(userId);
+    const otherList = await this.usersService.readChannelListWithoutUser(userId);
+    const meList = await this.usersService.readChannelListWithUser(userId);
     const channelList = { other: otherList, me: meList };
     client.emit('INFO_CH_LIST', channelList);
   }
 
   // ban
-  async commendBan(client: Socket, channelId: number, target: string) {
+  async commandBan(client: Socket, channelId: number, target: string) {
     try {
       if (target === undefined) {
         return ('양식오류: /ban [username]');
@@ -175,7 +175,7 @@ export class ChatsSocketService {
       const channelMembers = await this.chatsService.readOneChannelMember(channelId);
       const member = channelMembers.find((member) => member.user.name == target);
       if (member) {
-        this.commendKick(client, channelId, target);
+        this.commandKick(client, channelId, target);
         this.sendChannelMember(client, channelId);
       }
 
@@ -186,7 +186,7 @@ export class ChatsSocketService {
   }
 
   // unban
-  async commendUnban(client: Socket, channelId: number, target: string) {
+  async commandUnban(client: Socket, channelId: number, target: string) {
     if (target === undefined)
       return ('양식오류: /unban [username]');
     const user = await this.usersService.readOnePurePlayerWithName(target);
@@ -207,7 +207,7 @@ export class ChatsSocketService {
   }
 
   // mute
-  async commendMute(client: Socket, channelId: number, target: string) {
+  async commandMute(client: Socket, channelId: number, target: string) {
     try {
       if (target === undefined)
         return ('양식오류: /mute [username]');
@@ -233,7 +233,7 @@ export class ChatsSocketService {
   }
 
   // name
-  async commendName(client: Socket, channelId: number, target: string) {
+  async commandName(client: Socket, channelId: number, target: string) {
     try {
       if (target == undefined)
         return ('양식오류: /name [title]');
@@ -247,7 +247,7 @@ export class ChatsSocketService {
   }
 
   // password
-  async commendPassword(client: Socket, channelId: number, target: string) {
+  async commandPassword(client: Socket, channelId: number, target: string) {
     try {
       let password = null;
       if (target !== undefined)
@@ -259,40 +259,40 @@ export class ChatsSocketService {
     }
   }
 
-  async execCommend(client: Socket, message) {
+  async execCommand(client: Socket, message) {
     const cmd = message.content.split(' ');
     const { roomId } = client.data;
     const channelId = parseInt(roomId);
     let log;
     let error;
     if (cmd.length > 2) {
-      log = 'failed: Invaild Commend';
+      log = 'failed: Invaild Command';
       error = true;
     }
     switch (cmd[0]) {
       case '/?':
-        log = await this.commendHelp(client, channelId, cmd[1]);
+        log = await this.commandHelp(client, channelId, cmd[1]);
         break;
       case '/op':
-        log = await this.commendOp(client, channelId, cmd[1]);
+        log = await this.commandOp(client, channelId, cmd[1]);
         break;
       case '/ban':
-        log = await this.commendBan(client, channelId, cmd[1]);
+        log = await this.commandBan(client, channelId, cmd[1]);
         break;
       case '/unban':
-        log = await this.commendUnban(client, channelId, cmd[1]);
+        log = await this.commandUnban(client, channelId, cmd[1]);
         break;
       case '/mute':
-        log = await this.commendMute(client, channelId, cmd[1]);
+        log = await this.commandMute(client, channelId, cmd[1]);
         break;
       case '/name':
-        log = await this.commendName(client, channelId, cmd[1]);
+        log = await this.commandName(client, channelId, cmd[1]);
         break;
       case '/password':
-        log = await this.commendPassword(client, channelId, cmd[1]);
+        log = await this.commandPassword(client, channelId, cmd[1]);
         break;
       default:
-        log = 'failed: Invaild Commend';
+        log = 'failed: Invaild Command';
         error = true;
         break;
     }
