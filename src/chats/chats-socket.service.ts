@@ -54,8 +54,7 @@ export class ChatsSocketService {
 
     // room이 없는 경우 새로 만듬
     if (!this.getChatRoom(roomId)) {
-      console.log('make room');
-      this.createChatRoom(client, channelId, userId);
+      await this.createChatRoom(client, channelId, userId);
     }
 
     this.connectChatRoom(client, channelId, userId);
@@ -105,20 +104,20 @@ export class ChatsSocketService {
 
     // 최근 chat_log 50개 전달
     let log = await this.chatsService.readLatestChatLog(channelId);
-    console.log(log);
     client.emit('LOADCHAT', log);
   }
 
-  exitChatRoom(client: Socket, channelId: number, userId: number) {
+  async exitChatRoom(client: Socket, channelId: number, userId: number) {
+    const player = await this.usersService.readOnePurePlayer(userId);
     const roomId = channelId.toString();
+    client.data.roomId = 'room:lobby';
     client.rooms.clear();
-    client.rooms.add(roomId); //add 하는 이유가 뭐야?..
-    client.join(`room:lobby`);
-    client.data.roomId = `room:lobby`;
-    client.to(roomId).emit('getMessage', {
+    client.rooms.add('room:lobby');
+    client.join('room:lobby');
+    client.to(roomId).emit('QUIT', {
       id: null,
       nickname: '안내',
-      message: '"' + userId + '"님이 방에서 나갔습니다.',
+      message: `${player.name}님이 퇴장하셨습니다.`,
     });
   }
 

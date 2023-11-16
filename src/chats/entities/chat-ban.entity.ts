@@ -10,7 +10,9 @@ export class ChatBan {
   id: number;
 
   @ApiProperty({ type: () => ChannelConfig })
-  @ManyToOne(() => ChannelConfig, (channelConfig) => channelConfig.banList)
+  @ManyToOne(() => ChannelConfig, (channelConfig) => channelConfig.banList, { 
+    onDelete: "CASCADE"
+  })
   @JoinColumn({ name: 'channel_id' })
   channel: ChannelConfig;
 

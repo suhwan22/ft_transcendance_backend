@@ -36,14 +36,20 @@ export class ChannelConfig {
   memberList: ChannelMember[];
 
   @ApiProperty({ type : () => ChatBan, isArray: true })
-  @OneToMany(() => ChatBan, (chatBan) => chatBan.channel)
+  @OneToMany(() => ChatBan, (chatBan) => chatBan.channel, {
+    cascade: true
+  })
   banList: ChatBan[];
 
   @ApiProperty({ type : () => ChatMute, isArray: true })
-  @OneToMany(() => ChatMute, (chatMute) => chatMute.channel)
+  @OneToMany(() => ChatMute, (chatMute) => chatMute.channel, {
+    cascade: true
+  })
   muteList: ChatMute[];
 
   @ApiProperty({ type : () => ChatLog, isArray: true })
-  @OneToMany(() => ChatLog, (chatLog) => chatLog.channel)
+  @OneToMany(() => ChatLog, (chatLog) => chatLog.channel, {
+    cascade: true
+  })
   chatLogs: ChatLog[];
 }

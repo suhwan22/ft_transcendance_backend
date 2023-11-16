@@ -10,7 +10,9 @@ export class ChatLog {
   id: number;
 
   @ApiProperty({ type: () => ChannelConfig })
-  @ManyToOne(() => ChannelConfig, (channelConfig) => channelConfig.chatLogs)
+  @ManyToOne(() => ChannelConfig, (channelConfig) => channelConfig.chatLogs, {
+    onDelete: "CASCADE"
+  })
   @JoinColumn({ name: 'channel_id' })
   channel: ChannelConfig;
 

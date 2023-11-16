@@ -96,22 +96,26 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomId = message.channelId;
     let log;
 
+    // 혹시 없는 channel에 join하려는 경우, client 에러임
+    const channel = await this.chatsService.readOneChannelConfig(message.channelId);
+    if (!channel){
+      log = '존재하지 않는 channel입니다.';
+      client.emit('JOIN', log);
+      return ;
+    }
+
     //이미 접속해있는 방 일 경우 재접속 차단
-    console.log(client.data.roomId, roomId.toString());
     if (client.data.roomId === roomId.toString()) {
       return;
     }
-    console.log('in1?');
 
     // 맴버 조회 있으면 그냥 접속
     const isMember = await this.chatsService.readMemberInChannel(message.channelId, message.userId);
     if (isMember) {
-      console.log(isMember)
       //이전 방이 만약 나 혼자있던 방이면 제거
       if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
        this.chatsSocketService.deleteChatRoom(client.data.roomId);
        //이것도 작동 안함...
-       console.log('delete room');
       }
       this.chatsSocketService.connectChatRoom(client, message.channelId, message.userId);
       return;
@@ -126,8 +130,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     // 비번 확인
-    const channel = await this.chatsService.readOneChannelConfig(message.channelId);
-    if (!channel.public === false && !this.chatsService.comparePassword(message.password, message.channelId)) {
+    if (channel.public === false && !await this.chatsService.comparePassword(message.password, message.channelId)) {
       log = '비밀번호가 일치하지 않습니다.';
       client.emit('JOIN', log);
       return;
@@ -162,9 +165,24 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatsSocketService.deleteChatRoom(client.data.roomId);
       // 외래키 되어있는거 어떻게 지우지?.. channel_config와 channel_member 지워야함
     }
-    // 외래키로 되어있는거 가각 다 지우고나서 config 지우면 될듯
-    //channel_member 지워야함
-    this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
-  }
 
+    const channelMembers = await this.chatsService.readOneChannelMember(message.channelId);
+    if (channelMembers.length === 1) {
+      // member가 1명인 상태에서 나가기 때문에 방이 같이 제거되는 경우
+      const member = channelMembers.find((member) => member.user.id == message.userId);
+      if (!member)
+        return ('채널 맴버가 아닙니다. bug 상황');
+      await this.chatsService.deleteChannelMember(member.id);
+      await this.chatsService.deleteChannelConfig(message.channelId);
+    }
+    else {
+      const member = channelMembers.find((member) => member.user.id == message.userId);
+      if (!member)
+        return ('채널 맴버가 아닙니다.bug 상황');
+      await this.chatsService.deleteChannelMember(member.id);
+    }
+    console.log("here?");
+    await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
+    console.log("finish exit?");
+  }
 }

@@ -60,6 +60,9 @@ export class ChatsService {
   /* [R] 특정 ChannelConfig 조회 */
   async readOneChannelConfig(id: number): Promise<ChannelConfig> {
     const channelConfig = await this.channelConfigRepository.findOne({ where: { id }})
+    if (!channelConfig) {
+      return null;
+    }
     channelConfig.banList = await this.readBanList(id);
     channelConfig.chatLogs = await this.readChatLogList(id);
     channelConfig.memberList = await this.readOneChannelMember(id);
@@ -77,8 +80,10 @@ export class ChatsService {
     return (this.channelConfigRepository.findOne({ where: { id } }));
   }
 
-  /* [D] ChannelConfig 제거 */
+  /* [D] ChannelConfig 제거 
+          channel_member 관계는 없는 경우 */
   async deleteChannelConfig(id: number): Promise<void> {
+    await this.channelPasswordRepository.delete(id);
     await (this.channelConfigRepository.delete(id));
   }
 
@@ -259,7 +264,6 @@ export class ChatsService {
   }
 
   async readBanUser(channelId: number, userId: number): Promise<ChatBan> {
-    console.log(channelId, userId);
     const banList = await this.dataSource
                                       .getRepository(ChatBan).createQueryBuilder('ban_list')  
                                       .leftJoinAndSelect('ban_list.user', 'player')
@@ -371,6 +375,9 @@ export class ChatsService {
   }
 
   async comparePassword(password: string, channelId: number) {
+    if (!password){
+      return false;
+    }
     const userPassword = await this.readChannelPassword(channelId);
     return (await compare(password, userPassword.password));
   }
