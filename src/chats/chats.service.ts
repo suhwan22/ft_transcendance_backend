@@ -266,7 +266,7 @@ export class ChatsService {
                                       .limit(10)
                                       .getMany();
     return (chatLogs);
-
+  }
   async readChatLog(id: number): Promise<ChatLog> {
     const chatLog = await this.dataSource
                                 .getRepository(ChatLog).createQueryBuilder('chat_log')

@@ -42,7 +42,7 @@ export class ChatsSocketService {
       return;
     }
     else if (chatMute && this.checkMuteTime(chatMute))
-      this.chatsService.deleteMutenfo(chatMute.id);
+      this.chatsService.deleteMuteInfo(chatMute.id);
     const chatLogRequest = {
       channelId: message.channelId,
       userId: message.userId,
@@ -319,7 +319,7 @@ export class ChatsSocketService {
       }
       if (chatMute) {
         if (this.checkMuteTime(chatMute)) {
-          this.chatsService.deleteMutenfo(chatMute.id);
+          this.chatsService.deleteMuteInfo(chatMute.id);
           this.chatsService.createMuteInfo(chatMuteRequest);
           return ('해당 유저를 1분간 채팅 금지합니다.');
         }
