@@ -122,6 +122,12 @@ export class ChatsSocketService {
     client.rooms.add(roomId);
     client.join(roomId);
 
+    // 들어가는 방 채널 멤버들 전달
+    await this.sendChannelMember(client, channelId);
+
+    // 채널 리스트 다시 전달
+    await this.sendChannelList(client, userId);
+
     // 최근 chat_log 50개 전달
     let log = await this.chatsService.readLatestChatLog(channelId);
     client.emit('LOADCHAT', log);
@@ -130,18 +136,27 @@ export class ChatsSocketService {
   async exitChatRoom(client: Socket, channelId: number, userId: number) {
     const player = await this.usersService.readOnePurePlayer(userId);
     const roomId = channelId.toString();
+
     const log = this.getInfoMessage(`${player.name}님이 퇴장하셨습니다.`);
     client.to(roomId).emit('NOTICE', log);
+
     client.data.roomId = 'room:lobby';
     client.leave(roomId);
     client.rooms.clear();
     client.rooms.add('room:lobby');
     client.join('room:lobby');
+
+    // 채널 리스트 다시 전달
+    await this.sendChannelList(client, userId);
+
+    // roomId에 있는 사람들에게 바뀐 채널 멤버 전달
+    await this.sendChannelMember(client, channelId);
+
   }
 
   getChatRoom(roomId: string): chatRoomListDTO {
     return this.chatRoomList[roomId];
-  }
+}
 
   getChatRoomList(): Record<string, chatRoomListDTO> {
     return this.chatRoomList;

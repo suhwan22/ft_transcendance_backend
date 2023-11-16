@@ -190,9 +190,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return ('채널 맴버가 아닙니다.bug 상황');
       await this.chatsService.deleteChannelMember(member.id);
     }
-    console.log("here?");
     await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
-    console.log("finish exit?");
   }
 
   @SubscribeMessage('REGIST')
