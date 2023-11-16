@@ -157,6 +157,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatsSocketService.enterChatRoom(client, roomId, message.userId);
   }
 
+  @SubscribeMessage('EXIT')
+  async goToLobby(client: Socket, message) {
+    this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
+  }
+
   //채팅방 나가기
   // QUIT + message : {
   //   userId: number,
@@ -164,7 +169,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // }
   @SubscribeMessage('QUIT')
   async quitChatRoom(client: Socket, message) {
-
     //방이 만약 나 혼자인 방이면 제거
     if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
       this.chatsSocketService.deleteChatRoom(client.data.roomId);
@@ -209,18 +213,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('MSG')
   async sendMessage(client: Socket, message) {
     await this.chatsSocketService.sendMessage(client, message);
-  }
-
-  @SubscribeMessage('JOIN')
-  async joinClient(client: Socket, message) {
-    // 
-
-  }
-
-  @SubscribeMessage('QUIT')
-  async quitClient(client: Socket, message) {
-    // 해당 클라이언트 룸을 로비로 변경
-    console.log('quit');
   }
 
   @SubscribeMessage('KICK')

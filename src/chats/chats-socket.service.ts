@@ -122,6 +122,7 @@ export class ChatsSocketService {
 
   async connectChatRoom(client: Socket, channelId: number, userId: number) {
     const roomId = channelId.toString();
+    client.leave(client.data.roomId);
     client.data.roomId = roomId;
     client.rooms.clear();
     client.rooms.add(roomId);
@@ -135,17 +136,17 @@ export class ChatsSocketService {
   async exitChatRoom(client: Socket, channelId: number, userId: number) {
     const player = await this.usersService.readOnePurePlayer(userId);
     const roomId = channelId.toString();
-    client.data.roomId = 'room:lobby';
-    client.rooms.clear();
-    
-    client.rooms.add('room:lobby');
-    client.join('room:lobby');
     // 알림 메시지는 NOTICE 프로토콜로 전송하도록 수정
     client.to(roomId).emit('QUIT', {
       id: null,
       nickname: '안내',
       message: `${player.name}님이 퇴장하셨습니다.`,
     });
+    client.data.roomId = 'room:lobby';
+    client.leave(roomId);
+    client.rooms.clear();
+    client.rooms.add('room:lobby');
+    client.join('room:lobby');
   }
 
   getChatRoom(roomId: string): chatRoomListDTO {

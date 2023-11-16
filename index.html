@@ -48,7 +48,7 @@
       const a = data.find((member) => member.user.id === parseInt(user.value));
       if (!a) {
         console.log("강퇴되었습니다.");
-        socket.emit('JOIN', { channelId: -1 });
+        socket.emit('EXIT', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
       }
     });
     socket.on('JOIN', function (data) {
