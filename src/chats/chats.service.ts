@@ -60,6 +60,9 @@ export class ChatsService {
   /* [R] 특정 ChannelConfig 조회 */
   async readOneChannelConfig(id: number): Promise<ChannelConfig> {
     const channelConfig = await this.channelConfigRepository.findOne({ where: { id }})
+    if (!channelConfig) {
+      return null;
+    }
     channelConfig.banList = await this.readBanList(id);
     channelConfig.chatLogs = await this.readChatLogList(id);
     channelConfig.memberList = await this.readOneChannelMember(id);
@@ -80,14 +83,16 @@ export class ChatsService {
     await this.channelConfigRepository.update(id, config);
     return (this.channelConfigRepository.findOne({ where: { id } }));
   }
-
+  
   async updateChannelConfigWithTitle(id: number, title: string): Promise<ChannelConfig> {
     await this.channelConfigRepository.update(id, { title: title});
     return (this.channelConfigRepository.findOne({ where: { id } }));
   }
 
-  /* [D] ChannelConfig 제거 */
+  /* [D] ChannelConfig 제거 
+          channel_member 관계는 없는 경우 */
   async deleteChannelConfig(id: number): Promise<void> {
+    await this.channelPasswordRepository.delete(id);
     await (this.channelConfigRepository.delete(id));
   }
 
@@ -147,6 +152,18 @@ export class ChatsService {
     return (channelMembers);
   }
 
+  /* 특정 channel에 몇명 있는지 조사하기 위해 만든 pureChannelMember */
+  async readOnePureChannelMember(channelId: number): Promise<ChannelMember[]> {
+    const channelMembers = await this.dataSource
+                                .getRepository(ChannelMember).createQueryBuilder('channel_member')
+                                .leftJoinAndSelect('channel_member.channel', 'channel_config')
+                                .select(['channel_member.id', 'channel_config.title'])
+                                .where('channel_config.id = :id', { id: channelId })
+                                .getMany();
+    return (channelMembers);
+  }
+
+
   /* [R] 특정 User{id}에 속한 Member 조회 */
   async readUserChannelMemberWithUserId(userId: number): Promise<ChannelMember[]> {
     const channelMembers = await this.dataSource
@@ -203,6 +220,24 @@ export class ChatsService {
     await (this.channelMemberRepository.delete(id));
   }
 
+  async readMemberInChannel(channelId: number, userId: number): Promise<ChannelMember> {
+    const channelMembers = await this.dataSource
+                                .getRepository(ChannelMember).createQueryBuilder('channel_member')
+                                .leftJoinAndSelect('channel_member.user', 'player')
+                                .leftJoinAndSelect('channel_member.channel', 'channel_config')
+                                .select(['channel_member.id', 
+                                        'player.id', 
+                                        'player.name', 
+                                        'channel_member.op', 
+                                        'channel_member.date', 
+                                        'channel_config.id', 
+                                        'channel_config.title'])
+                                .where('channel_config.id = :channelId', { channelId }, )
+                                .andWhere('player.id = :userId', { userId })
+                                .getOne();
+    return (channelMembers);
+  }
+
   /** 
    * 
    * CHAT_LOG_LIST Table CURD 
@@ -219,6 +254,18 @@ export class ChatsService {
                                       .getMany();
     return (chatLogs);
   }
+
+  async readLatestChatLog(channelId: number): Promise<ChatLog[]> {
+    const chatLogs = await this.dataSource
+                                      .getRepository(ChatLog).createQueryBuilder('chat_log')
+                                      .leftJoinAndSelect('chat_log.user', 'player')
+                                      .leftJoinAndSelect('chat_log.channel', 'channel_config')
+                                      .select(['chat_log.id', 'chat_log.content', 'player.name', 'player.avatar', 'chat_log.date'])
+                                      .where('channel_config.id = :id', { id: channelId })
+                                      .orderBy('chat_log.date', 'DESC')
+                                      .limit(10)
+                                      .getMany();
+    return (chatLogs);
 
   async readChatLog(id: number): Promise<ChatLog> {
     const chatLog = await this.dataSource
@@ -276,6 +323,18 @@ export class ChatsService {
     return (banList);
   }
 
+  async readBanUser(channelId: number, userId: number): Promise<ChatBan> {
+    const banList = await this.dataSource
+                                      .getRepository(ChatBan).createQueryBuilder('ban_list')  
+                                      .leftJoinAndSelect('ban_list.user', 'player')
+                                      .leftJoinAndSelect('ban_list.channel', 'channel_config')
+                                      .select(['ban_list.id', 'channel_config.id', 'player.id', 'player.name'])
+                                      .where('channel_config.id = :channelId', { channelId })
+                                      .andWhere('player.id = :userId', { userId })
+                                      .getOne();
+    return (banList);
+  }
+  
   async readChatBan(channelId: number, userId: number): Promise<ChatBan> {
     const chatBan = await this.dataSource
                   .getRepository(ChatBan).createQueryBuilder('ban_list')  
@@ -352,12 +411,12 @@ export class ChatsService {
     return (this.chatMuteRepository.save(newMute));
   }
 
-  async updateMutenfo(id: number, mute: Partial<ChatMute>): Promise<ChatMute> {
+  async updateMuteInfo(id: number, mute: Partial<ChatMute>): Promise<ChatMute> {
     await this.chatMuteRepository.update(id, mute);
     return (this.chatMuteRepository.findOne({ where: { id } }));
   }
 
-  async deleteMutenfo(id: number): Promise<void> {
+  async deleteMuteInfo(id: number): Promise<void> {
     const deleteMute = await this.chatMuteRepository.findOne({ where: { id } });
     if (!deleteMute)
       return ;
@@ -394,9 +453,12 @@ export class ChatsService {
     return (this.readChannelPassword(channelId));
   }
 
-  async compareRefreshToken(password: string, channelId: number) {
+  async comparePassword(password: string, channelId: number) {
+    if (!password){
+      return false;
+    }
     const userPassword = await this.readChannelPassword(channelId);
-    return (await compare(password, userPassword));
+    return (await compare(password, userPassword.password));
   }
 
   async deleteChannelPassword(channelId: number): Promise<void> {

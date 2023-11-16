@@ -10,7 +10,9 @@ export class ChatMute {
   id: number;
 
   @ApiProperty({ type: () => ChannelConfig })
-  @ManyToOne(() => ChannelConfig, (channelConfig) => channelConfig.muteList)
+  @ManyToOne(() => ChannelConfig, (channelConfig) => channelConfig.muteList, {
+    onDelete: "CASCADE"
+  })
   @JoinColumn({ name: 'channel_id' })
   channel: ChannelConfig;
 
