@@ -12,15 +12,19 @@ import { Server, Socket } from 'socket.io';
 import { ChatsSocketService } from './chats-socket.service';
 import { ChatsService } from './chats.service';
 import { UsersService } from 'src/users/users.service';
+import { UserSocket } from 'src/users/entities/user-socket.entity';
 
 @WebSocketGateway(3131, { cors: '*' })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsSocketService: ChatsSocketService,
     private readonly chatsService: ChatsService,
-    private readonly usersService: UsersService) { }
+    private readonly usersService: UsersService) {
+      this.clients = [];
+    }
   @WebSocketServer()
   server: Server;
+  clients: ClientSocket[];
 
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket): void {
@@ -31,7 +35,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   //소켓 연결 해제시 유저목록에서 제거
-  public handleDisconnect(client: Socket): void {
+  async handleDisconnect(client: Socket): Promise<void> {
     const { roomId } = client.data;
     if (
       roomId != 'room:lobby' &&
@@ -43,25 +47,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.chatsSocketService.getChatRoomList(),
       );
     }
+    const clientSocket = this.clients.find((v) => v.socket.id === client.id);
+    const newClients = this.clients.filter((v) => v.socket.id !== client.id);
+    await this.usersService.updateUserSocket(clientSocket.userSocket.id, null);
+    this.clients = newClients;
     console.log('disonnected', client.id);
-  }
-
-  @SubscribeMessage('sendMessage')
-  async onChat(client: Socket, message) {
-    if (client.data.roomId === 'room:lobby') {
-      client.broadcast.emit('getMessage', {
-        channelId: null,
-        userId: message.userId,
-        content: message.content,
-      });
-      return;
-    }
-    if (message.content.charAt(0) === '/') {
-      if ((await this.chatsSocketService.checkOpUser(client, message)))
-        this.chatsSocketService.execCommand(client, message);
-      return;
-    }
-    const log = await this.chatsSocketService.sendMessage(client, message);
   }
 
   //채팅방 만들면서 들어가기
@@ -158,6 +148,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('EXIT')
   async goToLobby(client: Socket, message) {
+    const channelMembers = await this.chatsService.readOneChannelMember(message.channelId);
+    const member = channelMembers.find((member) => member.user.id == message.userId);
+    await this.chatsService.deleteChannelMember(member.id);
     this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId, "강퇴되었습니다.");
   }
 
@@ -194,7 +187,13 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
-    this.usersService.updateUserSocket(userId, client.id);
+    const userSocket = await this.usersService.readUserSocketWithUserId(userId);
+    const updateSocket = await this.usersService.updateUserSocket(userSocket.id, client.id);
+    const newClientSocket = new ClientSocket();
+    newClientSocket.socket = client;
+    newClientSocket.userSocket = updateSocket;
+    this.clients.push(newClientSocket);
+    const targetClient = this.clients.find((v) => v.userSocket.user.id === userId);
   }
 
   @SubscribeMessage('INFO_CH_LIST')
@@ -219,7 +218,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('NOTICE', log);
       return ;
     }
-    const msg = await this.chatsSocketService.commandKick(client, data.channelId, data.target);
+    const targetSocket = this.clients.find((v) => v.userSocket.user.name === data.target);
+    const msg = await this.chatsSocketService.commandKick(client, data.channelId, data.target, targetSocket);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit('NOTICE', log);
   }
@@ -231,7 +231,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('NOTICE', log);
       return ;
     }
-    const msg = await this.chatsSocketService.commandBan(client, data.channelId, data.target);
+    const targetSocket = this.clients.find((v) => v.userSocket.user.name === data.target);
+    const msg = await this.chatsSocketService.commandBan(client, data.channelId, data.target, targetSocket);
     if (msg) {
       const log = this.chatsSocketService.getInfoMessage(msg);
       client.emit("NOTICE", log);
@@ -299,4 +300,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
     client.emit("NOTICE", msg);
   }
+}
+
+export class ClientSocket {
+  socket: Socket;
+  userSocket: UserSocket;
 }

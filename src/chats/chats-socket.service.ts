@@ -4,6 +4,7 @@ import { Socket } from 'socket.io';
 import { ChannelConfig } from "./entities/channel-config.entity";
 import { UsersService } from "src/users/users.service";
 import { ChatMute } from "./entities/chat-mute.entity";
+import { ClientSocket } from "./chats.gateway";
 
 
 @Injectable()
@@ -182,14 +183,32 @@ export class ChatsSocketService {
   }
 
   // kick
-  async commandKick(client: Socket, channelId: number, target: string) {
+  async commandKick(client: Socket, channelId: number, target: string, targetClient: ClientSocket) {
     try {
-      const channelMembers = await this.chatsService.readOneChannelMember(channelId);
-      const member = channelMembers.find((member) => member.user.name == target);
-      if (!member)
-        return ('채널 맴버가 아닙니다.');
-      await this.chatsService.deleteChannelMember(member.id);
-      this.sendChannelMember(client, channelId);
+      const roomId = channelId.toString();
+      // 타겟이 소켓 연결 되어 있지 않을 경우
+      if (!targetClient) {
+        const channelMembers = await this.chatsService.readOneChannelMember(channelId);
+        const member = channelMembers.find((member) => member.user.name == target);
+        if (!member)
+          return ('채널 맴버가 아닙니다.');
+        await this.chatsService.deleteChannelMember(member.id);
+        this.sendChannelMember(client, channelId);
+      }
+      else {
+        // 타겟이 현재 채팅방일 경우
+        if (targetClient.socket.data.roomId === roomId) 
+          targetClient.socket.emit("KICK", targetClient.userSocket.user.id);
+        else {
+          const channelMembers = await this.chatsService.readOneChannelMember(channelId);
+          const member = channelMembers.find((member) => member.user.name == target);
+          if (!member)
+            return ('채널 맴버가 아닙니다.');
+          await this.chatsService.deleteChannelMember(member.id);
+          this.sendChannelList(targetClient.socket, targetClient.userSocket.user.id);
+          this.sendChannelMember(client, channelId);
+        }
+      }
       return (`${target} 님을 강퇴하였습니다.`);
     } catch (e) {
       return ('실패');
@@ -210,7 +229,7 @@ export class ChatsSocketService {
   }
 
   // ban
-  async commandBan(client: Socket, channelId: number, target: string) {
+  async commandBan(client: Socket, channelId: number, target: string, tagetSocket: ClientSocket) {
     try {
       if (target === '') {
         client.emit("BAN", await this.chatsService.readBanList(channelId));
@@ -232,7 +251,7 @@ export class ChatsSocketService {
       const channelMembers = await this.chatsService.readOneChannelMember(channelId);
       const member = channelMembers.find((member) => member.user.name == target);
       if (member) {
-        this.commandKick(client, channelId, target);
+        this.commandKick(client, channelId, target, tagetSocket);
       }
 
       return ('밴 목록에 추가하였습니다.');
@@ -359,47 +378,6 @@ export class ChatsSocketService {
     } catch (e) {
       return ('실패');
     }
-  }
-
-  async execCommand(client: Socket, message) {
-    const cmd = message.content.split(' ');
-    const { roomId } = client.data;
-    const channelId = parseInt(roomId);
-    let log;
-    let error;
-    if (cmd.length > 2) {
-      log = 'failed: Invaild Command';
-      error = true;
-    }
-    switch (cmd[0]) {
-      case '/op':
-        log = await this.commandOp(client, channelId, cmd[1]);
-        break;
-      case '/ban':
-        log = await this.commandBan(client, channelId, cmd[1]);
-        break;
-      case '/unban':
-        log = await this.commandUnban(client, channelId, cmd[1]);
-        break;
-      case '/mute':
-        log = await this.commandMute(client, channelId, cmd[1]);
-        break;
-      case '/name':
-        log = await this.commandName(client, channelId, cmd[1]);
-        break;
-      case '/password':
-        log = await this.commandPassword(client, channelId, cmd[1]);
-        break;
-      default:
-        log = 'failed: Invaild Command';
-        error = true;
-        break;
-    }
-    const msg = this.getInfoMessage('');
-    msg.content = log;
-    client.emit('MSG', msg);
-    if (error) return (false);
-    return (true);
   }
 
   async checkOpUser(client: Socket, message) {
