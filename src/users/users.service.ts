@@ -321,14 +321,24 @@ export class UsersService {
     return (list);
   }
 
-  async readChannelListWithUser(userId: number) {
+  async readChannelListWithUser(userId: number, flag: boolean) {
     const userChannelList = await this.chatsService.readUserChannelMemberWithUserId(userId);
     let arr = [];
+    let dm = [];
     for (let i = 0; i < userChannelList.length; i++) {
       const channelId = userChannelList[i].channel.id;
-      arr.push(await this.chatsService.readOnePureChannelConfig(channelId));
+      const channel = await this.chatsService.readOnePureChannelConfig(channelId);
+      if (!channel.dm)
+        arr.push(channel);
+      else
+        dm.push(channel);
     }
-    return (arr);
+    let result;
+    if (flag)
+      result = dm;
+    else
+      result = arr;
+    return (result);
   }
 
   async readUserSocket(id: number): Promise<UserSocket> {
