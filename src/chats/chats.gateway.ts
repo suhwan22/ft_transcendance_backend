@@ -20,11 +20,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatsSocketService: ChatsSocketService,
     private readonly chatsService: ChatsService,
     private readonly usersService: UsersService) {
-      this.clients = [];
+      this.clients = new Map();
     }
   @WebSocketServer()
   server: Server;
-  clients: ClientSocket[];
+  clients: any;
 
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket): void {
@@ -47,10 +47,14 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.chatsSocketService.getChatRoomList(),
       );
     }
-    const clientSocket = this.clients.find((v) => v.socket.id === client.id);
-    const newClients = this.clients.filter((v) => v.socket.id !== client.id);
-    await this.usersService.updateUserSocket(clientSocket.userSocket.id, null);
-    this.clients = newClients;
+    let key = -1;
+    this.clients.forEach((v, k, m) => {
+      if (v.id === client.id)
+        key = k;
+    });
+    if (key < 0)
+      return ;
+    this.clients.delete(key);
     console.log('disonnected', client.id);
   }
 
@@ -187,13 +191,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
-    const userSocket = await this.usersService.readUserSocketWithUserId(userId);
-    const updateSocket = await this.usersService.updateUserSocket(userSocket.id, client.id);
-    const newClientSocket = new ClientSocket();
-    newClientSocket.socket = client;
-    newClientSocket.userSocket = updateSocket;
-    this.clients.push(newClientSocket);
-    const targetClient = this.clients.find((v) => v.userSocket.user.id === userId);
+    this.clients.set(userId, client);
   }
 
   @SubscribeMessage('INFO_CH_LIST')
@@ -218,8 +216,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('NOTICE', log);
       return ;
     }
-    const targetSocket = this.clients.find((v) => v.userSocket.user.name === data.target);
-    const msg = await this.chatsSocketService.commandKick(client, data.channelId, data.target, targetSocket);
+    const targetUser = await this.usersService.readOnePurePlayerWithName(data.target);
+    const targetSocket = this.clients.get(targetUser.id);
+    const msg = await this.chatsSocketService.commandKick(client, data.channelId, data.target, targetUser.id, targetSocket);
     const log = this.chatsSocketService.getInfoMessage(msg);
     client.emit('NOTICE', log);
   }
@@ -231,8 +230,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('NOTICE', log);
       return ;
     }
-    const targetSocket = this.clients.find((v) => v.userSocket.user.name === data.target);
-    const msg = await this.chatsSocketService.commandBan(client, data.channelId, data.target, targetSocket);
+    const targetUser = await this.usersService.readOnePurePlayerWithName(data.target);
+    const targetSocket = this.clients.get(targetUser.id);
+    const msg = await this.chatsSocketService.commandBan(client, data.channelId, data.target, targetUser.id, targetSocket);
     if (msg) {
       const log = this.chatsSocketService.getInfoMessage(msg);
       client.emit("NOTICE", log);
