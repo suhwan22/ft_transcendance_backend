@@ -1,11 +1,17 @@
 import { ApiProperty } from "@nestjs/swagger";
-import { Column, CreateDateColumn, Entity, PrimaryColumn, UpdateDateColumn } from "typeorm";
+import { Column, Entity, JoinColumn, OneToOne, PrimaryColumn, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
+import { Player } from "./player.entity";
 
 @Entity({ name: 'user_socket' })
 export class UserSocket {
   @ApiProperty()
-  @PrimaryColumn({ name: 'id' })
-  userId: number;
+  @PrimaryGeneratedColumn()
+  id: number;
+
+  @ApiProperty({ type: () => Player})
+  @OneToOne( (type) => Player)
+  @JoinColumn({ name: 'user_id' })
+  user: Player;
 
   @ApiProperty()
   @Column({ nullable: true })

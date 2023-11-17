@@ -38,34 +38,33 @@
     const user = document.getElementById('user');
     const target = document.getElementById('target');
     const message = document.getElementById('message');
-    const socket = io('http://localhost:3131');
+    let socket = io('http://localhost:3131');
 
-    socket.on('MSG', async function (data) {
-      console.log(await data);
+    socket.on('MSG', function (data) {
+      console.log(data);
     });
     socket.on('INFO_CH_MEMBER', function (data) {
       console.log(data);
-      const a = data.find((member) => member.user.id === parseInt(user.value));
-      if (!a) {
-        console.log("강퇴되었습니다.");
-        socket.emit('EXIT', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
-      }
+    });
+    socket.on('KICK', function (data) {
+      console.log("강퇴되었습니다.");
+      socket.emit('EXIT', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
     });
     socket.on('NOTICE', function (data) {
       console.log(data);
-    })
+    });
     socket.on('INFO_CH_LIST', function (data) {
       console.log(data);
-    })
+    });
     socket.on('JOIN', function (data) {
       console.log(data);
-    })
+    });
     socket.on('LOADCHAT', function (data) {
       console.log(data);
-    })
+    });
     socket.on('QUIT', function (data) {
       console.log(data);
-    })
+    });
     socket.on('BAN', function (data) {
       console.log(data);
     });

@@ -331,29 +331,60 @@ export class UsersService {
     return (arr);
   }
 
-  async readUserSocket(userId: number): Promise<UserSocket> {
-    const userSocket = await this.userSocketRepository.findOne({ where: { userId } });
+  async readUserSocket(id: number): Promise<UserSocket> {
+    const userSocket = await this.dataSource
+                  .getRepository(UserSocket).createQueryBuilder('user_socket')
+                  .leftJoinAndSelect('user_socket.user', 'player')
+                  .select(['user_socket.id', 'player.id', 'player.name', 'user_socket.socket'])
+                  .where('user_socket.id = :id', { id: id })
+                  .getOne();
     return (userSocket);
   }
 
   async readUserSocketWithSocket(socket: string): Promise<UserSocket> {
-    const userSocket = await this.userSocketRepository.findOne({ where: { socket } });
+    const userSocket = await this.dataSource
+                  .getRepository(UserSocket).createQueryBuilder('user_socket')
+                  .leftJoinAndSelect('user_socket.user', 'player')
+                  .select(['user_socket.id', 'player.id', 'player.name', 'user_socket.socket'])
+                  .where('user_socket.socket = :socket', { socket: socket })
+                  .getOne();
+    return (userSocket);
+  }
+
+  async readUserSocketWithUserId(userId: number): Promise<UserSocket> {
+    const userSocket = await this.dataSource
+                  .getRepository(UserSocket).createQueryBuilder('user_socket')
+                  .leftJoinAndSelect('user_socket.user', 'player')
+                  .select(['user_socket.id', 'user_socket.socket'])
+                  .where('player.id = :id', { id: userId })
+                  .getOne();
+    return (userSocket);
+  }
+
+  async readUserSocketWithName(name: string): Promise<UserSocket> {
+    const userSocket = await this.dataSource
+                  .getRepository(UserSocket).createQueryBuilder('user_socket')
+                  .leftJoinAndSelect('user_socket.user', 'player')
+                  .select(['user_socket.id', 'player.id', 'player.name', 'user_socket.socket'])
+                  .where('player.name = :name', { name: name })
+                  .getOne();
     return (userSocket);
   }
 
   async createUserSocket(userId: number): Promise<UserSocket> {
-    const userSocket = { userId: userId, socket: null };
+    const user = await this.readOnePurePlayer(userId);
+    const userSocket = { user: user,  socket: null };
     const newUserSocket = this.userSocketRepository.create(userSocket);
     return (this.userSocketRepository.save(newUserSocket));
   }
 
-  async updateUserSocket(userId: number, socket: string): Promise<UserSocket> {
-    this.userSocketRepository.update(userId, { socket });
-    return (this.readUserSocket(userId));
+  async updateUserSocket(id: number, socket: string): Promise<UserSocket> {
+    await this.userSocketRepository.update(id, { socket: socket });
+    return (this.readUserSocket(id));
   }
 
-  async deleteUserSocket(userId: number): Promise<void> {
-    this.userSocketRepository.delete(userId);
+  async deleteUserSocket(id: number): Promise<void> {
+    this.userSocketRepository.delete(id);
   }
 
   async createUserAuth(userId: number): Promise<UserAuth> {
