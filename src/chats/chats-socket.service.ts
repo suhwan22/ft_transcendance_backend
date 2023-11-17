@@ -183,9 +183,10 @@ export class ChatsSocketService {
   }
 
   // kick
-  async commandKick(client: Socket, channelId: number, target: string, targetClient: ClientSocket) {
+  async commandKick(client: Socket, channelId: number, target: string, targetId: number, targetClient: Socket) {
     try {
       const roomId = channelId.toString();
+      const targetUser = await this.usersService.readOnePurePlayerWithName(target);
       // 타겟이 소켓 연결 되어 있지 않을 경우
       if (!targetClient) {
         const channelMembers = await this.chatsService.readOneChannelMember(channelId);
@@ -197,15 +198,15 @@ export class ChatsSocketService {
       }
       else {
         // 타겟이 현재 채팅방일 경우
-        if (targetClient.socket.data.roomId === roomId) 
-          targetClient.socket.emit("KICK", targetClient.userSocket.user.id);
+        if (targetClient.data.roomId === roomId) 
+          targetClient.emit("KICK", targetUser.id);
         else {
           const channelMembers = await this.chatsService.readOneChannelMember(channelId);
           const member = channelMembers.find((member) => member.user.name == target);
           if (!member)
             return ('채널 맴버가 아닙니다.');
           await this.chatsService.deleteChannelMember(member.id);
-          this.sendChannelList(targetClient.socket, targetClient.userSocket.user.id);
+          this.sendChannelList(targetClient, targetUser.id);
           this.sendChannelMember(client, channelId);
         }
       }
@@ -229,7 +230,7 @@ export class ChatsSocketService {
   }
 
   // ban
-  async commandBan(client: Socket, channelId: number, target: string, tagetSocket: ClientSocket) {
+  async commandBan(client: Socket, channelId: number, target: string, targetId: number, tagetSocket: Socket) {
     try {
       if (target === '') {
         client.emit("BAN", await this.chatsService.readBanList(channelId));
@@ -251,7 +252,7 @@ export class ChatsSocketService {
       const channelMembers = await this.chatsService.readOneChannelMember(channelId);
       const member = channelMembers.find((member) => member.user.name == target);
       if (member) {
-        this.commandKick(client, channelId, target, tagetSocket);
+        this.commandKick(client, channelId, target, targetId, tagetSocket);
       }
 
       return ('밴 목록에 추가하였습니다.');
