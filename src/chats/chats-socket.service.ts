@@ -4,8 +4,6 @@ import { Socket } from 'socket.io';
 import { ChannelConfig } from "./entities/channel-config.entity";
 import { UsersService } from "src/users/users.service";
 import { ChatMute } from "./entities/chat-mute.entity";
-import { IoAdapter } from "@nestjs/platform-socket.io";
-import { ChatBan } from "./entities/chat-ban.entity";
 
 
 @Injectable()
@@ -133,11 +131,11 @@ export class ChatsSocketService {
     client.emit('LOADCHAT', log);
   }
 
-  async exitChatRoom(client: Socket, channelId: number, userId: number) {
+  async exitChatRoom(client: Socket, channelId: number, userId: number, word: string) {
     const player = await this.usersService.readOnePurePlayer(userId);
     const roomId = channelId.toString();
 
-    const log = this.getInfoMessage(`${player.name}님이 퇴장하셨습니다.`);
+    const log = this.getInfoMessage(`${player.name}님이 ${word}`);
     client.to(roomId).emit('NOTICE', log);
 
     client.data.roomId = 'room:lobby';

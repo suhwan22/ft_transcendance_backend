@@ -12,7 +12,6 @@ import { Server, Socket } from 'socket.io';
 import { ChatsSocketService } from './chats-socket.service';
 import { ChatsService } from './chats.service';
 import { UsersService } from 'src/users/users.service';
-import { channel } from 'diagnostics_channel';
 
 @WebSocketGateway(3131, { cors: '*' })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -159,7 +158,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('EXIT')
   async goToLobby(client: Socket, message) {
-    this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
+    this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId, "강퇴되었습니다.");
   }
 
   //채팅방 나가기
@@ -190,7 +189,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return ('채널 맴버가 아닙니다.bug 상황');
       await this.chatsService.deleteChannelMember(member.id);
     }
-    await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
+    await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId, "퇴장하셨습니다.");
   }
 
   @SubscribeMessage('REGIST')
