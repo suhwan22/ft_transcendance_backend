@@ -244,7 +244,14 @@ export class UsersController {
   @ApiOperation({ summary: '참여 중인 채팅방 리스트 조회 API'})
   @ApiOkResponse({ description: 'Ok', type: ChannelConfig, isArray: true })
   @Get('/:userId/channels/me')
-  async read(@Param('userId') userId: number): Promise<ChannelConfig[]> {
-    return (this.usersService.readChannelListWithUser(userId));
+  async readChatUserInfo(@Param('userId') userId: number): Promise<ChannelConfig[]>  {
+    return (this.usersService.readChannelListWithUser(userId, false));
+  }
+
+  @ApiOperation({ summary: '참여 중인 dm 리스트 조회 API'})
+  @ApiOkResponse({ description: 'Ok', type: ChannelConfig, isArray: true })
+  @Get('/:userId/channels/dm')
+  async readDm(@Param('userId') userId: number): Promise<ChannelConfig[]>  {
+    return (this.usersService.readChannelListWithUser(userId, true));
   }
 }

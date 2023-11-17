@@ -224,8 +224,9 @@ export class ChatsSocketService {
 
   async sendChannelList(client: Socket, userId: number) {
     const otherList = await this.usersService.readChannelListWithoutUser(userId);
-    const meList = await this.usersService.readChannelListWithUser(userId);
-    const channelList = { other: otherList, me: meList };
+    const meList = await this.usersService.readChannelListWithUser(userId, false);
+    const dmList = await this.usersService.readChannelListWithUser(userId, true);
+    const channelList = { other: otherList, me: meList, dm: dmList };
     client.emit('INFO_CH_LIST', channelList);
   }
 

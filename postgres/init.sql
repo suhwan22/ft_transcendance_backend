@@ -121,6 +121,10 @@ insert into channel_member (id, channel_id, user_id, op, date)
                     values (100011, 100004, 1, true, now());
 insert into channel_member (id, channel_id, user_id, op, date) 
                     values (100012, 100004, 3, true, now());
+insert into channel_member (id, channel_id, user_id, op, date) 
+                    values (100013, 100005, 1, true, now());
+insert into channel_member (id, channel_id, user_id, op, date) 
+                    values (100014, 100005, 2, true, now());
 
 -- init ban_list data
 insert into ban_list (id, channel_id, user_id) values (100001, 100001, 5);
