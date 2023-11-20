@@ -12,11 +12,13 @@ import { UsersModule } from 'src/users/users.module';
 import { ChatsGateway } from './chats.gateway';
 import { ChatsSocketService } from './chats-socket.service';
 import { ChannelPassword } from './entities/channel-password.entity';
+import { SocketsModule } from 'src/sockets/sockets.module';
 
 @Module({
   imports: [
     forwardRef(() => GamesModule),
     forwardRef(() => UsersModule),
+    forwardRef(() => SocketsModule),
     TypeOrmModule.forFeature([
       ChannelConfig,
       ChannelMember,
@@ -28,6 +30,6 @@ import { ChannelPassword } from './entities/channel-password.entity';
   ],
   controllers: [ChatsController],
   providers: [ChatsService, ChatsGateway, ChatsSocketService],
-  exports: [TypeOrmModule, ChatsService]
+  exports: [TypeOrmModule, ChatsService, ChatsGateway]
 })
 export class ChatsModule {}

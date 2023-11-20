@@ -88,6 +88,11 @@ export class UsersService {
     return (this.playerRepository.findOne({ where: { id } }));
   }
 
+  async updatePlayerStatus(id: number, status: number): Promise<Player> {
+    await this.playerRepository.update(id, { status: status });
+    return (this.playerRepository.findOne({ where: { id } }));
+  }
+
   /* [D] Player 제거 */
   async deletePlayer(id: number): Promise<void> {
     await (this.playerRepository.delete(id));
@@ -157,7 +162,7 @@ export class UsersService {
     const friendList = await this.dataSource
       .getRepository(UserFriend).createQueryBuilder('friend_list')
       .leftJoinAndSelect('friend_list.friend', 'friend')
-      .select(['friend_list.id', 'friend.id', 'friend.name'])
+      .select(['friend_list.id', 'friend.id', 'friend.name', 'friend.avatar', 'friend.status'])
       .where('friend_list.user = :id', { id: user })
       .getMany();
     return (friendList)

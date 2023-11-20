@@ -13,25 +13,32 @@ import { ChatsSocketService } from './chats-socket.service';
 import { ChatsService } from './chats.service';
 import { UsersService } from 'src/users/users.service';
 import { UserSocket } from 'src/users/entities/user-socket.entity';
+import { GamesGateway } from 'src/games/games.gateway';
+import { forwardRef, Inject } from '@nestjs/common';
+import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 
-@WebSocketGateway(3131, { cors: '*' })
+@WebSocketGateway(3131, { cors: '*', namespace: '/chats' })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsSocketService: ChatsSocketService,
     private readonly chatsService: ChatsService,
-    private readonly usersService: UsersService) {
-      this.clients = new Map();
+    private readonly usersService: UsersService,
+    @Inject(forwardRef(() => GamesGateway))
+    private readonly gamesGateway: GamesGateway,
+    @Inject(forwardRef(() => LobbyGateway))
+    private readonly lobbyGateway: LobbyGateway,) {
+      this.clients = new Map<number, Socket>();
     }
   @WebSocketServer()
   server: Server;
-  clients: any;
+  clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket): void {
     client.leave(client.id);
     client.data.roomId = `room:lobby`;
     client.join('room:lobby');
-    console.log('connected', client.id);
+    console.log('chat connected', client.id);
   }
 
   //소켓 연결 해제시 유저목록에서 제거
@@ -47,15 +54,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.chatsSocketService.getChatRoomList(),
       );
     }
-    let key = -1;
-    this.clients.forEach((v, k, m) => {
-      if (v.id === client.id)
-        key = k;
-    });
-    if (key < 0)
+    const key = client.data.userId;
+    if (!key)
       return ;
     this.clients.delete(key);
-    console.log('disonnected', client.id);
+    console.log('chat disonnected', client.id);
   }
 
   //채팅방 만들면서 들어가기
@@ -192,6 +195,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
     this.clients.set(userId, client);
+    client.data.userId = userId;
+    this.usersService.updatePlayerStatus(userId, 2);
+    this.sendUpdateToChannelMember(userId);
+    this.lobbyGateway.sendUpdateToFriends(userId);
   }
 
   @SubscribeMessage('INFO_CH_LIST')
@@ -299,6 +306,16 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
     client.emit("NOTICE", msg);
+  }
+
+  @SubscribeMessage('INVATE')
+  async invateGame(client: Socket, data) {
+    const msg = await this.chatsSocketService.invateGame(client, data.userId, data.target);
+    client.emit("NOTICE", msg);
+  }
+
+  async sendUpdateToChannelMember(userId: number) {
+    this.chatsSocketService.sendUpdateToChannelMember(this.server, userId);
   }
 }
 

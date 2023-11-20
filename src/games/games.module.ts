@@ -5,6 +5,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { GameHistory } from './entities/game-history.entity';
 import { UsersModule } from 'src/users/users.module';
 import { ChatsModule } from 'src/chats/chats.module';
+import { GamesGateway } from './games.gateway';
 
 @Module({
   imports: [
@@ -13,7 +14,7 @@ import { ChatsModule } from 'src/chats/chats.module';
     TypeOrmModule.forFeature([
     GameHistory])],
   controllers: [GamesController],
-  providers: [GamesService],
-  exports: [TypeOrmModule, GamesService]
+  providers: [GamesService, GamesGateway],
+  exports: [TypeOrmModule, GamesService, GamesGateway]
 })
 export class GamesModule {}

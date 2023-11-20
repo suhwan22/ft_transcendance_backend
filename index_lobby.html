@@ -1,0 +1,51 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+  <div>
+    userId: <input id="user" type="text" />
+    <button onclick="regist()">regist socket</button>
+  </div>
+  <div>
+    target: <input id="target" type="text" />
+    <button onclick="invate()">invate</button>
+    <button onclick="request_friend()">friend</button>
+    <button onclick="accept_friend()">yes</button>
+    <button onclick="refuse_friend()">no</button>
+  </div>
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
+    integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
+    crossorigin="anonymous"></script>
+  <script>
+    const user = document.getElementById('user');
+    const target = document.getElementById('target');
+    let socket = io('http://localhost:3131/lobby');
+
+    socket.on('INVATE', function (data) {
+      console.log(data);
+    });
+    socket.on('INFO_FRIENDS', function (data) {
+      console.log(data);
+    })
+    function regist() {
+      socket.emit('REGIST', parseInt(user.value));
+    }
+    function request_friend() {
+      socket.emit('REQUEST_FRIEND', { userId: parseInt(user.value), target: target.value });
+    }
+    function accept_friend() {
+      socket.emit('ACCEPT_FRIEND', { userId: parseInt(user.value), target: target.value });
+    }
+    function refuse_friend() {
+      socket.emit('REFUSE_FRIEND', { userId: parseInt(user.value), target: target.value });
+    }
+    function invate() {
+      socket.emit('INVATE', { userId: parseInt(user.value), target: target.value });
+    }
+  </script>
+</body>
+
+</html>

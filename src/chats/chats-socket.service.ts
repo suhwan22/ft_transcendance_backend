@@ -1,6 +1,6 @@
 import { Injectable } from "@nestjs/common";
 import { ChatsService } from "./chats.service";
-import { Socket } from 'socket.io';
+import { Server, Socket } from 'socket.io';
 import { ChannelConfig } from "./entities/channel-config.entity";
 import { UsersService } from "src/users/users.service";
 import { ChatMute } from "./entities/chat-mute.entity";
@@ -392,6 +392,23 @@ export class ChatsSocketService {
       client.emit('MSG', msg);
     }
     return (channelMember.op);
+  }
+
+  async sendUpdateToChannelMember(server: Server, userId: number) {
+    const userChannelList = await this.chatsService.readUserChannelMemberWithUserId(userId);
+    for (let i = 0; i < userChannelList.length; i++) {
+      const roomId = userChannelList[i].channel.id.toString();
+      const channelMember = await this.chatsService.readOneChannelMember(userChannelList[i].channel.id);
+      server.to(roomId).emit('INFO_CH_MEMBER', channelMember);
+    }
+  }
+
+  async invateGame(clinet: Socket, userId: number, target: string) {
+    // target이 유효한지
+
+    // target이 현재 초대를 받을 수 있는 상태인지 (로비, 채팅 에서만)
+
+    // target에게 INVATE 전송
   }
 }
 

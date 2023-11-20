@@ -7,6 +7,7 @@ import { ConfigModule } from '@nestjs/config';
 import { GamesModule } from './games/games.module';
 import { ChatsModule } from './chats/chats.module';
 import { AuthModule } from './auth/auth.module';
+import { SocketsModule } from './sockets/sockets.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { AuthModule } from './auth/auth.module';
     GamesModule,
     ChatsModule,
     AuthModule,
+    SocketsModule,
     TypeOrmModule.forRoot({
       type: process.env.DB_TYPE as any,
       host: process.env.PG_HOST,
