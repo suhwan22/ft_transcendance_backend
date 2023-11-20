@@ -16,17 +16,17 @@ delete from player;
 
 -- init player data
 insert into player (id, name, avatar, status, date) 
-          values (1, 'amanda', 'avatar', 0, now());
+          values (1, 'amanda', 'avatar', 3, now());
 insert into player (id, name, avatar, status, date) 
-          values (2, 'bread', 'avatar', 0, now());
+          values (2, 'bread', 'avatar', 3, now());
 insert into player (id, name, avatar, status, date) 
-          values (3, 'calla', 'avatar', 0, now());
+          values (3, 'calla', 'avatar', 3, now());
 insert into player (id, name, avatar, status, date) 
-          values (4, 'dan', 'avatar', 0, now());
+          values (4, 'dan', 'avatar', 3, now());
 insert into player (id, name, avatar, status, date) 
-          values (5, 'eavan', 'avatar', 0, now());
+          values (5, 'eavan', 'avatar', 3, now());
 insert into player (id, name, avatar, status, date) 
-          values (6, 'frank', 'avatar', 0, now());
+          values (6, 'frank', 'avatar', 3, now());
 
 -- init user_socket
 insert into user_socket (id, date, user_id) 

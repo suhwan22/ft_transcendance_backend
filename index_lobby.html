@@ -10,8 +10,13 @@
     <button onclick="regist()">regist socket</button>
   </div>
   <div>
-    target: <input id="target" type="text" />
+    game target: <input id="target" type="text" />
     <button onclick="invate()">invate</button>
+    <button onclick="accept_game()">yes</button>
+    <button onclick="refuse_game()">no</button>
+  </div>
+  <div>
+    friend target: <input id="target" type="text" />
     <button onclick="request_friend()">friend</button>
     <button onclick="accept_friend()">yes</button>
     <button onclick="refuse_friend()">no</button>
@@ -24,12 +29,20 @@
     const target = document.getElementById('target');
     let socket = io('http://localhost:3131/lobby');
 
-    socket.on('INVATE', function (data) {
+    socket.on('NOTICE', function (data) {
       console.log(data);
+    });
+    socket.on('INVATE', function (data) {
+      console.log(data.target);
+      console.log(data.target.name + " 님이 게임 초대하였습니다.");
     });
     socket.on('INFO_FRIENDS', function (data) {
       console.log(data);
     })
+    socket.on('REQUEST_FRIEND', function (data) {
+      console.log(data.target);
+      console.log(data.target.name + " 님이 친구요청 하였습니다.");
+    });
     function regist() {
       socket.emit('REGIST', parseInt(user.value));
     }
@@ -44,6 +57,12 @@
     }
     function invate() {
       socket.emit('INVATE', { userId: parseInt(user.value), target: target.value });
+    }
+    function accept_game() {
+      socket.emit('ACCEPT_GAME', { userId: parseInt(user.value), target: target.value });
+    }
+    function refuse_game() {
+      socket.emit('REFUSE_GAME', { userId: parseInt(user.value), target: target.value });
     }
   </script>
 </body>

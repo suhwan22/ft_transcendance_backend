@@ -403,13 +403,11 @@ export class ChatsSocketService {
     }
   }
 
-  async invateGame(clinet: Socket, userId: number, target: string) {
-    // target이 유효한지
-
-    // target이 현재 초대를 받을 수 있는 상태인지 (로비, 채팅 에서만)
-
-    // target에게 INVATE 전송
+  async invateGame(targetClient: Socket, userId: number) {
+    const user = await this.usersService.readOnePurePlayer(userId);
+    targetClient.emit("INVATE", { target: user });
   }
+
 }
 
 export class chatRoomListDTO {

@@ -5,14 +5,20 @@ import { UsersService } from 'src/users/users.service';
 @Injectable()
 export class LobbySocketService {
   constructor(
-    private readonly usersService: UsersService,) {}
+    private readonly usersService: UsersService,) { }
 
-  async invateGame(clinet: Socket, userId: number, target: string) {
-    // target이 유효한지
+  getInfoMessage(message: string) {
+    return ({
+      id: null,
+      user: { id: null, name: '정보', avatar: null, status: 0, date: null },
+      content: message,
+      date: new Date(),
+    });
+  }
 
-    // target이 현재 초대를 받을 수 있는 상태인지 (로비, 채팅 에서만)
-
-    // target에게 INVATE 전송
+  async invateGame(targetClient: Socket, userId: number) {
+    const user = await this.usersService.readOnePurePlayer(userId);
+    targetClient.emit("INVATE", { target: user });
   }
 
   async sendFriendList(client: Socket, userId: number) {

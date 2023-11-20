@@ -47,14 +47,44 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.data.userId = userId;
 
     // 내 status 변경 -> 친구 & 채팅 맴버에게 뿌려주기
-    this.usersService.updatePlayerStatus(userId, 1);
+    this.usersService.updatePlayerStatus(userId, 0);
     this.sendUpdateToFriends(userId);
     this.chatsGateway.sendUpdateToChannelMember(userId);
   }
 
   @SubscribeMessage('INVATE')
   async invateGame(client: Socket, data) {
-    this.lobbySocketService.invateGame(client, data.userId, data.target);
+    let msg;
+    const target = await this.usersService.readOnePurePlayerWithName(data.target);
+    if (!target) {
+      msg = this.lobbySocketService.getInfoMessage("해당 유저는 존재하지 않습니다.");
+      client.emit("NOTICE", msg);
+      return ;
+    }
+
+    switch (target.status) {
+      case 0:
+        this.lobbySocketService.invateGame(this.clients.get(target.id), data.userId);
+        msg = this.lobbySocketService.getInfoMessage("게임초대 메시지를 전송하였습니다.");
+        client.emit("NOTICE", msg);
+        break;
+      case 1:
+        const targetClient = this.chatsGateway.clients.get(target.id);
+        this.lobbySocketService.invateGame(targetClient, data.userId);
+        msg = this.lobbySocketService.getInfoMessage("게임초대 메시지를 전송하였습니다.");
+        client.emit("NOTICE", msg);
+        break;
+      case 2:
+        msg = this.lobbySocketService.getInfoMessage("해당 유저는 이미 게임중 입니다.");
+        client.emit("NOTICE", msg);
+        break;
+      case 3:
+        msg = this.lobbySocketService.getInfoMessage("해당 유저는 접속 중이 아닙니다.");
+        client.emit("NOTICE", msg);
+        break;
+      default:
+        break;
+    }
   }
 
   @SubscribeMessage('INFO_FRIENDS')

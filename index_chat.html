@@ -6,15 +6,28 @@
 
 <body>
   <div>
-    channelId: <input id="channel" type="text" />
-    <button onclick="enter()">enter room</button>
+    userId: <input id="user" type="text" />
     <button onclick="regist()">regist socket</button>
   </div>
   <div>
-    userId: <input id="user" type="text" />
+    game target: <input id="target" type="text" />
+    <button onclick="invate()">invate </button>
+    <button onclick="accept_game()">yes </button>
+    <button onclick="refuse_game()">no </button>
   </div>
   <div>
-    target: <input id="target" type="text" />
+    friend target: <input id="target" type="text" />
+    <button onclick="request_game()">friend </button>
+    <button onclick="invate()">yes </button>
+    <button onclick="invate()">no </button>
+  </div>
+  <div>
+    channelId: <input id="channel" type="text" />
+    <button onclick="enter()">enter room</button>
+    <button onclick="quit()">quit room</button>
+  </div>
+  <div>
+    chat target: <input id="target" type="text" />
     <button onclick="kick()">kick </button>
     <button onclick="ban()">ban </button>
     <button onclick="unban()">unban </button>
@@ -22,14 +35,10 @@
     <button onclick="op()">op </button>
     <button onclick="block()">block </button>
     <button onclick="unblock()">unblock </button>
-    <button onclick="invate()">unblock </button>
   </div>
   <div>
     <input id="message" type="text" />
     <button onclick="send()">send test</button>
-  </div>
-  <div>
-    <button onclick="quit()">quit room</button>
   </div>
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
@@ -73,7 +82,8 @@
       console.log(data);
     });
     socket.on('INVATE', function (data) {
-      console.log(data);
+      console.log(data.target);
+      console.log(data.target.name + " 님이 게임 초대하였습니다.");
     });
 
     function kick() {
@@ -112,6 +122,21 @@
     }
     function quit() {
       socket.emit('QUIT', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
+    }
+    function accept_game() {
+      socket.emit('ACCEPT_GAME', { userId: parseInt(user.value), target: target.value });
+    }
+    function refuse_game() {
+      socket.emit('REFUSE_GAME', { userId: parseInt(user.value), target: target.value });
+    }
+    function request_friend() {
+      socket.emit('REQUEST_FRIEND', { userId: parseInt(user.value), target: target.value });
+    }
+    function accept_friend() {
+      socket.emit('ACCEPT_FRIEND', { userId: parseInt(user.value), target: target.value });
+    }
+    function refuse_friend() {
+      socket.emit('REFUSE_FRIEND', { userId: parseInt(user.value), target: target.value });
     }
   </script>
 </body>
