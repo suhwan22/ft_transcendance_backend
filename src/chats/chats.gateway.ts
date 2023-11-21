@@ -130,11 +130,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 맴버 조회 있으면 그냥 접속
     const isMember = await this.chatsService.readMemberInChannel(message.channelId, message.userId);
     if (isMember) {
-      //이전 방이 만약 나 혼자있던 방이면 제거
-      if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
-       this.chatsSocketService.deleteChatRoom(client.data.roomId);
-       //이것도 작동 안함...
-      }
+      // //이전 방이 만약 나 혼자있던 방이면 제거
+      // if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
+      //  this.chatsSocketService.deleteChatRoom(client.data.roomId);
+      //  //이것도 작동 안함...
+      // }
       this.chatsSocketService.connectChatRoom(client, message.channelId, message.userId);
       return;
     }
