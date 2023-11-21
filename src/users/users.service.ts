@@ -169,6 +169,17 @@ export class UsersService {
     return (friendList)
   }
 
+  async readFriendWithFriendId(user: number, friend: number): Promise<UserFriend> {
+    const userFriend = await this.dataSource
+      .getRepository(UserFriend).createQueryBuilder('friend_list')
+      .leftJoinAndSelect('friend_list.friend', 'friend')
+      .select(['friend_list.id', 'friend.id', 'friend.name', 'friend.avatar', 'friend.status'])
+      .where('friend_list.user = :user', { user: user })
+      .andWhere('friend_list.friend = :friend', { friend: friend })
+      .getOne();
+    return (userFriend);
+  }
+
   // 유저 친구 생성 메서드
   async createFriendInfo(friendRequestDto: Partial<UserFriendRequestDto>): Promise<UserFriend> {
     const friend = await this.readOnePlayer(friendRequestDto.friend);

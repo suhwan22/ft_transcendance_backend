@@ -438,6 +438,12 @@ export class ChatsSocketService {
       client.emit("NOTICE", msg);
       return;
     }
+    const frined = await this.usersService.readFriendWithFriendId(userId, target.id);
+    if (frined) {
+      const msg = this.getInfoMessage("이미 친구 관계입니다.");
+      client.emit("NOTICE", msg);
+      return;
+    }
     const otherRequest = await this.usersService.readRecvAndSendFriendRequest(userId, target.id);
     if (otherRequest) {
       const user = await this.usersService.readOnePurePlayer(userId);
