@@ -47,16 +47,16 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결 해제시 유저목록에서 제거
   async handleDisconnect(client: Socket): Promise<void> {
     const { roomId } = client.data;
-    if (
-      roomId != 'room:lobby' &&
-      !this.server.sockets.adapter.rooms.get(roomId)
-    ) {
-      this.chatsSocketService.deleteChatRoom(roomId);
-      this.server.emit(
-        'getChatRoomList',
-        this.chatsSocketService.getChatRoomList(),
-      );
-    }
+    // if (
+    //   roomId != 'room:lobby' &&
+    //   !this.server.sockets.adapter.rooms.get(roomId)
+    // ) {
+    //   this.chatsSocketService.deleteChatRoom(roomId);
+    //   this.server.emit(
+    //     'getChatRoomList',
+    //     this.chatsSocketService.getChatRoomList(),
+    //   );
+    // }
     const key = client.data.userId;
     if (!key)
       return ;
