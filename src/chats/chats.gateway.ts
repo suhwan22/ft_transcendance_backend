@@ -386,21 +386,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.emit("NOTICE", msg);
         return;
       }
-      const request = await this.usersService.readRecvAndSendFriendRequest(target.id, data.userId);
-      if (request) {
-        msg = this.chatsSocketService.getInfoMessage("이미 친구 요청한 유저입니다.");
-        client.emit("NOTICE", msg);
-        return;
-      }
-      const user = await this.usersService.readOnePurePlayer(data.userId);
-      const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
-      msg = this.chatsSocketService.getInfoMessage(target.name + " 님에게 친구 요청하였습니다.");
-      client.emit("NOTICE", msg);
-
       const targetClient = this.getClientWithStatus(target);
-      if (!targetClient)
-        return ;
-      targetClient.emit("REQUEST_FRIEND", friendRequest);
+      this.chatsSocketService.requestFriend(client, targetClient, data.userId, target);
     }
     catch (e) {
       msg = this.chatsSocketService.getInfoMessage("Server Error: DB error");
@@ -418,7 +405,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('REFUSE_FRIEND')
   async refuseFriend(client: Socket, data: Partial<FriendRequest>) {
-    this.chatsSocketService.refuseFriend(client, data);
+    const target = await this.usersService.readOnePurePlayer(data.send.id);
+    const targetClient = this.getClientWithStatus(target);
+    this.chatsSocketService.refuseFriend(client, targetClient, data, target);
   }
 }
 

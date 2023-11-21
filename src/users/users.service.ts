@@ -301,8 +301,8 @@ export class UsersService {
       .leftJoinAndSelect('friend_list.send', 'send')
       .leftJoinAndSelect('friend_list.recv', 'recv')
       .select(['friend_list.id', 'recv.id', 'recv.name', 'send.id', 'send.name'])
-      .where('send.id = :id', { id: send })
-      .where('recv.id = :id', { id: recv })
+      .where('send.id = :send', { send: send })
+      .andWhere('recv.id = :recv', { recv: recv })
       .getOne();
     return (friendRequest);
   }
