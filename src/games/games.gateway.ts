@@ -11,6 +11,7 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatsGateway } from 'src/chats/chats.gateway';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
+import { Player } from 'src/users/entities/player.entity';
 import { UsersService } from 'src/users/users.service';
 
 @WebSocketGateway(3131, { namespace: '/games' })
@@ -60,20 +61,54 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
-    console.log('match making');
-    // 대기 큐에 넣기
-    this.queue.push(client);
-    // 대기 큐에 헤드에 오거나 매칭이 잡혔다면 탈출
-    while (this.queue[0].data.userId === userId || client.data.math === true)
-      client.emit("NOTICE", "waitting...");
-    if (client.data.math)
-      return ;
-    // 대기 큐에 사람이 올때 까지 대기
-    while (this.queue.length > 0)
-      client.emit("NOTICE", "waitting...");
-    const other = this.queue.shift();
-    other.data.math = true;
-    client.emit("NOTICE", "success");
-    other.emit("NOTICE", "sucesss");
+    if (this.queue.length <= 0) {
+      this.queue.push(client);
+    }
+    else {
+      const targetClient = this.queue.shift();
+      client.join(client.id + targetClient.id);
+      targetClient.join(client.id + targetClient.id);
+      const user = await this.usersService.readOnePurePlayer(client.data.userId);
+      const target = await this.usersService.readOnePurePlayer(targetClient.data.userId);
+      client.emit("ROOM", new GameRoom(client.id + targetClient.id, true, target.name));
+      targetClient.emit("ROOM", new GameRoom(client.id + targetClient.id, false, user.name));
+    }
+    // console.log('match making');
+    // // 대기 큐에 넣기
+    // this.queue.push(client);
+    // // 대기 큐에 헤드에 오거나 매칭이 잡혔다면 탈출
+    // while (!(this.queue[0].data.userId === userId || client.data.math === true)) {
+    //   client.emit("NOTICE", "waitting...");
+    // }
+    // if (client.data.math)
+    //   return ;
+    
+    // // 대기 큐에 사람이 올때 까지 대기
+    // let count = 0;
+    // while (this.queue.length <= 1) {
+    //   client.emit("NOTICE", "waitting...");
+    //   console.log(count++);
+    // }
+    // this.queue.shift();
+    // const other = this.queue.shift();
+    // other.data.math = true;
+    // client.emit("NOTICE", "success");
+    // other.emit("NOTICE", "sucesss");
   }
+}
+
+export class GameRoom {
+  constructor(roomId: string, isLeft: boolean, opposite: string) {
+    this.roomId = roomId;
+    this.isLeft = isLeft;
+    this.opposite = opposite;
+  }
+  roomId: string;
+  isLeft: boolean;
+  opposite: string;
+}
+
+export class PingPongPlayer {
+  player: Player;
+  isLeft: boolean;
 }
