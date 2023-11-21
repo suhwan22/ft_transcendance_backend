@@ -13,6 +13,8 @@ import { ChatsGateway } from 'src/chats/chats.gateway';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { Player } from 'src/users/entities/player.entity';
 import { UsersService } from 'src/users/users.service';
+import { GameRoom, PingPongPlayer } from './entities/game-room.entity';
+import { PlayerInfoDto } from './entities/player-info.dto';
 
 @WebSocketGateway(3131, { namespace: '/games' })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -24,12 +26,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly usersService: UsersService,) {
     this.clients = new Map<number, Socket>();
     this.queue = [];
+    this.gameRooms = [];
   }
 
   @WebSocketServer()
   server: Server;
   clients: Map<number, Socket>;
   queue: Socket[];
+  gameRooms: GameRoom[];
 
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket, ...args: any[]): void {
@@ -66,12 +70,19 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     else {
       const targetClient = this.queue.shift();
-      client.join(client.id + targetClient.id);
-      targetClient.join(client.id + targetClient.id);
+      const roomId = client.id + targetClient.id;
+      client.rooms.add(roomId);
+      targetClient.rooms.add(roomId);
+      client.join(roomId);
+      targetClient.join(roomId);
       const user = await this.usersService.readOnePurePlayer(client.data.userId);
       const target = await this.usersService.readOnePurePlayer(targetClient.data.userId);
-      client.emit("ROOM", new GameRoom(client.id + targetClient.id, true, target.name));
-      targetClient.emit("ROOM", new GameRoom(client.id + targetClient.id, false, user.name));
+      client.emit("ROOM", new PlayerInfoDto(roomId, true, target.name));
+      targetClient.emit("ROOM", new PlayerInfoDto(roomId, false, user.name));
+
+      const me = new PingPongPlayer(user, false);
+      const op = new PingPongPlayer(target, false);
+      this.gameRooms.push(new GameRoom(client.id + targetClient.id, me, op));
     }
     // console.log('match making');
     // // 대기 큐에 넣기
@@ -95,20 +106,23 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // client.emit("NOTICE", "success");
     // other.emit("NOTICE", "sucesss");
   }
-}
 
-export class GameRoom {
-  constructor(roomId: string, isLeft: boolean, opposite: string) {
-    this.roomId = roomId;
-    this.isLeft = isLeft;
-    this.opposite = opposite;
+  @SubscribeMessage('READY')
+  readyGame(client: Socket, data: PlayerInfoDto) {
+    let i = 0;
+    for (i = 0; i < this.gameRooms.length; i++) {
+      if (this.gameRooms[i].roomId === data.roomId) 
+        break;
+    }
+    if (data.isLeft)
+      this.gameRooms[i].left.isReady = true;
+    else
+      this.gameRooms[i].right.isReady = true;
+    client.broadcast.to(data.roomId).emit("READY", "READY");
+    if (this.gameRooms[i].left.isReady && this.gameRooms[i].right.isReady) {
+      console.log(client.rooms);
+      client.to(data.roomId).emit("START", "START");
+      client.emit("START", "START");
+    }
   }
-  roomId: string;
-  isLeft: boolean;
-  opposite: string;
-}
-
-export class PingPongPlayer {
-  player: Player;
-  isLeft: boolean;
 }
