@@ -14,7 +14,7 @@ import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { Player } from 'src/users/entities/player.entity';
 import { UsersService } from 'src/users/users.service';
 import { GameRoom, PingPongPlayer } from './entities/game-room.entity';
-import { PlayerInfoDto } from './entities/player-info.dto';
+import { PlayerInfoDto } from './dtos/player-info.dto';
 
 @WebSocketGateway(3131, { namespace: '/games' })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -120,9 +120,28 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.gameRooms[i].right.isReady = true;
     client.broadcast.to(data.roomId).emit("READY", "READY");
     if (this.gameRooms[i].left.isReady && this.gameRooms[i].right.isReady) {
-      console.log(client.rooms);
       client.to(data.roomId).emit("START", "START");
       client.emit("START", "START");
     }
   }
+
+
+  @SubscribeMessage('PING')
+  ping(client: Socket, data) {
+    let i = 0;
+    for (i = 0; i < this.gameRooms.length; i++) {
+      if (this.gameRooms[i].roomId === data.roomId) 
+        break;
+    }
+    this.gameRooms[i].gameInfo.ball = data.ball;
+    if (data.isLeft) {
+      this.gameRooms[i].gameInfo.left = data.bar;
+    }
+    else {
+      this.gameRooms[i].gameInfo.right = data.bar;
+    }
+    client.to(data.roomId).emit("PONG", this.gameRooms[i].gameInfo);
+    client.emit("PONG", this.gameRooms[i].gameInfo);
+  }
 }
+
