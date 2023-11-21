@@ -125,7 +125,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-
   @SubscribeMessage('PING')
   ping(client: Socket, data) {
     let i = 0;
@@ -142,6 +141,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     client.to(data.roomId).emit("PONG", this.gameRooms[i].gameInfo);
     client.emit("PONG", this.gameRooms[i].gameInfo);
+  }
+
+  @SubscribeMessage('HIT')
+  sendBallVector(client: Socket, data) {
+    client.to(data.roomId).emit("VECTOR", data);
+    client.emit("VECTOR", data);
   }
 }
 
