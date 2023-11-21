@@ -1,0 +1,47 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+  <div>
+    userId: <input id="user" type="text" />
+    <button onclick="regist()">regist socket</button>
+  </div>
+  <div>
+    <button onclick="match()">Match Making</button>
+  </div>
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
+    integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
+    crossorigin="anonymous"></script>
+  <script>
+    const user = document.getElementById('user');
+    let socket = io('http://localhost:3131/games');
+
+    socket.on('NOTICE', function (data) {
+      console.log(data);
+    });
+    socket.on('INVATE', function (data) {
+      gameRequest = data;
+      console.log(gameRequest);
+      console.log(gameRequest.send.name + " 님이 게임 초대하였습니다.");
+    });
+    socket.on('INFO_FRIENDS', function (data) {
+      console.log(data);
+    })
+    socket.on('REQUEST_FRIEND', function (data) {
+      frinedRequest = data;
+      console.log(frinedRequest);
+      console.log(frinedRequest.send.name + " 님이 친구요청 하였습니다.");
+    });
+    function regist() {
+      socket.emit('REGIST', parseInt(user.value));
+    }
+    function match() {
+        socket.emit('MATCH', parseInt(user.value));
+    }
+  </script>
+</body>
+
+</html>
