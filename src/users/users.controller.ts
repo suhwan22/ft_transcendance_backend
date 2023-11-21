@@ -13,6 +13,7 @@ import { PlayerRequestDto } from './dtos/player.request.dto';
 import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 import { JwtTwoFactorAuthGuard } from 'src/auth/guards/jwt-2fa.guard';
 import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
+import { FriendRequestDto } from './dtos/friend-request.request.dto';
 
 @ApiTags('Users')
 @Controller('users')
@@ -188,7 +189,7 @@ export class UsersController {
   @ApiBody({ type: FriendRequest })
   @ApiCreatedResponse({ description: 'success', type: FriendRequest })
   @Post('friend-requests')
-  async createFriendRequest(@Body() request: Partial<FriendRequest>): Promise<FriendRequest> {
+  async createFriendRequest(@Body() request: Partial<FriendRequestDto>): Promise<FriendRequest> {
     return this.usersService.createFriendRequest(request);
   }
 

@@ -16,6 +16,9 @@ import { UserSocket } from 'src/users/entities/user-socket.entity';
 import { GamesGateway } from 'src/games/games.gateway';
 import { forwardRef, Inject } from '@nestjs/common';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
+import { Player } from 'src/users/entities/player.entity';
+import { FriendRequest } from 'src/users/entities/friend-request.entity';
+import { GameRequest } from 'src/games/entities/game-request';
 
 @WebSocketGateway(3131, { cors: '*', namespace: '/chats' })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -58,7 +61,21 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!key)
       return ;
     this.clients.delete(key);
+    this.usersService.updatePlayerStatus(key, 3);
+    this.sendUpdateToChannelMember(key);
+    this.lobbyGateway.sendUpdateToFriends(key);
     console.log('chat disonnected', client.id);
+  }
+
+  getClientWithStatus(target: Player): Socket {
+    switch (target.status) {
+      case 0:
+        return (this.lobbyGateway.clients.get(target.id));
+      case 1:
+        return (this.clients.get(target.id));
+      default:
+        return (null);
+    }
   }
 
   //채팅방 만들면서 들어가기
@@ -315,36 +332,93 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (!target) {
       msg = this.chatsSocketService.getInfoMessage("해당 유저는 존재하지 않습니다.");
       client.emit("NOTICE", msg);
-      return ;
+      return;
     }
-
-    switch (target.status) {
-      case 0:
-        const targetClient = this.lobbyGateway.clients.get(target.id);
-        this.chatsSocketService.invateGame(targetClient, data.userId);
-        msg = this.chatsSocketService.getInfoMessage("게임초대 메시지를 전송하였습니다.");
-        client.emit("NOTICE", msg);
-        break;
-      case 1:
-        this.chatsSocketService.invateGame(this.clients.get(target.id), data.userId);
-        msg = this.chatsSocketService.getInfoMessage("게임초대 메시지를 전송하였습니다.");
-        client.emit("NOTICE", msg);
-        break;
-      case 2:
+    const targetClient = this.getClientWithStatus(target);
+    if (!targetClient) {
+      if (target.status === 2)
         msg = this.chatsSocketService.getInfoMessage("해당 유저는 이미 게임중 입니다.");
-        client.emit("NOTICE", msg);
-        break;
-      case 3:
-        msg = this.chatsSocketService.getInfoMessage("해당 유저는 접속 중이 아닙니다.");
-        client.emit("NOTICE", msg);
-        break;
-      default:
-        break;
+      else
+        msg = this.chatsSocketService.getInfoMessage("해당 유저는 접속중이 아닙니다.");
+      client.emit("NOTICE", msg);
+      return;
     }
+    this.chatsSocketService.invateGame(targetClient, data.userId, target);
+    msg = this.chatsSocketService.getInfoMessage("게임초대 메시지를 전송하였습니다.");
+    client.emit("NOTICE", msg);
+  }
+
+
+  @SubscribeMessage('ACCEPT_GAME')
+  async acceptGame(client: Socket, data: Partial<GameRequest>) {
+    const target = await this.usersService.readOnePurePlayer(data.send.id);
+    let msg;
+    const targetClient = this.getClientWithStatus(target);
+    if (!targetClient) {
+      if (target.status === 2)
+        msg = this.chatsSocketService.getInfoMessage("해당 유저는 이미 게임중 입니다.");
+      else
+        msg = this.chatsSocketService.getInfoMessage("해당 유저는 접속중이 아닙니다.");
+      client.emit("NOTICE", msg);
+      return;
+    }
+    this.chatsSocketService.acceptGame(client, targetClient, data, target);
+  }
+
+  @SubscribeMessage('REFUSE_GAME')
+  async refuseGame(client: Socket, data: Partial<GameRequest>) {
+    const target = await this.usersService.readOnePurePlayer(data.send.id);
+    const targetClient = this.getClientWithStatus(target);
+    this.chatsSocketService.refuseGame(client, targetClient, data, target);
   }
 
   async sendUpdateToChannelMember(userId: number) {
     this.chatsSocketService.sendUpdateToChannelMember(this.server, userId);
+  }
+
+  @SubscribeMessage('REQUEST_FRIEND')
+  async requestFriend(client: Socket, data) {
+    let msg;
+    try {
+      const target = await this.usersService.readOnePurePlayerWithName(data.target);
+      if (!target) {
+        msg = this.chatsSocketService.getInfoMessage("해당 유저는 존재하지 않습니다.");
+        client.emit("NOTICE", msg);
+        return;
+      }
+      const request = await this.usersService.readRecvAndSendFriendRequest(target.id, data.userId);
+      if (request) {
+        msg = this.chatsSocketService.getInfoMessage("이미 친구 요청한 유저입니다.");
+        client.emit("NOTICE", msg);
+        return;
+      }
+      const user = await this.usersService.readOnePurePlayer(data.userId);
+      const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
+      msg = this.chatsSocketService.getInfoMessage(target.name + " 님에게 친구 요청하였습니다.");
+      client.emit("NOTICE", msg);
+
+      const targetClient = this.getClientWithStatus(target);
+      if (!targetClient)
+        return ;
+      targetClient.emit("REQUEST_FRIEND", friendRequest);
+    }
+    catch (e) {
+      msg = this.chatsSocketService.getInfoMessage("Server Error: DB error");
+      client.emit("NOTICE", msg);
+      return;
+    }
+  }
+
+  @SubscribeMessage('ACCEPT_FRIEND')
+  async acceptFriend(client: Socket, data: Partial<FriendRequest>) {
+    const target = await this.usersService.readOnePurePlayer(data.send.id);
+    const targetClient = this.getClientWithStatus(target);
+    this.chatsSocketService.acceptFriend(client, targetClient, data, target);
+  }
+
+  @SubscribeMessage('REFUSE_FRIEND')
+  async refuseFriend(client: Socket, data: Partial<FriendRequest>) {
+    this.chatsSocketService.refuseFriend(client, data);
   }
 }
 

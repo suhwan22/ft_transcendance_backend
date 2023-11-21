@@ -51,8 +51,8 @@ insert into friend_list (id, "user", friend_id) values (100005, 3, 1);
 insert into friend_list (id, "user", friend_id) values (100006, 4, 1);
 
 -- init friend_request data
-insert into friend_request (id, recv, send) values (100001, 2, 3);
-insert into friend_request (id, recv, send) values (100002, 2, 4);
+insert into friend_request (id, recv_id, send_id) values (100001, 2, 3);
+insert into friend_request (id, recv_id, send_id) values (100002, 2, 4);
 
 -- init block_list data
 insert into block_list (id, "user", target_id) values (100001, 1, 5);

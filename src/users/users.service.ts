@@ -19,6 +19,7 @@ import { ChannelMember } from 'src/chats/entities/channel-member.entity';
 import { UserAuth } from './entities/user-auth.entity';
 import { compare, hash } from 'bcrypt';
 import { UserSocket } from './entities/user-socket.entity';
+import { FriendRequestDto } from './dtos/friend-request.request.dto';
 
 @Injectable()
 export class UsersService {
@@ -179,6 +180,15 @@ export class UsersService {
     return (this.userFriendRepository.save(newFriend));
   }
 
+  async createFriendWithPlayer(userId: number, friend: Player): Promise<UserFriend> {
+    const temp = {
+      user: userId,
+      friend: friend
+    }
+    const newFriend = this.userFriendRepository.create(temp);
+    return (this.userFriendRepository.save(newFriend));
+  }
+
   // 유저 친구 수정 메서드
   async updateFriendInfo(id: number, friend: Partial<UserFriend>): Promise<UserFriend> {
     await this.userFriendRepository.update(id, friend);
@@ -253,9 +263,18 @@ export class UsersService {
    */
 
   /* [C] FriendRequest 생성 */
-  async createFriendRequest(request: Partial<FriendRequest>): Promise<FriendRequest> {
-    const newRequest = this.friendRequestRepository.create(request);
-    return (this.friendRequestRepository.save(newRequest));
+  async createFriendRequest(request: Partial<FriendRequestDto>): Promise<FriendRequest> {
+    const recv = await this.readOnePurePlayer(request.recv);
+    const send = await this.readOnePurePlayer(request.send);
+    const newRequest = { recv: recv, send: send };
+    const friendRequest = this.friendRequestRepository.create(newRequest);
+    return (this.friendRequestRepository.save(friendRequest));
+  }
+
+  async createFriendRequestWithPlayer(recv: Player, send: Player): Promise<FriendRequest> {
+    const newRequest = { recv: recv, send: send };
+    const friendRequest = this.friendRequestRepository.create(newRequest);
+    return (this.friendRequestRepository.save(friendRequest));
   }
 
   /* [R] 모든 FriendRequest 조회 */
@@ -265,12 +284,39 @@ export class UsersService {
 
   /* [R] 특정 recv{id}의 FriendRequest 조회 */
   async readRecvFriendRequest(recv: number): Promise<FriendRequest[]> {
-    return (this.friendRequestRepository.find({ where: { recv } }));
+    const friendRequestList = await this.dataSource
+      .getRepository(FriendRequest).createQueryBuilder('friend_list')
+      .leftJoinAndSelect('friend_list.send', 'send')
+      .leftJoinAndSelect('friend_list.recv', 'recv')
+      .select(['friend_list.id', 'recv.id', 'recv.name', 'send.id', 'send.name'])
+      .where('recv.id = :id', { id: recv })
+      .getMany();
+    return (friendRequestList);
+  }
+
+  /* [R] 특정 send{id}의 FriendRequest 조회 */
+  async readRecvAndSendFriendRequest(recv:number, send: number): Promise<FriendRequest> {
+    const friendRequest = await this.dataSource
+      .getRepository(FriendRequest).createQueryBuilder('friend_list')
+      .leftJoinAndSelect('friend_list.send', 'send')
+      .leftJoinAndSelect('friend_list.recv', 'recv')
+      .select(['friend_list.id', 'recv.id', 'recv.name', 'send.id', 'send.name'])
+      .where('send.id = :id', { id: send })
+      .where('recv.id = :id', { id: recv })
+      .getOne();
+    return (friendRequest);
   }
 
   /* [R] 특정 send{id}의 FriendRequest 조회 */
   async readSendFriendRequest(send: number): Promise<FriendRequest[]> {
-    return (this.friendRequestRepository.find({ where: { send } }));
+    const friendRequestList = await this.dataSource
+      .getRepository(FriendRequest).createQueryBuilder('friend_list')
+      .leftJoinAndSelect('friend_list.send', 'send')
+      .leftJoinAndSelect('friend_list.recv', 'recv')
+      .select(['friend_list.id', 'recv.id', 'recv.name', 'send.id', 'send.name'])
+      .where('send.id = :id', { id: send })
+      .getMany();
+    return (friendRequestList);
   }
 
   /* [D] FriendRequest 제거 */

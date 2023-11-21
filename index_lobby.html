@@ -10,13 +10,13 @@
     <button onclick="regist()">regist socket</button>
   </div>
   <div>
-    game target: <input id="target" type="text" />
+    game: <input id="game" type="text" />
     <button onclick="invate()">invate</button>
     <button onclick="accept_game()">yes</button>
     <button onclick="refuse_game()">no</button>
   </div>
   <div>
-    friend target: <input id="target" type="text" />
+    friend: <input id="friend" type="text" />
     <button onclick="request_friend()">friend</button>
     <button onclick="accept_friend()">yes</button>
     <button onclick="refuse_friend()">no</button>
@@ -25,44 +25,57 @@
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
     crossorigin="anonymous"></script>
   <script>
+    let frinedRequest = null;
+    let gameRequest = null;
     const user = document.getElementById('user');
-    const target = document.getElementById('target');
+    const game = document.getElementById('game');
+    const friend= document.getElementById('friend');
     let socket = io('http://localhost:3131/lobby');
 
     socket.on('NOTICE', function (data) {
       console.log(data);
     });
     socket.on('INVATE', function (data) {
-      console.log(data.target);
-      console.log(data.target.name + " 님이 게임 초대하였습니다.");
+      gameRequest = data;
+      console.log(gameRequest);
+      console.log(gameRequest.send.name + " 님이 게임 초대하였습니다.");
     });
     socket.on('INFO_FRIENDS', function (data) {
       console.log(data);
     })
     socket.on('REQUEST_FRIEND', function (data) {
-      console.log(data.target);
-      console.log(data.target.name + " 님이 친구요청 하였습니다.");
+      frinedRequest = data;
+      console.log(frinedRequest);
+      console.log(frinedRequest.send.name + " 님이 친구요청 하였습니다.");
     });
     function regist() {
       socket.emit('REGIST', parseInt(user.value));
     }
     function request_friend() {
-      socket.emit('REQUEST_FRIEND', { userId: parseInt(user.value), target: target.value });
+      socket.emit('REQUEST_FRIEND', { userId: parseInt(user.value), target: friend.value });
     }
     function accept_friend() {
-      socket.emit('ACCEPT_FRIEND', { userId: parseInt(user.value), target: target.value });
+      if (frinedRequest)
+        socket.emit('ACCEPT_FRIEND', frinedRequest);
+      frinedRequest = null;
     }
     function refuse_friend() {
-      socket.emit('REFUSE_FRIEND', { userId: parseInt(user.value), target: target.value });
+      if (frinedRequest)
+        socket.emit('REFUSE_FRIEND', frinedRequest);
+      frinedRequest = null;
     }
     function invate() {
-      socket.emit('INVATE', { userId: parseInt(user.value), target: target.value });
+      socket.emit('INVATE', { userId: parseInt(user.value), target: game.value });
     }
     function accept_game() {
-      socket.emit('ACCEPT_GAME', { userId: parseInt(user.value), target: target.value });
+      if (gameRequest)
+        socket.emit('ACCEPT_GAME', gameRequest);
+      gameRequest = null;
     }
     function refuse_game() {
-      socket.emit('REFUSE_GAME', { userId: parseInt(user.value), target: target.value });
+      if (gameRequest)
+        socket.emit('REFUSE_GAME', gameRequest);
+      gameRequest = null;
     }
   </script>
 </body>
