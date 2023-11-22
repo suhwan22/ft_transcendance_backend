@@ -1,0 +1,148 @@
+<html>
+
+<head>
+
+</head>
+
+<body>
+  <div>
+    userId: <input id="user" type="text" />
+    <button onclick="regist()">regist socket</button>
+    <button onclick="match()">Match Making</button>
+  </div>
+  <div>
+    speed: <input id="speed" type="text" />
+    ballSize: <input id="ballSize" type="text" />
+    barSize: <input id="barSize" type="text" />
+    <button onclick="option()">Option</button>
+    <button onclick="ready()">Ready</button>
+  </div>
+  <div>
+    <button onclick="pause()">pause</button>
+    <button onclick="resume()">resume</button>
+  </div>
+  <div>
+    bar: <input id="bar" type="text" />
+    <button onclick="ping()">ping</button>
+  </div>
+  <div>
+    x: <input id="x" type="text" />
+    y: <input id="y" type="text" />
+    <button onclick="hit()">hit</button>
+  </div>
+  <div>
+    <button onclick="point()">get Point</button>
+  </div>
+  <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
+    integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
+    crossorigin="anonymous"></script>
+  <script>
+    const user = document.getElementById('user');
+    const bar = document.getElementById('bar');
+    const x = document.getElementById('x');
+    const y = document.getElementById('y');
+    const speed = document.getElementById('speed');
+    const ballSize = document.getElementById('ballSize');
+    const barSize = document.getElementById('barSize');
+    let socket = io('http://localhost:3131/games');
+    let game = null;
+
+    socket.on('NOTICE', function (data) {
+      console.log(data);
+    });
+    socket.on('ROOM', function (data) {
+      game = data;
+      console.log(data);
+    });
+    socket.on('OPTION', function (data) {
+      console.log(data);
+    });
+    socket.on('READY', function (data) {
+      if (game) {
+        if (data === game.isLeft)
+          console.log("준비 하였습니다.");
+        else
+          console.log("상대방이 준비 하였습니다.");
+      }
+    });
+    socket.on('START', function (data) {
+      console.log("게임 스타트");
+    });
+    socket.on('PONG', function (data) {
+      console.log(data);
+    });
+    socket.on('VECTOR', function (data) {
+      console.log(data);
+    });
+    socket.on('SCORE', function (data) {
+      console.log(data);
+    });
+    socket.on('PAUSE', function (data) {
+      console.log("게임 정지");
+    });
+    socket.on('RESUME', function (data) {
+      console.log("게임 재개");
+    });
+    socket.on('LOAD', function (data) {
+      game = data.room;
+      console.log(data);
+      console.log("게임복구");
+    });
+    socket.on('END', function (data) {
+      if (game) {
+        if (data.winnerIsLeft === game.isLeft)
+          console.log("승리");
+        else
+          console.log("패배");
+      }
+      game = null;
+    });
+    function regist() {
+      socket.emit('REGIST', parseInt(user.value));
+    }
+    function match() {
+      socket.emit('MATCH', parseInt(user.value));
+      console.log("waitting...");
+    }
+    function option() {
+      if (!game)
+        return;
+        socket.emit('OPTION', { speed: parseInt(speed.value), ballSize: parseInt(ballSize.value), barSize: parseInt(barSize.value) });
+    }
+    function ready() {
+      if (!game)
+        return ;
+      socket.emit('READY', game);
+    }
+    function ping() {
+      if (!game)
+        return ;
+      const data =  { roomId: game.roomId, ball: { x: 2, y: 54 }, bar: parseInt(bar.value), isLeft: game.isLeft}
+      socket.emit('PING', data);
+    }
+    function hit() {
+      if (!game)
+        return ;
+      const data =  { roomId: game.roomId, xv: parseInt(x.value), yv: parseInt(y.value) };
+      socket.emit('HIT', data);
+    }
+    function point() {
+      if (!game)
+        return ;
+      const data =  { roomId: game.roomId, isLeft: game.isLeft };
+      socket.emit('SCORE', data);
+    }
+    function pause() {
+      if (!game)
+        return ;
+      socket.emit('PAUSE', {});
+    }
+    function resume() {
+      if (!game)
+        return ;
+      socket.emit('RESUME', {});
+    }
+  </script>
+</body>
+
+</html>

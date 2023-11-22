@@ -5,6 +5,8 @@ import { UsersService } from 'src/users/users.service';
 import { Repository } from 'typeorm';
 import { GameHistory } from './entities/game-history.entity';
 import { GameHistoryRequestDto } from './dtos/game-history.request.dto';
+import { GameRoom } from './entities/game.entity';
+import { Player } from 'src/users/entities/player.entity';
 
 @Injectable()
 export class GamesService {
@@ -26,6 +28,22 @@ export class GamesService {
       result: history.result,
       userScore: history.userScore,
       opponentScore: history.opponentScore
+    }
+    const newHistory = this.gameHistoryRepository.create(temp);
+    return (this.gameHistoryRepository.save(newHistory));
+  }
+
+  async createGameHistoryWitData(user: number, 
+                                 opponent: Player, 
+                                 result: boolean, 
+                                 userScore: number, 
+                                 opponentScore: number): Promise<GameHistory> {
+    const temp = {
+      user: user,
+      opponent: opponent,
+      result: result,
+      userScore: userScore,
+      opponentScore: opponentScore
     }
     const newHistory = this.gameHistoryRepository.create(temp);
     return (this.gameHistoryRepository.save(newHistory));
