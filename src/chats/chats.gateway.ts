@@ -186,7 +186,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const channelMembers = await this.chatsService.readOneChannelMember(message.channelId);
     const member = channelMembers.find((member) => member.user.id == message.userId);
     await this.chatsService.deleteChannelMember(member.id);
-    this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId, "강퇴되었습니다.", 7);
+    await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId, "강퇴되었습니다.", 7);
   }
 
   //채팅방 나가기
