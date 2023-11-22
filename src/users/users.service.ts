@@ -148,6 +148,7 @@ export class UsersService {
   }
 
   async updateUserGameRecord(userId: number, result: boolean): Promise<UserGameRecord> {
+    // query builder로 짜기
     const record = await this.readOneUserGameRecord(userId);
     if (result) {
       record.win++;
