@@ -143,6 +143,7 @@ export class ChatsService {
                                 'channel_member.op', 
                                 'player.id', 
                                 'player.name', 
+                                'player.avatar', 
                                 'player.status', 
                                 'channel_member.date', 
                                 'channel_config.id', 
@@ -263,7 +264,7 @@ export class ChatsService {
                                       .select(['chat_log.id', 'chat_log.content', 'player.name', 'player.avatar', 'chat_log.date'])
                                       .where('channel_config.id = :id', { id: channelId })
                                       .orderBy('chat_log.date', 'DESC')
-                                      .limit(10)
+                                      .limit(50)
                                       .getMany();
     return (chatLogs);
   }
