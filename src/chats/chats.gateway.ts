@@ -269,6 +269,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('NOTICE', log);
       return ;
     }
+    if (data.target === '') {
+      await this.chatsSocketService.commandBanList(client, data.channelId);
+      return ;
+    }
     const targetUser = await this.usersService.readOnePurePlayerWithName(data.target);
     if (!targetUser) {
       const log = this.chatsSocketService.getNotice("존재하지 않는 유저입니다.", 11);

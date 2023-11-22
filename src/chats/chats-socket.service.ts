@@ -245,12 +245,12 @@ export class ChatsSocketService {
   }
 
   // ban
+  async commandBanList(client: Socket, channelId: number) {
+      client.emit("BAN", await this.chatsService.readBanList(channelId));
+  }
+
   async commandBan(client: Socket, channelId: number, target: string, targetId: number, tagetSocket: Socket) {
     try {
-      if (target === '') {
-        client.emit("BAN", await this.chatsService.readBanList(channelId));
-        return (null);
-      }
       const user = await this.usersService.readOnePurePlayerWithName(target);
       if (!user)
         return (this.getNotice("존재하지 않는 유저입니다.", 11));
