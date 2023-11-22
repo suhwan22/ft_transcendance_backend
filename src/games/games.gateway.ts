@@ -11,10 +11,10 @@ import {
 import { Server, Socket } from 'socket.io';
 import { ChatsGateway } from 'src/chats/chats.gateway';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
-import { Player } from 'src/users/entities/player.entity';
 import { UsersService } from 'src/users/users.service';
-import { GameRoom, PingPongPlayer } from './entities/game-room.entity';
+import { GameRoom, PingPongPlayer } from './entities/game.entity';
 import { PlayerInfoDto } from './dtos/player-info.dto';
+import { GamesSocketService } from './games-socket.service';
 
 @WebSocketGateway(3131, { namespace: '/games' })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -23,20 +23,22 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatsGateway: ChatsGateway,
     @Inject(forwardRef(() => LobbyGateway))
     private readonly lobbyGateway: LobbyGateway,
-    private readonly usersService: UsersService,) {
+    private readonly usersService: UsersService,
+    private readonly gamesSocketService: GamesSocketService,) {
     this.clients = new Map<number, Socket>();
     this.queue = [];
-    this.gameRooms = [];
+    this.gameRooms = new Map<string, GameRoom>();
   }
 
   @WebSocketServer()
   server: Server;
   clients: Map<number, Socket>;
   queue: Socket[];
-  gameRooms: GameRoom[];
+  gameRooms:  Map<string, GameRoom>;
 
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket, ...args: any[]): void {
+    client.leave(client.id);
     console.log('game connected', client.id);
   }
 
@@ -45,18 +47,42 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const key = client.data.userId;
     if (!key)
       return ;
-    this.clients.delete(key);
-    this.usersService.updatePlayerStatus(key, 3);
-    this.chatsGateway.sendUpdateToChannelMember(key);
-    this.lobbyGateway.sendUpdateToFriends(key);
-    console.log('chat disonnected', client.id);
+    if (client.data.roomId) {
+      const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
+      const updateGame = this.gamesSocketService.pauseGame(targetClient, this.gameRooms.get(client.data.roomId));
+      this.gameRooms.set(updateGame.roomId, updateGame);
+    }
+    else {
+      const newQueue = this.queue.filter((e) => e.data.userId !== client.data.userId);
+      this.queue = newQueue;
+      this.clients.delete(key);
+      this.usersService.updatePlayerStatus(key, 3);
+      this.chatsGateway.sendUpdateToChannelMember(key);
+      this.lobbyGateway.sendUpdateToFriends(key);
+    }
+    console.log('game disonnected', client.id);
   }
-
-
+  
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
     client.data.userId = userId;
-    client.data.math = false;
+    if (this.clients.get(userId)) {
+      const gameRoom = this.getGameRoomWithUserId(userId);
+      const roomId = gameRoom.roomId;
+      const isLeft = gameRoom.getUserPosition(userId);
+      const opposite = gameRoom.getOppositeNameWithUserId(userId);
+      const playerInfoDto = new PlayerInfoDto(roomId, isLeft, opposite);
+      const loadData = {
+        room: playerInfoDto,
+        objectPos: gameRoom.gameInfo,
+        score: gameRoom.score,
+        option: gameRoom.option,
+        stop: gameRoom.stop,
+      }
+      client.data.roomId = roomId;
+      client.join(roomId);
+      client.emit("LOAD", loadData);
+    }
     this.clients.set(userId, client);
     this.usersService.updatePlayerStatus(userId, 2);
     this.chatsGateway.sendUpdateToChannelMember(userId);
@@ -71,18 +97,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     else {
       const targetClient = this.queue.shift();
       const roomId = client.id + targetClient.id;
-      client.rooms.add(roomId);
-      targetClient.rooms.add(roomId);
-      client.join(roomId);
-      targetClient.join(roomId);
-      const user = await this.usersService.readOnePurePlayer(client.data.userId);
-      const target = await this.usersService.readOnePurePlayer(targetClient.data.userId);
-      client.emit("ROOM", new PlayerInfoDto(roomId, true, target.name));
-      targetClient.emit("ROOM", new PlayerInfoDto(roomId, false, user.name));
-
-      const me = new PingPongPlayer(user, false);
-      const op = new PingPongPlayer(target, false);
-      this.gameRooms.push(new GameRoom(client.id + targetClient.id, me, op));
+      const gameRoom = await this.gamesSocketService.makeRoom(client, targetClient, roomId);
+      this.gameRooms.set(roomId, gameRoom);
     }
     // console.log('match making');
     // // 대기 큐에 넣기
@@ -109,44 +125,76 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('READY')
   readyGame(client: Socket, data: PlayerInfoDto) {
-    let i = 0;
-    for (i = 0; i < this.gameRooms.length; i++) {
-      if (this.gameRooms[i].roomId === data.roomId) 
-        break;
-    }
-    if (data.isLeft)
-      this.gameRooms[i].left.isReady = true;
-    else
-      this.gameRooms[i].right.isReady = true;
-    client.broadcast.to(data.roomId).emit("READY", "READY");
-    if (this.gameRooms[i].left.isReady && this.gameRooms[i].right.isReady) {
-      client.to(data.roomId).emit("START", "START");
-      client.emit("START", "START");
-    }
+    const gameRoom = this.gameRooms.get(client.data.roomId);
+    const updateRoom = this.gamesSocketService.readyGame(client, gameRoom, data);
+    this.gameRooms.set(client.data.roomId, updateRoom);
   }
 
   @SubscribeMessage('PING')
   ping(client: Socket, data) {
-    let i = 0;
-    for (i = 0; i < this.gameRooms.length; i++) {
-      if (this.gameRooms[i].roomId === data.roomId) 
-        break;
-    }
-    this.gameRooms[i].gameInfo.ball = data.ball;
-    if (data.isLeft) {
-      this.gameRooms[i].gameInfo.left = data.bar;
-    }
-    else {
-      this.gameRooms[i].gameInfo.right = data.bar;
-    }
-    client.to(data.roomId).emit("PONG", this.gameRooms[i].gameInfo);
-    client.emit("PONG", this.gameRooms[i].gameInfo);
+    const gameRoom = this.gameRooms.get(client.data.roomId);
+    const updateRoom = this.gamesSocketService.updateGameInfo(client, gameRoom, data);
+    this.gameRooms.set(client.data.roomId, updateRoom);
   }
 
   @SubscribeMessage('HIT')
   sendBallVector(client: Socket, data) {
-    client.to(data.roomId).emit("VECTOR", data);
-    client.emit("VECTOR", data);
+    client.to(client.data.roomId).emit("VECTOR", data);
+  }
+
+  @SubscribeMessage('SCORE')
+  sendScore(client: Socket, data) {
+    const gameRoom = this.gameRooms.get(client.data.roomId);
+    const updateRoom = this.gamesSocketService.updateGameScore(client, gameRoom, data);
+    this.gameRooms.set(data.roomId, updateRoom);
+
+    if (updateRoom.score.left >= 11 || updateRoom.score.right >= 11) {
+      let k;
+      if (updateRoom.left.player.id === client.data.userId)
+        k = updateRoom.right.player.id;
+      else
+        k = updateRoom.left.player.id;
+      const targetClient = this.clients.get(k);
+      this.gamesSocketService.endGame(client, targetClient, updateRoom);
+    }
+  }
+
+  @SubscribeMessage('OPTION')
+  sendOption(client: Socket, data) {
+    const gameRoom = this.gameRooms.get(client.data.roomId);
+    const updateRoom = this.gamesSocketService.updateGameOption(client, gameRoom, data);
+    this.gameRooms.set(updateRoom.roomId, updateRoom);
+  }
+
+  @SubscribeMessage('PAUSE')
+  sendPauseGame(client: Socket, data) {
+    const gameRoom = this.gameRooms.get(client.data.roomId);
+    const updateRoom = this.gamesSocketService.pauseGame(client, gameRoom);
+    this.gameRooms.set(updateRoom.roomId, updateRoom);
+  }
+
+  @SubscribeMessage('RESUME')
+  sendResumeGame(client: Socket, data) {
+    const gameRoom = this.gameRooms.get(client.data.roomId);
+    const updateRoom = this.gamesSocketService.resumeGame(client, gameRoom);
+    this.gameRooms.set(updateRoom.roomId, updateRoom);
+  }
+
+  getGameRoomWithUserId(userId: number): GameRoom {
+    let gameRoom = null;
+    this.gameRooms.forEach((v) => {
+      if (v.left.player.id === userId || v.right.player.id === userId)
+        gameRoom = v;
+    })
+    return (gameRoom);
+  }
+
+  getTargetClient(roomId: string, userId: number): Socket {
+    const gameRoom = this.gameRooms.get(roomId);
+    if (gameRoom.left.player.id === userId)
+      return (this.clients.get(gameRoom.right.player.id));
+    else
+      return (this.clients.get(gameRoom.left.player.id));
   }
 }
 

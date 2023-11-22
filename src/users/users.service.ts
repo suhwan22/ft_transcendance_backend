@@ -147,6 +147,20 @@ export class UsersService {
     return (this.recordRepository.findOne({ where: { id } }));
   }
 
+  async updateUserGameRecord(userId: number, result: boolean): Promise<UserGameRecord> {
+    const record = await this.readOneUserGameRecord(userId);
+    if (result) {
+      record.win++;
+      record.score++;
+    }
+    else {
+      record.loss++;
+      record.score--;
+    }
+    await this.recordRepository.update(record.id, record);
+    return (record);
+  }
+
   // /* [D] UserGameRecord 제거 */
   // async deleteUserGameRecord(id: number): Promise<void> {
   //   await (this.recordRepository.delete(id));
