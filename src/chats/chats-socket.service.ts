@@ -26,10 +26,9 @@ export class ChatsSocketService {
     };
   }
 
-  getInfoMessage(message: string) {
+  getNotice(message: string, code: number) {
     return ({
-      id: null,
-      user: { id: null, name: '정보', avatar: null, status: 0, date: null },
+      code: code,
       content: message,
       date: new Date(),
     });
@@ -39,7 +38,7 @@ export class ChatsSocketService {
     let log;
     const chatMute = await this.chatsService.readChatMute(message.channelId, message.userId);
     if (chatMute && !this.checkMuteTime(chatMute)) {
-      log = this.getInfoMessage('채팅 금지로 인하여 일정 시간동안 채팅이 금지됩니다.');
+      log = this.getNotice('채팅 금지로 인하여 일정 시간동안 채팅이 금지됩니다.', 35);
       client.emit('NOTICE', log);
       return;
     }
@@ -91,7 +90,7 @@ export class ChatsSocketService {
     // channellist 동기화 하는거 추가 해야함
     
     
-    const log = this.getInfoMessage(`${player.name}님이 ${chat.title}방에 입장하셨습니다.`);
+    const log = this.getNotice(`${player.name}님이 ${chat.title}방에 입장하셨습니다.`, 5);
     client.to(roomId).emit('NOTICE', log);
   }
 
@@ -112,8 +111,16 @@ export class ChatsSocketService {
 
     const { chat } = this.getChatRoom(roomId);
     
-    const log = this.getInfoMessage(`${player.name}님이 ${chat.title}방에 입장하셨습니다.`);
+    const log = this.getNotice(`${player.name}님이 ${chat.title}방에 입장하셨습니다.`, 5);
     client.to(roomId).emit('NOTICE', log);
+  }
+
+  async connectLobby(client: Socket, userId: number) {
+    client.leave(client.data.roomId);
+    client.data.roomId = 'room:lobby';
+    client.rooms.clear();
+    client.rooms.add('room:lobby');
+    client.join('room:lobby');
   }
 
   async connectChatRoom(client: Socket, channelId: number, userId: number) {
@@ -135,11 +142,11 @@ export class ChatsSocketService {
     client.emit('LOADCHAT', log);
   }
 
-  async exitChatRoom(client: Socket, channelId: number, userId: number, word: string) {
+  async exitChatRoom(client: Socket, channelId: number, userId: number, word: string, code: number) {
     const player = await this.usersService.readOnePurePlayer(userId);
     const roomId = channelId.toString();
 
-    const log = this.getInfoMessage(`${player.name}님이 ${word}`);
+    const log = this.getNotice(`${player.name}님이 ${word}`, code);
     client.to(roomId).emit('NOTICE', log);
 
     client.data.roomId = 'room:lobby';
@@ -177,11 +184,15 @@ export class ChatsSocketService {
   async commandOp(client: Socket, channelId: number, target: string) {
     try {
       const user = await this.usersService.readOnePurePlayerWithName(target);
+      if (!user)
+        return (this.getNotice("존재하지 않는 유저입니다.", 11));
       const channelMember = await this.chatsService.readChannelMember(channelId, user.id);
+      if (!channelMember)
+        return (this.getNotice("채널 맴버가 아닙니다.", 9));
       this.chatsService.updateChannelMemberOp(channelMember.id, false);
-      return (`"${target}"님에게 OP 권한을 부여 하였습니다.`);
+      return (this.getNotice(`"${target}"님에게 OP 권한을 부여 하였습니다.`, 200));
     } catch (e) {
-      return (`OP 권한 부여 실패`);
+      return (this.getNotice("DB error", 200));
     }
   }
 
@@ -195,7 +206,7 @@ export class ChatsSocketService {
         const channelMembers = await this.chatsService.readOneChannelMember(channelId);
         const member = channelMembers.find((member) => member.user.name == target);
         if (!member)
-          return ('채널 맴버가 아닙니다.');
+          return (this.getNotice("채널 맴버가 아닙니다.", 9));
         await this.chatsService.deleteChannelMember(member.id);
         this.sendChannelMember(client, channelId);
       }
@@ -207,15 +218,15 @@ export class ChatsSocketService {
           const channelMembers = await this.chatsService.readOneChannelMember(channelId);
           const member = channelMembers.find((member) => member.user.name == target);
           if (!member)
-            return ('채널 맴버가 아닙니다.');
+            return (this.getNotice("채널 맴버가 아닙니다.", 9));
           await this.chatsService.deleteChannelMember(member.id);
           this.sendChannelList(targetClient, targetUser.id);
           this.sendChannelMember(client, channelId);
         }
       }
-      return (`${target} 님을 강퇴하였습니다.`);
+      return (this.getNotice("성공적으로 강퇴하였습니다.", 10));
     } catch (e) {
-      return ('실패');
+      return (this.getNotice("DB Error", 200));
     }
   }
 
@@ -242,10 +253,10 @@ export class ChatsSocketService {
       }
       const user = await this.usersService.readOnePurePlayerWithName(target);
       if (!user)
-        return ('존재하지 않는 유저입니다.');
+        return (this.getNotice("존재하지 않는 유저입니다.", 11));
       const chatBan = await this.chatsService.readChatBan(channelId, user.id);
       if (chatBan)
-        return ('이미 밴 목록에 추가된 유저입니다.');
+        return (this.getNotice('이미 밴 목록에 추가된 유저입니다.', 12) );
       const chatBanRequest = {
         channelId: channelId,
         userId: user.id
@@ -258,10 +269,9 @@ export class ChatsSocketService {
       if (member) {
         this.commandKick(client, channelId, target, targetId, tagetSocket);
       }
-
-      return ('밴 목록에 추가하였습니다.');
+      return (this.getNotice('성공적으로 밴 성공하였습니다.', 13) );
     } catch (e) {
-      return ('실패');
+      return (this.getNotice("DB Error", 200));
     }
   }
 
@@ -270,15 +280,15 @@ export class ChatsSocketService {
     try {
       const user = await this.usersService.readOnePurePlayerWithName(target);
       if (!user)
-        return ('존재하지 않는 유저입니다.');
+      return (this.getNotice("존재하지 않는 유저입니다.", 11));
       const chatBan = await this.chatsService.readChatBan(channelId, user.id);
       if (!chatBan)
-        return ('밴 목록에 해당하는 유저가 없습니다.');
+        return (this.getNotice('밴 목록에 해당하는 유저가 없습니다.', 14) );
       this.chatsService.deleteBanInfo(chatBan.id);
-      return ('밴 목록에서 제거하였습니다.');
+      return (this.getNotice('밴 목록에서 제거하였습니다.', 15) );
     }
     catch (e) {
-      return ('실패');
+      return (this.getNotice("DB Error", 200));
     }
   }
 
@@ -292,19 +302,19 @@ export class ChatsSocketService {
       }
       const user = await this.usersService.readOnePurePlayerWithName(target);
       if (!user)
-        return ('존재하지 않는 유저입니다.');
+        return (this.getNotice("존재하지 않는 유저입니다.", 11));
       const blocked = userBlocks.find((e) => e.target.name === target);
       if (blocked)
-        return ('이미 차단 목록에 추가된 유저입니다.');
+        return (this.getNotice("이미 차단 목록에 추가된 유저입니다.", 16));
 
       const userBlockRequest = {
         user: userId,
         target: user.id
       }
       this.usersService.createBlockInfo(userBlockRequest);
-      return ('차단 목록에 추가하였습니다.');
+      return (this.getNotice('차단 목록에 추가하였습니다.', 17));
     } catch (e) {
-      return ('실패');
+      return (this.getNotice("DB Error", 200));
     }
   }
   // unblock
@@ -313,15 +323,15 @@ export class ChatsSocketService {
       const userBlocks = await this.usersService.readBlockList(userId);
       const user = await this.usersService.readOnePurePlayerWithName(target);
       if (!user)
-        return ('존재하지 않는 유저입니다.');
+        return (this.getNotice("존재하지 않는 유저입니다.", 11));
       const blocked = userBlocks.find((e) => e.target.name === target);
       if (!blocked)
-        return ('차단 목록에 해당하는 유저가 없습니다.');
+        return (this.getNotice("차단 목록에 해당하는 유저가 없습니다.", 18));
       this.usersService.deleteBlockInfo(blocked.id);
-      return ('차단 목록에서 제거하였습니다.');
+      return (this.getNotice("차단 목록에서 제거하였습니다.", 19));
     }
     catch (e) {
-      return ('실패');
+      return (this.getNotice("DB Error", 200));
     }
   }
 
@@ -339,7 +349,7 @@ export class ChatsSocketService {
     try {
       const user = await this.usersService.readOnePurePlayerWithName(target);
       if (!user)
-        return ('존재하지 않는 유저입니다.');
+        return (this.getNotice("존재하지 않는 유저입니다.", 11));
       const chatMute = await this.chatsService.readChatMute(channelId, user.id);
       const chatMuteRequest = {
         channelId: channelId,
@@ -349,26 +359,14 @@ export class ChatsSocketService {
         if (this.checkMuteTime(chatMute)) {
           this.chatsService.deleteMuteInfo(chatMute.id);
           this.chatsService.createMuteInfo(chatMuteRequest);
-          return ('해당 유저를 1분간 채팅 금지합니다.');
+          return (this.getNotice("해당 유저를 1분간 채팅 금지합니다.", 21));
         }
-        return ('이미 채팅 금지된 유저입니다.');
+        return (this.getNotice("이미 채팅 금지된 유저입니다.", 20));
       }
       this.chatsService.createMuteInfo(chatMuteRequest);
-      return ('해당 유저를 1분간 채팅 금지합니다.');
+      return (this.getNotice("해당 유저를 1분간 채팅 금지합니다.", 21));
     } catch (e) {
-      return ('실패');
-    }
-  }
-
-  // name
-  async commandName(client: Socket, channelId: number, target: string) {
-    try {
-      this.chatsService.updateChannelConfigWithTitle(channelId, target);
-      // 유저한테 다시 채널 리스트 뿌리는 로직 필요
-      // 
-      return ('채팅방 이름을 변경하였습니다.');
-    } catch (e) {
-      return ('실패');
+      return (this.getNotice("DB Error", 200));
     }
   }
 
@@ -379,9 +377,9 @@ export class ChatsSocketService {
       if (target !== undefined)
         password = target;
       this.chatsService.updateChannelPassword(channelId, password);
-      return ('비밀번호가 성공적으로 변경되었습니다.');
+      return (this.getNotice("비밀번호가 성공적으로 변경되었습니다.", 22));
     } catch (e) {
-      return ('실패');
+      return (this.getNotice("DB Error", 200));
     }
   }
 
@@ -391,7 +389,7 @@ export class ChatsSocketService {
     const channelMember = await this.chatsService.readChannelMember(channelId, message.userId);
 
     if (!channelMember.op) {
-      const msg = this.getInfoMessage('OP 권한이 필요합니다.');
+      const msg = this.getNotice('OP 권한이 필요합니다.', 8);
       client.emit('MSG', msg);
     }
     return (channelMember.op);
@@ -414,16 +412,16 @@ export class ChatsSocketService {
 
   async acceptGame(client: Socket, targetClient: Socket, gameRequest: Partial<GameRequest>, target: Player) {
     const user = await this.usersService.readOnePurePlayer(gameRequest.recv.id);
-    const msg = this.getInfoMessage("요청을 수락 하였습니다.");
+    const msg = this.getNotice("요청을 수락 하였습니다.", 26);
     client.emit("NOTICE", msg);
     // 2명 게임 소캣 열도록 유도?
     // 그리고 정해진 두명을 게임 소켓내 같은 룸으로 join 시켜야함
   }
 
   async refuseGame(client: Socket, targetClient: Socket, gameRequest: Partial<GameRequest>, target: Player) {
-    client.emit("NOTICE", this.getInfoMessage("요청을 거절 하였습니다."));
+    client.emit("NOTICE", this.getNotice("요청을 거절 하였습니다.", 27));
     if (target.status === 0 || target.status === 1)
-      targetClient.emit("NOTICE", this.getInfoMessage(gameRequest.recv.name + " 님이 게임초대를 거절 하였습니다."));
+      targetClient.emit("NOTICE", this.getNotice(gameRequest.recv.name + " 님이 게임초대를 거절 하였습니다.", 28));
   }
 
   async sendFriendList(client: Socket, userId: number) {
@@ -434,13 +432,13 @@ export class ChatsSocketService {
   async requestFriend(client: Socket, targetClient: Socket, userId: number, target: Player) {
     const request = await this.usersService.readRecvAndSendFriendRequest(target.id, userId);
     if (request) {
-      const msg = this.getInfoMessage("이미 친구 요청한 유저입니다.");
+      const msg = this.getNotice("이미 친구 요청한 유저입니다.", 29);
       client.emit("NOTICE", msg);
       return;
     }
     const frined = await this.usersService.readFriendWithFriendId(userId, target.id);
     if (frined) {
-      const msg = this.getInfoMessage("이미 친구 관계입니다.");
+      const msg = this.getNotice("이미 친구 관계입니다.", 30);
       client.emit("NOTICE", msg);
       return;
     }
@@ -454,17 +452,17 @@ export class ChatsSocketService {
         this.sendFriendList(targetClient, target.id);
       if (user.status === 0)
         this.sendFriendList(client, userId);
-      const msg = this.getInfoMessage(target.name + " 님과 친구가 되었습니다.");
+      const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 31);
       client.emit("NOTICE", msg);
       if (target.status === 0 || target.status === 1) {
-        const msg = this.getInfoMessage(user.name + " 님과 친구가 되었습니다.");
+        const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 31);
         targetClient.emit("NOTICE", msg);
       }
     }
     else {
       const user = await this.usersService.readOnePurePlayer(userId);
       const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
-      const msg = this.getInfoMessage(target.name + " 님에게 친구 요청하였습니다.");
+      const msg = this.getNotice(target.name + " 님에게 친구 요청하였습니다.", 31);
       client.emit("NOTICE", msg);
       if (targetClient)
         targetClient.emit("REQUEST_FRIEND", friendRequest);
@@ -481,15 +479,15 @@ export class ChatsSocketService {
         this.sendFriendList(targetClient, target.id);
       if (user.status === 0)
         this.sendFriendList(client, user.id);
-      const msg = this.getInfoMessage(target.name + " 님과 친구가 되었습니다.");
+        const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32);
       client.emit("NOTICE", msg);
       if (target.status === 0 || target.status === 1) {
-        const msg = this.getInfoMessage(user.name + " 님과 친구가 되었습니다.");
+        const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32);
         targetClient.emit("NOTICE", msg);
       }
     }
     catch (e) {
-      const msg = this.getInfoMessage("Server Error: DB error");
+      const msg = this.getNotice("DB error", 200);
       client.emit("NOTICE", msg);
     }
   }
@@ -497,13 +495,13 @@ export class ChatsSocketService {
   async refuseFriend(client: Socket, targetClient: Socket, friendRequest: Partial<FriendRequest>, target: Player) {
     try {
       this.usersService.deleteFriendRequest(friendRequest.id);
-      const msg = this.getInfoMessage("요청을 거절 하였습니다.");
+      const msg = this.getNotice("요청을 거절 하였습니다.", 33);
       client.emit("NOTICE", msg);
       if (target.status === 0 || target.status === 1)
-        targetClient.emit("NOTICE", this.getInfoMessage(friendRequest.recv.name + " 님이 친구요청을 거절 하였습니다."));
+        targetClient.emit("NOTICE", this.getNotice(friendRequest.recv.name + " 님이 친구요청을 거절 하였습니다.", 34));
     }
     catch (e) {
-      const msg = this.getInfoMessage("Server Error: DB error");
+      const msg = this.getNotice("DB error", 200);
       client.emit("NOTICE", msg);
     }
   }
