@@ -47,9 +47,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const key = client.data.userId;
     if (!key)
       return ;
+    
+    // 해당 user가 gameRoom 안에 있는 경우
     if (client.data.roomId) {
       const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
-      const updateGame = this.gamesSocketService.pauseGame(targetClient, this.gameRooms.get(client.data.roomId));
+      const updateGame = this.gamesSocketService.pauseGame(client, targetClient, this.gameRooms.get(client.data.roomId), key);
       this.gameRooms.set(updateGame.roomId, updateGame);
     }
     else {
@@ -169,7 +171,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('PAUSE')
   sendPauseGame(client: Socket, data) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
-    const updateRoom = this.gamesSocketService.pauseGame(client, gameRoom);
+    const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
+    const updateRoom = this.gamesSocketService.pauseGame(client, targetClient, gameRoom, client.data.userId);
     this.gameRooms.set(updateRoom.roomId, updateRoom);
   }
 
@@ -177,6 +180,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   sendResumeGame(client: Socket, data) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.resumeGame(client, gameRoom);
+    this.gameRooms.set(updateRoom.roomId, updateRoom);
+  }
+
+  @SubscribeMessage('SAVE')
+  saveGame(client: Socket, data) {
+    const gameRoom = this.gameRooms.get(client.data.roomId);
+    const updateRoom = this.gamesSocketService.saveGame(client, gameRoom, data);
     this.gameRooms.set(updateRoom.roomId, updateRoom);
   }
 
