@@ -404,10 +404,10 @@ export class ChatsSocketService {
     }
   }
 
-  async invateGame(targetClient: Socket, userId: number, target: Player) {
+  async inviteGame(targetClient: Socket, userId: number, target: Player) {
     const user = await this.usersService.readOnePurePlayer(userId);
     const gameRequest = new GameRequest(target, user);
-    targetClient.emit("INVATE", gameRequest);
+    targetClient.emit("INVTE", gameRequest);
   }
 
   async acceptGame(client: Socket, targetClient: Socket, gameRequest: Partial<GameRequest>, target: Player) {

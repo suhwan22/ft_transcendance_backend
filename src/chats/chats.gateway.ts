@@ -341,7 +341,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit("NOTICE", msg);
   }
 
-  @SubscribeMessage('INVATE')
+  @SubscribeMessage('INVITE')
   async invateGame(client: Socket, data) {
     let msg;
     const target = await this.usersService.readOnePurePlayerWithName(data.target);
@@ -359,7 +359,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit("NOTICE", msg);
       return;
     }
-    this.chatsSocketService.invateGame(targetClient, data.userId, target);
+    this.chatsSocketService.inviteGame(targetClient, data.userId, target);
     msg = this.chatsSocketService.getNotice("게임초대 메시지를 전송하였습니다.", 25);
     client.emit("NOTICE", msg);
   }

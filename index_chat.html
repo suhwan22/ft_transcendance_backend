@@ -120,8 +120,8 @@
     function regist() {
       socket.emit('REGIST', parseInt(user.value));
     }
-    function invate() {
-      socket.emit('INVATE', { userId: parseInt(user.value), target: game.value });
+    function invite() {
+      socket.emit('INVITE', { userId: parseInt(user.value), target: game.value });
     }
     function send() {
       socket.emit('MSG', { userId: parseInt(user.value), channelId: parseInt(channel.value), content: message.value });

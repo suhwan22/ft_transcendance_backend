@@ -69,7 +69,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatsGateway.sendUpdateToChannelMember(userId);
   }
 
-  @SubscribeMessage('INVATE')
+  @SubscribeMessage('INVITE')
   async invateGame(client: Socket, data) {
     let msg;
     const target = await this.usersService.readOnePurePlayerWithName(data.target);
@@ -87,7 +87,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit("NOTICE", msg);
       return;
     }
-    this.lobbySocketService.invateGame(targetClient, data.userId, target);
+    this.lobbySocketService.inviteGame(targetClient, data.userId, target);
     msg = this.lobbySocketService.getInfoMessage("게임초대 메시지를 전송하였습니다.");
     client.emit("NOTICE", msg);
   }

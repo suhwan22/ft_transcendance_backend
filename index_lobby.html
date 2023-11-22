@@ -11,7 +11,7 @@
   </div>
   <div>
     game: <input id="game" type="text" />
-    <button onclick="invate()">invate</button>
+    <button onclick="invite()">invite</button>
     <button onclick="accept_game()">yes</button>
     <button onclick="refuse_game()">no</button>
   </div>
@@ -65,7 +65,7 @@
       frinedRequest = null;
     }
     function invate() {
-      socket.emit('INVATE', { userId: parseInt(user.value), target: game.value });
+      socket.emit('INVITE', { userId: parseInt(user.value), target: game.value });
     }
     function accept_game() {
       if (gameRequest)
