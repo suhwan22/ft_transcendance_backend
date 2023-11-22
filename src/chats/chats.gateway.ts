@@ -114,6 +114,18 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const roomId = message.channelId;
     let log;
 
+    //lobby인 경우 message.channelId === -1
+    if (message.channelId < 0) {
+      // //이전 방이 만약 나 혼자있던 방이면 제거
+      // if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
+      //  this.chatsSocketService.deleteChatRoom(client.data.roomId);
+      //  //이것도 작동 안함...
+      // }
+      this.chatsSocketService.connectLobby(client, message.userId);
+      return;
+    }
+
+
     // 혹시 없는 channel에 join하려는 경우, client 에러임
     const channel = await this.chatsService.readOneChannelConfig(message.channelId);
     if (!channel){
@@ -163,9 +175,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     //이전 방이 만약 나 혼자있던 방이면 제거
-    if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
-      this.chatsSocketService.deleteChatRoom(client.data.roomId);
-    }
+    // if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
+    //   this.chatsSocketService.deleteChatRoom(client.data.roomId);
+    // }
 
     this.chatsSocketService.enterChatRoom(client, roomId, message.userId);
   }
@@ -186,10 +198,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('QUIT')
   async quitChatRoom(client: Socket, message) {
     //방이 만약 나 혼자인 방이면 제거
-    if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
-      this.chatsSocketService.deleteChatRoom(client.data.roomId);
-      // 외래키 되어있는거 어떻게 지우지?.. channel_config와 channel_member 지워야함
-    }
+    // if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
+    //   this.chatsSocketService.deleteChatRoom(client.data.roomId);
+    //   // 외래키 되어있는거 어떻게 지우지?.. channel_config와 channel_member 지워야함
+    // }
 
     const channelMembers = await this.chatsService.readOneChannelMember(message.channelId);
     if (channelMembers.length === 1) {

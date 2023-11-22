@@ -116,6 +116,14 @@ export class ChatsSocketService {
     client.to(roomId).emit('NOTICE', log);
   }
 
+  async connectLobby(client: Socket, userId: number) {
+    client.leave(client.data.roomId);
+    client.data.roomId = 'room:lobby';
+    client.rooms.clear();
+    client.rooms.add('room:lobby');
+    client.join('room:lobby');
+  }
+
   async connectChatRoom(client: Socket, channelId: number, userId: number) {
     const roomId = channelId.toString();
     client.leave(client.data.roomId);
