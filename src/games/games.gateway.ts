@@ -51,8 +51,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 해당 user가 gameRoom 안에 있는 경우
     if (client.data.roomId) {
       const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
-      const updateGame = this.gamesSocketService.pauseGame(client, targetClient, this.gameRooms.get(client.data.roomId), key);
-      this.gameRooms.set(updateGame.roomId, updateGame);
+      const { updateRoom, flag } = this.gamesSocketService.pauseGame(client, targetClient, this.gameRooms.get(client.data.roomId), key);
+      this.gameRooms.set(updateRoom.roomId, updateRoom);
+      if (flag) {
+        this.gameRooms.delete(client.data.roomId);
+        client.data.roomId = null;
+        targetClient.data.roomId = null;
+      }
     }
     else {
       const newQueue = this.queue.filter((e) => e.data.userId !== client.data.userId);
@@ -68,23 +73,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
     client.data.userId = userId;
-    if (this.clients.get(userId)) {
-      const gameRoom = this.getGameRoomWithUserId(userId);
-      const roomId = gameRoom.roomId;
-      const isLeft = gameRoom.getUserPosition(userId);
-      const opposite = gameRoom.getOppositeNameWithUserId(userId);
-      const playerInfoDto = new PlayerInfoDto(roomId, isLeft, opposite);
-      const loadData = {
-        room: playerInfoDto,
-        objectPos: gameRoom.gameInfo,
-        score: gameRoom.score,
-        option: gameRoom.option,
-        stop: gameRoom.stop,
-      }
-      client.data.roomId = roomId;
-      client.join(roomId);
-      client.emit("LOAD", loadData);
-    }
     this.clients.set(userId, client);
     this.usersService.updatePlayerStatus(userId, 2);
     this.chatsGateway.sendUpdateToChannelMember(userId);
@@ -93,6 +81,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
+    const gameRoom = this.getGameRoomWithUserId(userId);
+    if (gameRoom) {
+      const roomId = gameRoom.roomId;
+      client.data.roomId = roomId;
+      client.join(roomId);
+      client.emit("RELOAD", gameRoom);
+      return ;
+    }
     if (this.queue.length <= 0) {
       this.queue.push(client);
     }
@@ -126,9 +122,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('READY')
-  readyGame(client: Socket, data: PlayerInfoDto) {
+  readyGame(client: Socket, data: GameRoom) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
-    const updateRoom = this.gamesSocketService.readyGame(client, gameRoom, data);
+    const updateRoom = this.gamesSocketService.readyGame(client, gameRoom);
     this.gameRooms.set(client.data.roomId, updateRoom);
   }
 
@@ -150,6 +146,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const updateRoom = this.gamesSocketService.updateGameScore(client, gameRoom, data);
     this.gameRooms.set(data.roomId, updateRoom);
 
+
     if (updateRoom.score.left >= 11 || updateRoom.score.right >= 11) {
       let k;
       if (updateRoom.left.player.id === client.data.userId)
@@ -158,6 +155,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         k = updateRoom.left.player.id;
       const targetClient = this.clients.get(k);
       this.gamesSocketService.endGame(client, targetClient, updateRoom);
+      this.gameRooms.delete(client.data.roomId);
+      client.data.roomId = null;
+      targetClient.data.roomId = null;
     }
   }
 
@@ -172,8 +172,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   sendPauseGame(client: Socket, data) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
-    const updateRoom = this.gamesSocketService.pauseGame(client, targetClient, gameRoom, client.data.userId);
+    const {updateRoom, flag} = this.gamesSocketService.pauseGame(client, targetClient, gameRoom, client.data.userId);
     this.gameRooms.set(updateRoom.roomId, updateRoom);
+    if (flag) {
+      this.gameRooms.delete(client.data.roomId);
+      client.data.roomId = null;
+      targetClient.data.roomId = null;
+    }
   }
 
   @SubscribeMessage('RESUME')

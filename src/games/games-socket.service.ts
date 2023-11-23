@@ -23,21 +23,22 @@ export class GamesSocketService {
     targetClient.data.roomId = roomId;
     const user = await this.usersService.readOnePurePlayer(client.data.userId);
     const target = await this.usersService.readOnePurePlayer(targetClient.data.userId);
-    client.emit("ROOM", new PlayerInfoDto(roomId, true, target.name));
-    targetClient.emit("ROOM", new PlayerInfoDto(roomId, false, user.name));
-
     const me = new PingPongPlayer(user, false);
     const op = new PingPongPlayer(target, false);
+    const gameRoom = new GameRoom(roomId, me, op);
+    client.emit("LOAD", gameRoom);
+    targetClient.emit("LOAD", gameRoom);
+
     return (new GameRoom(roomId, me, op));
   }
 
-  readyGame(client: Socket, gameRoom: GameRoom, data: PlayerInfoDto): GameRoom {
+  readyGame(client: Socket, gameRoom: GameRoom): GameRoom {
     const updateRoom = gameRoom;
-    if (data.isLeft)
-      updateRoom.left.isReady = true;
+    if (gameRoom.getUserPosition(client.data.userId))
+      updateRoom.left.isReady = !updateRoom.left.isReady;
     else
-      updateRoom.right.isReady = true;
-    client.to(client.data.roomId).emit("READY", data.isLeft);
+      updateRoom.right.isReady = !updateRoom.right.isReady;
+    client.to(client.data.roomId).emit("READY", updateRoom);
     if (updateRoom.left.isReady && updateRoom.right.isReady) {
       client.to(client.data.roomId).emit("START", "START");
     }
@@ -79,25 +80,33 @@ export class GamesSocketService {
     if (updateRoom.getUserPosition(userId)) {
       if (updateRoom.left.pause === 3) {
         this.endGameWithExtra(client, targetClient, gameRoom);
+        return ({updateRoom, flag: true});
       }
       updateRoom.left.isPause = true;
       updateRoom.left.pause++;
     }
     else {
-      updateRoom.left.isPause = true;
-      updateRoom.right.pause++;
-      if (updateRoom.left.pause === 3) {
+      if (updateRoom.right.pause === 3) {
         this.endGameWithExtra(client, targetClient, gameRoom);
+        return ({updateRoom, flag: true});
       }
+      updateRoom.right.isPause = true;
+      updateRoom.right.pause++;
     }
 
     client.to(gameRoom.roomId).emit("PAUSE", "PAUSE");
-    return (updateRoom);
+    return ({ updateRoom, flag: false });
   }
 
   resumeGame(client: Socket, gameRoom: GameRoom) {
     const updateRoom = gameRoom;
     updateRoom.stop = false;
+    if (updateRoom.getUserPosition(client.data.userId)) {
+      updateRoom.left.isPause = false;
+    }
+    else {
+      updateRoom.right.isPause = false;
+    }
     const gameInfo = {
       ball: {
         x: gameRoom.gameInfo.ball.x,
@@ -108,7 +117,11 @@ export class GamesSocketService {
       right: gameRoom.gameInfo.right,
       left: gameRoom.gameInfo.left
     }
-    if (updateRoom.left.isPause && updateRoom.right.isPause)
+    console.log("a");
+    console.log(updateRoom.right.isPause);
+    console.log(updateRoom.left.isPause);
+
+    if (!updateRoom.left.isPause && !updateRoom.right.isPause)
       client.to(gameRoom.roomId).emit("RESUME", gameInfo);
     return (updateRoom);
   }
@@ -129,32 +142,30 @@ export class GamesSocketService {
   // 몰수패 client가 4번째 pause를 건쪽이기 때문에 targetClient 가 무조건 승리
   async endGameWithExtra(client: Socket, targetClient: Socket, gameRoom: GameRoom): Promise<void> {
     let win: Player, loss: Player;
-    let winScore, lossScore, isLeft;
+    let winScore, lossScore, winnerUserId;
 
     //pause를 건 쪽이 left인 경우
     if (gameRoom.getUserPosition(client.data.userId)) {
-      win = gameRoom.right.player;
-      loss = gameRoom.left.player;
-      winScore = gameRoom.score.right;
-      lossScore = gameRoom.score.left;
-      isLeft = false;
-    }
-    else {
       win = gameRoom.left.player;
       loss = gameRoom.right.player;
       winScore = gameRoom.score.left;
       lossScore = gameRoom.score.right;
-      isLeft = true;
+      winnerUserId = gameRoom.right.player.id;
+    }
+    else {
+      win = gameRoom.right.player;
+      loss = gameRoom.left.player;
+      winScore = gameRoom.score.right;
+      lossScore = gameRoom.score.left;
+      winnerUserId = gameRoom.left.player.id;
     }
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore);
     await this.usersService.updateUserGameRecord(win.id, true);
     await this.usersService.updateUserGameRecord(loss.id, false);
-    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: isLeft });
+    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerUserId: winnerUserId });
     client.leave(gameRoom.roomId);
-    client.data.roomId = null;
     targetClient.leave(gameRoom.roomId);
-    targetClient.data.roomId = null;
   }
 
   async endGame(client: Socket, targetClient: Socket, gameRoom: GameRoom): Promise<void> {
@@ -180,8 +191,6 @@ export class GamesSocketService {
     await this.usersService.updateUserGameRecord(loss.id, false);
     client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: isLeft });
     client.leave(gameRoom.roomId);
-    client.data.roomId = null;
     targetClient.leave(gameRoom.roomId);
-    targetClient.data.roomId = null;
   }
 }

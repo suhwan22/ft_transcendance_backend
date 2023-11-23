@@ -50,7 +50,7 @@
     socket.on('NOTICE', function (data) {
       console.log(data);
     });
-    socket.on('ROOM', function (data) {
+    socket.on('LOAD', function (data) {
       game = data;
       console.log(data);
     });
@@ -58,12 +58,7 @@
       console.log(data);
     });
     socket.on('READY', function (data) {
-      if (game) {
-        if (data === game.isLeft)
-          console.log("준비 하였습니다.");
-        else
-          console.log("상대방이 준비 하였습니다.");
-      }
+      "aaaaa";
     });
     socket.on('START', function (data) {
       console.log("게임 스타트");
@@ -83,18 +78,14 @@
     socket.on('RESUME', function (data) {
       console.log("게임 재개");
     });
-    socket.on('LOAD', function (data) {
-      game = data.room;
+    socket.on('RELOAD', function (data) {
+      game = data;
       console.log(data);
       console.log("게임복구");
     });
     socket.on('END', function (data) {
-      if (game) {
-        if (data.winnerIsLeft === game.isLeft)
-          console.log("승리");
-        else
-          console.log("패배");
-      }
+      if (game)
+        console.log(data.winnerUserId + " 승리")
       game = null;
     });
     function regist() {
