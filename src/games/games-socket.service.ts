@@ -80,9 +80,11 @@ export class GamesSocketService {
       if (updateRoom.left.pause === 3) {
         this.endGameWithExtra(client, targetClient, gameRoom);
       }
+      updateRoom.left.isPause = true;
       updateRoom.left.pause++;
     }
     else {
+      updateRoom.left.isPause = true;
       updateRoom.right.pause++;
       if (updateRoom.left.pause === 3) {
         this.endGameWithExtra(client, targetClient, gameRoom);
@@ -106,7 +108,8 @@ export class GamesSocketService {
       right: gameRoom.gameInfo.right,
       left: gameRoom.gameInfo.left
     }
-    client.to(gameRoom.roomId).emit("RESUME", gameInfo);
+    if (updateRoom.left.isPause && updateRoom.right.isPause)
+      client.to(gameRoom.roomId).emit("RESUME", gameInfo);
     return (updateRoom);
   }
 

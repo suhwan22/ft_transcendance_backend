@@ -15,9 +15,12 @@ export class PingPongPlayer {
   constructor(player: Player, isReady: boolean) {
     this.player = player;
     this.isReady = isReady;
+    this.isPause = false;
+    this.pause = 0;
   }
   player: Player;
   isReady: boolean;
+  isPause: boolean;
   pause: number;
 }
 
