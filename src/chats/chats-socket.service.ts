@@ -93,6 +93,8 @@ export class ChatsSocketService {
     const roomId = channelId.toString();
     const player = await this.usersService.readOnePurePlayer(userId);
 
+    console.log(userId, channelId);
+    console.log(player);
     const channelMemberRequest = {
       channelId: channelId,
       userId: userId,
@@ -100,9 +102,9 @@ export class ChatsSocketService {
     }
     await this.chatsService.createChannelMember(channelMemberRequest);
 
-    this.createChatRoom(client, channelId, userId);
+    await this.createChatRoom(client, channelId, userId);
 
-    this.connectChatRoom(client, channelId, userId);
+    await this.connectChatRoom(client, channelId, userId);
 
     const { chat } = this.getChatRoom(roomId);
 

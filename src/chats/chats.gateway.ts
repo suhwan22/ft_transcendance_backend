@@ -87,7 +87,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // }
   @SubscribeMessage('HOST')
   async hostChatRoom(client: Socket, message) {
-    let isPassword = message.password ? true : false;
+    let isPassword = message.password ? false : true;
     let userLimit = message.limit ? message.limit : 10;
     const channelConfigDto = {
       title: message.title,
@@ -98,7 +98,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     const newChannelConfig = await this.chatsService.createChannelConfig(channelConfigDto);
     const roomId = newChannelConfig.id;
-    let log;
 
     this.chatsSocketService.createAndEnterChatRoom(client, roomId, message.userId);
   }

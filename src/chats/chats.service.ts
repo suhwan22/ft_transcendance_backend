@@ -548,9 +548,10 @@ export class ChatsService {
   }
 
   async createChannelPassword(channelId: number, password: string): Promise<ChannelPassword> {
-    let hashPass = null;
+    let hashPass: string = null;
+    const saltRound = 10;
     if (password)
-      hashPass = await hash(password, 10);
+      hashPass = await hash(password, saltRound);
     const channelPassword = { channelId: channelId, password: hashPass };
     const newChannelPassword = this.channelPasswordRepository.create(channelPassword);
     return (this.channelPasswordRepository.save(newChannelPassword));
@@ -568,8 +569,9 @@ export class ChatsService {
     if (!password) {
       return false;
     }
+    const inputPassword = password;
     const userPassword = await this.readChannelPassword(channelId);
-    return (await compare(password, userPassword.password));
+    return (await compare(inputPassword, userPassword.password));
   }
 
   async deleteChannelPassword(channelId: number): Promise<void> {
