@@ -216,7 +216,8 @@ export class ChatsSocketService {
 
       // 타겟이 오프라인 이거나 온라인인데 그 채팅방을 안보고 있는 경우
       //await this.chatsService.deleteChannelMember(member.id);
-      await this.chatsService.deleteChannelMemberWithUserId(channelId, targetId);
+      //await this.chatsService.deleteChannelMemberWithUserId(channelId, targetId);
+      this.usersService.readOnePlayer(1);
       await this.sendChannelMember(client, channelId);
       if (targetClient)
         await this.sendChannelList(targetClient, targetId);
@@ -245,18 +246,18 @@ export class ChatsSocketService {
     client.emit("BAN", await this.chatsService.readBanList(channelId));
   }
 
-  async commandBan(client: Socket, channelId: number, target: string, targetId: number, tagetSocket: Socket) {
+  async commandBan(client: Socket, channelId: number, targetName: string, targetId: number, tagetSocket: Socket) {
     try {
-      const user = await this.usersService.readOnePurePlayerWithName(target);
-      if (!user)
+      const target = await this.usersService.readOnePurePlayerWithName(targetName);
+      if (!target)
         return (this.getNotice("존재하지 않는 유저입니다.", 11));
-      const chatBan = await this.chatsService.readChatBan(channelId, user.id);
+      const chatBan = await this.chatsService.readChatBan(channelId, target.id);
       if (chatBan)
         return (this.getNotice('이미 밴 목록에 추가된 유저입니다.', 12));
 
       const chatBanRequest = {
         channelId: channelId,
-        userId: user.id
+        userId: target.id
       }
       await this.chatsService.createBanInfo(chatBanRequest);
       // 이미 채팅방에 있으면 강퇴
@@ -297,7 +298,7 @@ export class ChatsSocketService {
       const target = await this.usersService.readOnePurePlayerWithName(targetName);
       if (!target)
         return (this.getNotice("존재하지 않는 유저입니다.", 11));
-      
+
       const blocked = await this.usersService.readUserBlockWithTargetId(userId, target.id);
       if (blocked)
         return (this.getNotice("이미 차단 목록에 추가된 유저입니다.", 16));
@@ -386,7 +387,7 @@ export class ChatsSocketService {
     const user = await this.usersService.readOnePurePlayer(userId);
     if (!user) {
       this.getNotice("존재하지 않는 유저입니다.", 11);
-      return ;
+      return;
     }
     const gameRequest = new GameRequest(target, user);
     targetClient.emit("INVTE", gameRequest);
@@ -424,31 +425,13 @@ export class ChatsSocketService {
       client.emit("NOTICE", msg);
       return;
     }
-    const otherRequest = await this.usersService.readRecvAndSendFriendRequest(userId, target.id);
-    if (otherRequest) {
-      const user = await this.usersService.readOnePurePlayer(userId);
-      await this.usersService.createFriendWithPlayer(user.id, target);
-      await this.usersService.createFriendWithPlayer(target.id, user);
-      this.usersService.deleteFriendRequest(otherRequest.id);
-      if (target.status === 0)
-        this.sendFriendList(targetClient, target.id);
-      if (user.status === 0)
-        this.sendFriendList(client, userId);
-      const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 31);
-      client.emit("NOTICE", msg);
-      if (target.status === 0 || target.status === 1) {
-        const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 31);
-        targetClient.emit("NOTICE", msg);
-      }
-    }
-    else {
-      const user = await this.usersService.readOnePurePlayer(userId);
-      const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
-      const msg = this.getNotice(target.name + " 님에게 친구 요청하였습니다.", 31);
-      client.emit("NOTICE", msg);
-      if (targetClient)
-        targetClient.emit("REQUEST_FRIEND", friendRequest);
-    }
+
+    const user = await this.usersService.readOnePurePlayer(userId);
+    const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
+    const msg = this.getNotice(target.name + " 님에게 친구 요청하였습니다.", 31);
+    client.emit("NOTICE", msg);
+    if (targetClient)
+      targetClient.emit("REQUEST_FRIEND", friendRequest);
   }
 
   async acceptFriend(client: Socket, targetClient: Socket, friendRequest: Partial<FriendRequest>, target: Player) {
@@ -456,7 +439,11 @@ export class ChatsSocketService {
       const user = await this.usersService.readOnePurePlayer(friendRequest.recv.id);
       await this.usersService.createFriendWithPlayer(user.id, target);
       await this.usersService.createFriendWithPlayer(target.id, user);
-      this.usersService.deleteFriendRequest(friendRequest.id);
+      await this.usersService.deleteFriendRequest(friendRequest.id);
+      const otherRequest = await this.usersService.readRecvAndSendFriendRequest(target.id, user.id);
+      if (otherRequest)
+        await this.usersService.deleteFriendRequest(otherRequest.id);
+
       if (target.status === 0)
         this.sendFriendList(targetClient, target.id);
       if (user.status === 0)
@@ -476,7 +463,7 @@ export class ChatsSocketService {
 
   async refuseFriend(client: Socket, targetClient: Socket, friendRequest: Partial<FriendRequest>, target: Player) {
     try {
-      this.usersService.deleteFriendRequest(friendRequest.id);
+      await this.usersService.deleteFriendRequest(friendRequest.id);
       const msg = this.getNotice("요청을 거절 하였습니다.", 33);
       client.emit("NOTICE", msg);
       if (target.status === 0 || target.status === 1)
