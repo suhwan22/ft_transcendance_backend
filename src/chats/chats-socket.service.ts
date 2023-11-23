@@ -210,9 +210,8 @@ export class ChatsSocketService {
       }
 
       // 타겟이 오프라인 이거나 온라인인데 그 채팅방을 안보고 있는 경우
-      //await this.chatsService.deleteChannelMember(member.id);
+      await this.chatsService.deleteChannelMember(member.id);
       //await this.chatsService.deleteChannelMemberWithUserId(channelId, targetId);
-      this.usersService.readOnePlayer(1);
       await this.sendChannelMember(client, channelId);
       if (targetClient)
         await this.sendChannelList(targetClient, targetId);
