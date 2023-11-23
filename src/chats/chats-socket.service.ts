@@ -83,12 +83,7 @@ export class ChatsSocketService {
     }
 
     this.connectChatRoom(client, channelId, userId);
-
     const { chat } = this.getChatRoom(roomId);
-
-    // memlist 동기화 하는거 추가 해야함
-    // channellist 동기화 하는거 추가 해야함
-
 
     const log = this.getNotice(`${player.name}님이 ${chat.title}방에 입장하셨습니다.`, 5);
     client.to(roomId).emit('NOTICE', log);
@@ -399,6 +394,9 @@ export class ChatsSocketService {
     client.emit("NOTICE", msg);
     // 2명 게임 소캣 열도록 유도?
     // 그리고 정해진 두명을 게임 소켓내 같은 룸으로 join 시켜야함
+    // 게임 roomId 생성
+    const roomId = client.id + targetClient.id;
+    
   }
 
   async refuseGame(client: Socket, targetClient: Socket, gameRequest: Partial<GameRequest>, target: Player) {

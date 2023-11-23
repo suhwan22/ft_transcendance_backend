@@ -91,36 +91,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
-    if (this.queue.length <= 0) {
-      this.queue.push(client);
-    }
-    else {
-      const targetClient = this.queue.shift();
-      const roomId = client.id + targetClient.id;
-      const gameRoom = await this.gamesSocketService.makeRoom(client, targetClient, roomId);
+    this.queue.push(client);
+    if (this.queue.length >= 2) {
+      const client1 = this.queue.shift();
+      const client2 = this.queue.shift();
+      const roomId = client1.id + client2.id;
+      const gameRoom = await this.gamesSocketService.makeRoom(client1, client2, roomId);
       this.gameRooms.set(roomId, gameRoom);
     }
-    // console.log('match making');
-    // // 대기 큐에 넣기
-    // this.queue.push(client);
-    // // 대기 큐에 헤드에 오거나 매칭이 잡혔다면 탈출
-    // while (!(this.queue[0].data.userId === userId || client.data.math === true)) {
-    //   client.emit("NOTICE", "waitting...");
-    // }
-    // if (client.data.math)
-    //   return ;
-    
-    // // 대기 큐에 사람이 올때 까지 대기
-    // let count = 0;
-    // while (this.queue.length <= 1) {
-    //   client.emit("NOTICE", "waitting...");
-    //   console.log(count++);
-    // }
-    // this.queue.shift();
-    // const other = this.queue.shift();
-    // other.data.math = true;
-    // client.emit("NOTICE", "success");
-    // other.emit("NOTICE", "sucesss");
   }
 
   @SubscribeMessage('READY')
