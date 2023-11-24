@@ -329,13 +329,13 @@ export class ChatsSocketService {
   async commandMute(client: Socket, channelId: number, target: string) {
     try {
       await this.chatsService.createChatMuteWithName(channelId, target);
-      return (this.getNotice("해당 유저를 1분간 채팅 금지합니다.", 21));
+      return (this.getNotice(`${target}의 채팅을 1분간 금지합니다.`, 21));
     } catch (e) {
       if (e.code === '23502')
         return (this.getNotice("존재하지 않는 유저입니다.", 11));
       else if (e.code === '23505') {
         await this.chatsService.updateTimeChatMuteWithName(channelId, target);
-        return (this.getNotice("해당 유저를 1분간 채팅 금지합니다.", 21));
+        return (this.getNotice(`${target}의 채팅을 1분간 금지합니다.`, 21));
       }
       return (this.getNotice("DB Error", 200));
     }

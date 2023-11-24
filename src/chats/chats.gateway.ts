@@ -311,7 +311,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MUTE')
   async muteClient(client: Socket, data) {
-    const roomId = data.changeId.toString();
+    const roomId = data.channelId.toString();
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
       client.emit('NOTICE', log);
@@ -319,11 +319,15 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     try {
       const log = await this.chatsSocketService.commandMute(client, data.channelId, data.target);
-      client.to(roomId).emit('NOTICE', log);
+      const msg = this. chatsSocketService.getNotice(`${data.target}의 채팅이 1분간 금지됩니다.`,21);
+      client.emit('NOTICE', log);
+      client.join(client.id);
+      client.broadcast.to(roomId).emit('NOTICE', msg);
+      client.leave(client.id);
     } catch(e) {
       const log = this.chatsSocketService.getNotice("DB Error", 200);
       client.emit("NOTICE", log);
-    } 
+    }
   }
 
   @SubscribeMessage('PASS')
@@ -339,15 +343,19 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('OP')
   async setOpClient(client: Socket, data) {
-    const roomId = data.changeId.toString();
+    const roomId = data.channelId.toString();
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
       client.emit('NOTICE', 8);
       return ;
     }
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
-    this.chatsSocketService.sendChannelMember(client, data.changeId);
-    client.to(roomId).emit("NOTICE", msg);
+    const log = this.chatsSocketService.getNotice(`${data.target}님이 op권한을 획득했습니다.`,200);
+    this.chatsSocketService.sendChannelMember(client, data.channelId);
+    client.emit("NOTICE", msg);
+    client.join(client.id);
+    client.to(roomId).emit("NOTICE", log);
+    client.leave(client.id);
   }
 
   @SubscribeMessage('INVITE')
