@@ -1,14 +1,11 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, getManager } from 'typeorm';
+import { DataSource, Repository, UpdateResult } from 'typeorm';
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserBlock } from './entities/user-block.entity';
 import { UserFriend } from './entities/user-friend.entity';
-import { UserDto } from './dtos/user.dto';
-import { ChannelListDto } from './dtos/channel-list.dto';
 import { ChatsService } from 'src/chats/chats.service';
-import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
 import { FriendRequest } from './entities/friend-request.entity';
 import { UserBlockRequestDto } from './dtos/user-block.request.dto';
 import { UserFriendRequestDto } from './dtos/user-friend.request.dto';
@@ -78,6 +75,7 @@ export class UsersService {
     const player = await this.playerRepository.findOne({ where: { id } });
     return (player);
   }
+
   async   readOnePurePlayerWithName(name: string): Promise<Player> {
     const player = await this.playerRepository.findOne({ where: { name } });
     return (player);
@@ -118,6 +116,18 @@ export class UsersService {
     return (this.recordRepository.save(newRecord));
   }
 
+  async createUserGameRecordWithResult(user: Player, result: boolean): Promise<UserGameRecord> {
+    let record = { win: 0, loss: 1, score: -1 };
+    if (result) 
+      record = { win: 1, loss: 0, score: 1 };
+    const newRecord = this.recordRepository.create({ 
+      user: user, 
+      win: record.win, 
+      loss: record.loss, 
+      score: record.score });
+    return (this.recordRepository.save(newRecord));
+  }
+
   /* [R] 모든 UserGameRecord 조회 */
   async readAllUserGameRecord(): Promise<UserGameRecord[]> {
     const recordList = await this.dataSource
@@ -147,25 +157,41 @@ export class UsersService {
     return (this.recordRepository.findOne({ where: { id } }));
   }
 
-  async updateUserGameRecord(userId: number, result: boolean): Promise<UserGameRecord> {
-    // query builder로 짜기
-    const record = await this.readOneUserGameRecord(userId);
-    if (result) {
-      record.win++;
-      record.score++;
-    }
-    else {
-      record.loss++;
-      record.score--;
-    }
-    await this.recordRepository.update(record.id, record);
-    return (record);
+  async updateUserGameRecord(user: Player, result: boolean): Promise<UserGameRecord> {
+    let updateResult: UpdateResult;
+    if (result)
+      updateResult = await this.updateUserGameRecordWin(user.id);
+    else 
+      updateResult = await this.updateUserGameRecordLoss(user.id);
+    if (updateResult.affected === 0)
+      return (this.createUserGameRecordWithResult(user, result));
+    return (await this.readOneUserGameRecord(user.id));
   }
 
-  // /* [D] UserGameRecord 제거 */
-  // async deleteUserGameRecord(id: number): Promise<void> {
-  //   await (this.recordRepository.delete(id));
-  // }
+  async updateUserGameRecordWin(userId: number) {
+    const update = await this.dataSource
+      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
+      .update()
+      .set({ win: () => 'win + 1', score: () => 'score + 1'})
+      .where(`user_id = ${userId}`)
+      .execute()
+    return (update);
+  }
+
+  async updateUserGameRecordLoss(userId: number) {
+    const update = await this.dataSource
+      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
+      .update()
+      .set({ win: () => 'loss + 1', score: () => 'score - 1'})
+      .where(`user_id = ${userId}`)
+      .execute()
+    return (update);
+  }
+
+  /* [D] UserGameRecord 제거 */
+  async deleteUserGameRecord(id: number): Promise<void> {
+    await (this.recordRepository.delete(id));
+  }
 
   /**
    * 
@@ -221,18 +247,23 @@ export class UsersService {
     return (this.userFriendRepository.findOne({ where: { id } }));
   }
 
-  // // 유저 친구 제거 메서드
-  // async deleteFriendInfo(user: number, friend: number): Promise<void> {
-  //   const deleteFriend = await this.userFriendRepository.findOne({ where: { user, friend} });
-  //   if (!deleteFriend)
-  //     return ;
-  //   await this.userFriendRepository.remove(deleteFriend);
-  // }
+  // 유저 친구 제거 메서드
+  async deleteFriendInfo(user: number, friend: number): Promise<void> {
+    const deleteResult = await this.dataSource
+      .getRepository(UserFriend).createQueryBuilder('friend_list')
+      .delete()
+      .where(`user_id = ${user} and friend_id = ${friend}`)
+      .execute();
+  }
 
   // 유저 전체 친구 삭제 메서드
-  // async deleteFriendList(user: number): Promise<void> {
-  //   await this.userFriendRepository.delete({ user });
-  // }
+  async deleteFriendList(user: number): Promise<void> {
+    const deleteResult = await this.dataSource
+      .getRepository(UserFriend).createQueryBuilder('friend_list')
+      .delete()
+      .where(`user_id = ${user}`)
+      .execute();
+  }
 
   /**
    * 
@@ -291,15 +322,16 @@ export class UsersService {
 
   // 유저 블락 제거 메서드
   async deleteBlockInfo(id: number): Promise<void> {
-    const deleteFriend = await this.userBlockRepository.findOne({ where: { id } });
-    if (!deleteFriend)
-       return ;
-    await this.userBlockRepository.remove(deleteFriend);
+    await (this.friendRequestRepository.delete(id));
   }
 
   // 유저 블락 전체제거 메서드
   async deleteBlockList(user: number): Promise<void> {
-    await this.userBlockRepository.delete({ user });
+    const deleteResult = await this.dataSource
+      .getRepository(UserBlock).createQueryBuilder('block_list')
+      .delete()
+      .where(`user = ${user}`)
+      .execute();
   }
 
   /**
@@ -369,33 +401,6 @@ export class UsersService {
   async deleteFriendRequest(id: number): Promise<void> {
     await (this.friendRequestRepository.delete(id));
   }
-
-  // async readUserInfo(id: number): Promise<UserDto> {
-  //   const userDto = new UserDto();
-  //   const userInfo = await this.playerRepository.findOne({ where: { id }});
-  //   const blockList = await this.userBlockRepository.find({ where: { user: id }});
-  //   const friendList = await this.userFriendRepository.find({ where: { user: id }});
-
-  //   var blocks: { userId: number, name: string }[] = [];
-  //   var friends: { userId: number, name: string }[] = [];
-
-  //   for (const idx of blockList) {
-  //     blocks.push({ userId: idx.target, name: "temp" });
-  //   }
-
-  //   for (const idx of friendList) {
-  //     friends.push({ userId: idx.friend, name: "temp" });
-  //   }
-
-  //   userDto.id = userInfo.id;
-  //   userDto.name = userInfo.name;
-  //   userDto.avatar = userInfo.avatar;
-  //   //userDto.rank: number;
-  //   userDto.record = await this.readOneUserGameRecord(id);
-  //   userDto.blockList = blocks;
-  //   userDto.friendList = friends;
-  //   return (userDto);
-  // }
 
   async readChannelList(userId: number): Promise<ChannelMember[]> {
     const userChannelList = await this.chatsService.readChannelMemberWithUserId(userId);

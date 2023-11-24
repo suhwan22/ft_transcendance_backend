@@ -219,21 +219,11 @@ export class UsersController {
 
   /* [D] FriendRequest 제거 */
   @ApiOperation({ summary: '친구 요청 삭제 API' })
-  // @ApiQuery({ name: 'user', type: 'number' })
-  // @ApiQuery({ name: 'target', type: 'number' })
   @ApiOkResponse({ description: 'Ok' })
   @Delete('/friend-requests/:id')
   async deleteFriendRequest(@Param('id') target: number): Promise<void> {
     await this.usersService.deleteFriendRequest(target);
   }
-
-  // @ApiOperation({ summary: 'user info 조회 API'})
-  // @ApiOkResponse({ description: 'Ok', type: UserDto, isArray: true })
-  // @Get(':userId')
-  // async readUserInfo(@Param('userId') id: number): Promise<UserDto> {
-  //   return (this.usersService.readUserInfo(id));
-  // }
-
 
   @ApiOperation({ summary: '참여 가능 채팅방 리스트 조회 API'})
   @ApiOkResponse({ description: 'Ok', type: ChannelConfig, isArray: true })
