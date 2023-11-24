@@ -83,6 +83,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async matchMaking(client: Socket, userId: number) {
     const gameRoom = this.getGameRoomWithUserId(userId);
     if (gameRoom) {
+      if (!gameRoom.start) {
+        // 게임 시작 전 게임방에서 팅겼을 경우
+      }
       const roomId = gameRoom.roomId;
       client.data.roomId = roomId;
       client.join(roomId);
@@ -98,27 +101,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const gameRoom = await this.gamesSocketService.makeRoom(client, targetClient, roomId);
       this.gameRooms.set(roomId, gameRoom);
     }
-    // console.log('match making');
-    // // 대기 큐에 넣기
-    // this.queue.push(client);
-    // // 대기 큐에 헤드에 오거나 매칭이 잡혔다면 탈출
-    // while (!(this.queue[0].data.userId === userId || client.data.math === true)) {
-    //   client.emit("NOTICE", "waitting...");
-    // }
-    // if (client.data.math)
-    //   return ;
-    
-    // // 대기 큐에 사람이 올때 까지 대기
-    // let count = 0;
-    // while (this.queue.length <= 1) {
-    //   client.emit("NOTICE", "waitting...");
-    //   console.log(count++);
-    // }
-    // this.queue.shift();
-    // const other = this.queue.shift();
-    // other.data.math = true;
-    // client.emit("NOTICE", "success");
-    // other.emit("NOTICE", "sucesss");
   }
 
   @SubscribeMessage('READY')
@@ -137,6 +119,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('HIT')
   sendBallVector(client: Socket, data) {
+    const gameRoom = this.gameRooms.get(client.data.roomId);
+    const updateRoom = this.gamesSocketService.saveGame(client, gameRoom, data);
+    this.gameRooms.set(updateRoom.roomId, updateRoom);
     client.to(client.data.roomId).emit("VECTOR", data);
   }
 

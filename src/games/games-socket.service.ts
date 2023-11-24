@@ -40,6 +40,7 @@ export class GamesSocketService {
       updateRoom.right.isReady = !updateRoom.right.isReady;
     client.to(client.data.roomId).emit("READY", updateRoom);
     if (updateRoom.left.isReady && updateRoom.right.isReady) {
+      gameRoom.start = true;
       client.to(client.data.roomId).emit("START", "START");
     }
     return (updateRoom);
@@ -98,6 +99,10 @@ export class GamesSocketService {
     return ({ updateRoom, flag: false });
   }
 
+  checkTimePause(roomId: string, userId: number) {
+
+  }
+
   resumeGame(client: Socket, gameRoom: GameRoom) {
     const updateRoom = gameRoom;
     updateRoom.stop = false;
@@ -117,7 +122,6 @@ export class GamesSocketService {
       right: gameRoom.gameInfo.right,
       left: gameRoom.gameInfo.left
     }
-    console.log("a");
     console.log(updateRoom.right.isPause);
     console.log(updateRoom.left.isPause);
 

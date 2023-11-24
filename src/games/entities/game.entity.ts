@@ -35,6 +35,7 @@ export class GameRoom {
     this.option = { speed: 3, ballSize: 1, barSize: 10 };
     this.gameInfo = new GameInfo();
     this.stop = false;
+    this.start = false;
   }
   roomId: string;
   left: PingPongPlayer;
@@ -43,6 +44,7 @@ export class GameRoom {
   option: { speed: number, ballSize: number, barSize: number };
   gameInfo: GameInfo;
   stop: boolean;
+  start: boolean;
   
   getUserPosition(userId: number) {
     if (this.left.player.id === userId)
