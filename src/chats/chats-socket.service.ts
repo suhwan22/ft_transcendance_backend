@@ -180,14 +180,10 @@ export class ChatsSocketService {
   // op
   async commandOp(client: Socket, channelId: number, target: string) {
     try {
-      const user = await this.usersService.readOnePurePlayerWithName(target);
-      if (!user)
-        return (this.getNotice("존재하지 않는 유저입니다.", 11));
-      const channelMember = await this.chatsService.readChannelMember(channelId, user.id);
-      if (!channelMember)
+      const update = await this.chatsService.updateChannelOpWithName(channelId, target, true);
+      if (update.affected === 0) {
         return (this.getNotice("채널 맴버가 아닙니다.", 9));
-      //await this.chatsService.updateChannelMemberOp(channelMember.id, false);
-      await this.chatsService.updateChannelMemberWithUserId(user.id, true, channelId);
+      }
       return (this.getNotice(`"${target}"님에게 OP 권한을 부여 하였습니다.`, 200));
     } catch (e) {
       console.log(e);
@@ -199,10 +195,6 @@ export class ChatsSocketService {
   async commandKick(client: Socket, channelId: number, targetId: number, targetClient: Socket) {
     try {
       const roomId = channelId.toString();
-      const member = await this.chatsService.readChannelMember(channelId, targetId);
-      if (!member)
-        return (this.getNotice("채널 맴버가 아닙니다.", 9));
-
       // 타겟이 그 채팅방을 보고 있는 경우
       if (targetClient) {
         if (targetClient.data.roomId === roomId) {
@@ -210,15 +202,17 @@ export class ChatsSocketService {
           return (this.getNotice("성공적으로 강퇴하였습니다.", 10));
         }
       }
-
       // 타겟이 오프라인 이거나 온라인인데 그 채팅방을 안보고 있는 경우
-      await this.chatsService.deleteChannelMember(member.id);
-      //await this.chatsService.deleteChannelMemberWithUserId(channelId, targetId);
+      const deleteResult = await this.chatsService.deleteChannelMemberWithUserId(channelId, targetId);
+      if (deleteResult.affected === 0) {
+        return (this.getNotice("채널 맴버가 아닙니다.", 9));
+      }
       await this.sendChannelMember(client, channelId);
       if (targetClient)
         await this.sendChannelList(targetClient, targetId);
       return (this.getNotice("성공적으로 강퇴하였습니다.", 10));
     } catch (e) {
+      console.log(e);
       return (this.getNotice("DB Error", 200));
     }
   }
@@ -242,26 +236,15 @@ export class ChatsSocketService {
     client.emit("BAN", await this.chatsService.readBanList(channelId));
   }
 
-  async commandBan(client: Socket, channelId: number, targetName: string, targetId: number, tagetSocket: Socket) {
+  async commandBan(client: Socket, channelId: number, targetName: string) {
     try {
-      const target = await this.usersService.readOnePurePlayerWithName(targetName);
-      if (!target)
-        return (this.getNotice("존재하지 않는 유저입니다.", 11));
-      const chatBan = await this.chatsService.readChatBan(channelId, target.id);
-      if (chatBan)
-        return (this.getNotice('이미 밴 목록에 추가된 유저입니다.', 12));
-
-      const chatBanRequest = {
-        channelId: channelId,
-        userId: target.id
-      }
-      await this.chatsService.createBanInfo(chatBanRequest);
-      // 이미 채팅방에 있으면 강퇴
-      const member = await this.chatsService.readChannelMember(channelId, targetId);
-      if (member)
-        await this.commandKick(client, channelId, targetId, tagetSocket);
+      await this.chatsService.createChatBanWithName(channelId, targetName);
       return (this.getNotice('성공적으로 밴 성공하였습니다.', 13));
     } catch (e) {
+      if (e.code === '23502')
+        return (this.getNotice("존재하지 않는 유저입니다.", 11));
+      else if (e.code === '23505')
+        return (this.getNotice('이미 밴 목록에 추가된 유저입니다.', 12));
       return (this.getNotice("DB Error", 200));
     }
   }
@@ -269,13 +252,9 @@ export class ChatsSocketService {
   // unban
   async commandUnban(client: Socket, channelId: number, target: string) {
     try {
-      const user = await this.usersService.readOnePurePlayerWithName(target);
-      if (!user)
-        return (this.getNotice("존재하지 않는 유저입니다.", 11));
-      const chatBan = await this.chatsService.readChatBan(channelId, user.id);
-      if (!chatBan)
+      const deleteResult = await this.chatsService.deleteChatBanWithName(target);
+      if (deleteResult.affected === 0)
         return (this.getNotice('밴 목록에 해당하는 유저가 없습니다.', 14));
-      await this.chatsService.deleteBanInfo(chatBan.id);
       return (this.getNotice('밴 목록에서 제거하였습니다.', 15));
     }
     catch (e) {
@@ -291,30 +270,22 @@ export class ChatsSocketService {
         client.emit("BLOCK", userBlocks);
         return (null);
       }
-      const target = await this.usersService.readOnePurePlayerWithName(targetName);
-      if (!target)
-        return (this.getNotice("존재하지 않는 유저입니다.", 11));
-
-      const blocked = await this.usersService.readUserBlockWithTargetId(userId, target.id);
-      if (blocked)
-        return (this.getNotice("이미 차단 목록에 추가된 유저입니다.", 16));
-
-      await this.usersService.createBlockInfoWithTarget(userId, target);
+      await this.usersService.createBlockInfoWithTarget(userId, targetName);
       return (this.getNotice('차단 목록에 추가하였습니다.', 17));
     } catch (e) {
+      if (e.code === '23502')
+        return (this.getNotice("존재하지 않는 유저입니다.", 11));
+      else if (e.code === '23505')
+        return (this.getNotice("이미 차단 목록에 추가된 유저입니다.", 16));
       return (this.getNotice("DB Error", 200));
     }
   }
   // unblock
   async commandUnblock(client: Socket, channelId: number, userId: number, targetName: string) {
     try {
-      const target = await this.usersService.readOnePurePlayerWithName(targetName);
-      if (!target)
-        return (this.getNotice("존재하지 않는 유저입니다.", 11));
-      const blocked = await this.usersService.readUserBlockWithTargetId(userId, target.id);
-      if (!blocked)
+      const deleteResult = await this.usersService.deleteUserBlockWithName(targetName);
+      if (deleteResult.affected === 0)
         return (this.getNotice("차단 목록에 해당하는 유저가 없습니다.", 18));
-      await this.usersService.deleteBlockInfo(blocked.id);
       return (this.getNotice("차단 목록에서 제거하였습니다.", 19));
     }
     catch (e) {
@@ -334,25 +305,15 @@ export class ChatsSocketService {
   // mute
   async commandMute(client: Socket, channelId: number, target: string) {
     try {
-      const user = await this.usersService.readOnePurePlayerWithName(target);
-      if (!user)
-        return (this.getNotice("존재하지 않는 유저입니다.", 11));
-      const chatMute = await this.chatsService.readChatMute(channelId, user.id);
-      const chatMuteRequest = {
-        channelId: channelId,
-        userId: user.id
-      }
-      if (chatMute) {
-        if (this.checkMuteTime(chatMute)) {
-          await this.chatsService.deleteMuteInfo(chatMute.id);
-          await this.chatsService.createMuteInfo(chatMuteRequest);
-          return (this.getNotice("해당 유저를 1분간 채팅 금지합니다.", 21));
-        }
-        return (this.getNotice("이미 채팅 금지된 유저입니다.", 20));
-      }
-      await this.chatsService.createMuteInfo(chatMuteRequest);
+      await this.chatsService.createChatMuteWithName(channelId, target);
       return (this.getNotice("해당 유저를 1분간 채팅 금지합니다.", 21));
     } catch (e) {
+      if (e.code === '23502')
+        return (this.getNotice("존재하지 않는 유저입니다.", 11));
+      else if (e.code === '23505') {
+        await this.chatsService.updateTimeChatMuteWithName(channelId, target);
+        return (this.getNotice("해당 유저를 1분간 채팅 금지합니다.", 21));
+      }
       return (this.getNotice("DB Error", 200));
     }
   }

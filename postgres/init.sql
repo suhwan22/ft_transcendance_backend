@@ -131,7 +131,7 @@ insert into ban_list (id, channel_id, user_id) values (100001, 100001, 5);
 insert into ban_list (id, channel_id, user_id) values (100002, 100001, 6);
 
 -- init mute_list data
-insert into mute_list (id, channel_id, user_id, date) values (100001, 100001, 4, now());
+insert into mute_list (id, channel_id, user_id, duplicate, date) values (100001, 100001, 4, 0, now());
 
 -- init chat_log data
 insert into chat_log (id, channel_id, user_id, content, date) 
