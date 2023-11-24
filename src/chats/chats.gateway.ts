@@ -101,6 +101,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.clients.forEach((v, k, m) => this.chatsSocketService.sendChannelList(v, v.data.userId));
     this.chatsSocketService.sendChannelMember(client, newChannelConfig.id);
     this.chatsSocketService.createAndEnterChatRoom(client, roomId, message.userId);
+    client.emit('HOST', {channelId: newChannelConfig.id });
   }
 
   //채팅방 들어가기
