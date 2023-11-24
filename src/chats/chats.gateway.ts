@@ -98,7 +98,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     const newChannelConfig = await this.chatsService.createChannelConfig(channelConfigDto);
     const roomId = newChannelConfig.id;
-
+    this.clients.forEach((v, k, m) => this.chatsSocketService.sendChannelList(v, v.data.userId));
     this.chatsSocketService.createAndEnterChatRoom(client, roomId, message.userId);
   }
 
