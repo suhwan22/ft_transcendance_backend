@@ -344,6 +344,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return ;
     }
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
+    this.chatsSocketService.sendChannelMember(client, data.changeId);
     client.to(data.channelId.toString()).emit("NOTICE", msg);
   }
 
