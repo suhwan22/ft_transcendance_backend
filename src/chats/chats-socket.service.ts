@@ -139,11 +139,11 @@ export class ChatsSocketService {
     client.emit('LOADCHAT', log);
   }
 
-  async exitChatRoom(client: Socket, channelId: number, userId: number, word: string, code: number) {
+  async exitChatRoom(client: Socket, channelId: number, userId: number) {
     const player = await this.usersService.readOnePurePlayer(userId);
     const roomId = channelId.toString();
 
-    const log = this.getNotice(`${player.name}님이 ${word}`, code);
+    const log = this.getNotice(`${player.name}님이 퇴장하셨습니다.`, 6);
     client.to(roomId).emit('NOTICE', log);
 
     client.data.roomId = 'room:lobby';
@@ -157,7 +157,30 @@ export class ChatsSocketService {
 
     // roomId에 있는 사람들에게 바뀐 채널 멤버 전달
     await this.sendChannelMember(client, channelId);
+  }
 
+  async kickChatRoom(client: Socket, channelId: number, userId: number) {
+    const player = await this.usersService.readOnePurePlayer(userId);
+    const channel = await this.chatsService.readOnePureChannelConfig(channelId);
+    const roomId = channelId.toString();
+
+    client.data.roomId = 'room:lobby';
+    client.leave(roomId);
+    client.rooms.clear();
+    client.rooms.add('room:lobby');
+    client.join('room:lobby');
+
+    const logChannel = this.getNotice(`${player.name}님이 강퇴 되었습니다`, 7);
+    client.broadcast.to(roomId).emit('NOTICE', logChannel);
+
+    const logTarget = this.getNotice(`${channel.title}에서 강퇴 되었습니다`, 37);
+    client.emit('NOTICE', logTarget);
+
+    // 채널 리스트 다시 전달
+    await this.sendChannelList(client, userId);
+
+    // roomId에 있는 사람들에게 바뀐 채널 멤버 전달
+    await this.sendChannelMember(client, channelId);
   }
 
   getChatRoom(roomId: string): chatRoomListDTO {
