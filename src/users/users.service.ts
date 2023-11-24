@@ -305,13 +305,20 @@ export class UsersService {
   }
 
   // 유저 블락 생성 메서드
-  async createBlockInfoWithTarget(user: number, target: Player): Promise<UserBlock> {
-    const block = {
-      user: user,
-      target: target
-    }
-    const newBlock = this.userBlockRepository.create(block);
-    return (this.userBlockRepository.save(newBlock));
+  async createBlockInfoWithTarget(user: number, targetName: string) {
+    const playerQr = await this.dataSource
+      .getRepository(Player)
+      .createQueryBuilder('player')
+      .subQuery()
+      .from(Player, 'player')
+      .select('player.id')
+      .where(`name = '${targetName}'`)
+      .getQuery();
+    const userBlock = await this.dataSource
+      .getRepository(UserBlock).createQueryBuilder('block_list')
+      .insert()
+      .values({ user: user, target: () => `${playerQr}` })
+      .execute();
   }
 
   // 유저 블락 수정 메서드
@@ -328,10 +335,30 @@ export class UsersService {
   // 유저 블락 전체제거 메서드
   async deleteBlockList(user: number): Promise<void> {
     const deleteResult = await this.dataSource
-      .getRepository(UserBlock).createQueryBuilder('block_list')
+      .getRepository(UserBlock)
+      .createQueryBuilder('block_list')
       .delete()
       .where(`user = ${user}`)
       .execute();
+  }
+
+  async deleteUserBlockWithName(name: string) {
+    const playerQr = await this.dataSource
+      .getRepository(Player)
+      .createQueryBuilder('player')
+      .subQuery()
+      .from(Player, 'player')
+      .select('player.id')
+      .where(`name = '${name}'`)
+      .getQuery();
+
+    const deleteResult = await this.dataSource
+      .getRepository(UserBlock)
+      .createQueryBuilder('block_list')
+      .delete()
+      .where(`target_id = ${playerQr}`)
+      .execute();
+    return (deleteResult);
   }
 
   /**

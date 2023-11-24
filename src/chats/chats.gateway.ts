@@ -272,14 +272,14 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.chatsSocketService.commandBanList(client, data.channelId);
       return ;
     }
-    const targetUser = await this.usersService.readOnePurePlayerWithName(data.target);
-    if (!targetUser) {
-      const log = this.chatsSocketService.getNotice("존재하지 않는 유저입니다.", 11);
-      client.emit('NOTICE', log);
-      return ;
+    const log = await this.chatsSocketService.commandBan(client, data.channelId, data.target);
+
+    // 이미 채팅방에 있으면 강퇴
+    const member = await this.chatsService.readChannelMemberWithName(data.channelId, data.target);
+    if (member) {
+      const targetSocket = this.clients.get(member.user.id);
+      await this.chatsSocketService.commandKick(client, data.channelId, member.user.id, targetSocket);
     }
-    const targetSocket = this.clients.get(targetUser.id);
-    const log = await this.chatsSocketService.commandBan(client, data.channelId, data.target, targetUser.id, targetSocket);
     client.emit("NOTICE", log);
   }
 
@@ -314,8 +314,13 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit('NOTICE', log);
       return ;
     }
-    const log = await this.chatsSocketService.commandMute(client, data.channelId, data.target);
-    client.emit("NOTICE", log);
+    try {
+      const log = await this.chatsSocketService.commandMute(client, data.channelId, data.target);
+      client.emit("NOTICE", log);
+    } catch(e) {
+      const log = this.chatsSocketService.getNotice("DB Error", 200);
+      client.emit("NOTICE", log);
+    } 
   }
 
   @SubscribeMessage('PASS')
