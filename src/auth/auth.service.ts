@@ -105,7 +105,7 @@ export class AuthService {
         id: data.id,
         name: data.login,
         avatar: data.image.link,
-        status: 1
+        status: 3
       };
       user = await this.usersService.createPlayer(newPlayer);
       this.usersService.createUserAuth(user.id);

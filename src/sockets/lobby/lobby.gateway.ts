@@ -69,26 +69,26 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatsGateway.sendUpdateToChannelMember(userId);
   }
 
-  @SubscribeMessage('INVATE')
+  @SubscribeMessage('INVITE')
   async invateGame(client: Socket, data) {
     let msg;
     const target = await this.usersService.readOnePurePlayerWithName(data.target);
     if (!target) {
-      msg = this.lobbySocketService.getInfoMessage("해당 유저는 존재하지 않습니다.");
+      msg = this.lobbySocketService.getNotice("존재하지 않는 유저입니다.", 11);
       client.emit("NOTICE", msg);
       return;
     }
     const targetClient = this.getClientWithStatus(target);
     if (!targetClient) {
       if (target.status === 2)
-        msg = this.lobbySocketService.getInfoMessage("해당 유저는 이미 게임중 입니다.");
+        msg = this.lobbySocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23);
       else
-        msg = this.lobbySocketService.getInfoMessage("해당 유저는 접속중이 아닙니다.");
+        msg = this.lobbySocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24);
       client.emit("NOTICE", msg);
       return;
     }
-    this.lobbySocketService.invateGame(targetClient, data.userId, target);
-    msg = this.lobbySocketService.getInfoMessage("게임초대 메시지를 전송하였습니다.");
+    this.lobbySocketService.inviteGame(targetClient, data.userId, target);
+    msg = this.lobbySocketService.getNotice("게임초대 메시지를 전송하였습니다.", 25);
     client.emit("NOTICE", msg);
   }
 
@@ -99,9 +99,9 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const targetClient = this.getClientWithStatus(target);
     if (!targetClient) {
       if (target.status === 2)
-        msg = this.lobbySocketService.getInfoMessage("해당 유저는 이미 게임중 입니다.");
+        msg = this.lobbySocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23);
       else
-        msg = this.lobbySocketService.getInfoMessage("해당 유저는 접속중이 아닙니다.");
+        msg = this.lobbySocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24);
       client.emit("NOTICE", msg);
       return;
     }
@@ -126,7 +126,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const target = await this.usersService.readOnePurePlayerWithName(data.target);
       if (!target) {
-        msg = this.lobbySocketService.getInfoMessage("해당 유저는 존재하지 않습니다.");
+        msg = this.lobbySocketService.getNotice("존재하지 않는 유저입니다.", 11);
         client.emit("NOTICE", msg);
         return;
       }
@@ -134,7 +134,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.lobbySocketService.requestFriend(client, targetClient, data.userId, target);
     }
     catch (e) {
-      msg = this.lobbySocketService.getInfoMessage("Server Error: DB error");
+      msg = this.lobbySocketService.getNotice("DB error", 200);
       client.emit("NOTICE", msg);
       return;
     }

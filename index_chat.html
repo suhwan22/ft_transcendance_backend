@@ -23,6 +23,7 @@
   </div>
   <div>
     channelId: <input id="channel" type="text" />
+    password: <input id="input_password" type="text" />
     <button onclick="enter()">enter room</button>
     <button onclick="quit()">quit room</button>
   </div>
@@ -40,6 +41,12 @@
     <input id="message" type="text" />
     <button onclick="send()">send test</button>
   </div>
+  <div>
+    channelName: <input id="channelName" type="text" />
+    password: <input id="password" type="text" />
+    limit: <input id="limit" type="text" />
+    <button onclick="host()">host</button>
+  </div>
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
     crossorigin="anonymous"></script>
@@ -47,6 +54,10 @@
     let frinedRequest = null;
     let gameRequest = null;
     const channel = document.getElementById('channel');
+    const channelName = document.getElementById('channelName');
+    const password = document.getElementById('password');
+    const input_password = document.getElementById('input_password');
+    const limit = document.getElementById('limit');
     const user = document.getElementById('user');
     const chat = document.getElementById('chat');
     const game = document.getElementById('game');
@@ -120,18 +131,21 @@
     function regist() {
       socket.emit('REGIST', parseInt(user.value));
     }
-    function invate() {
-      socket.emit('INVATE', { userId: parseInt(user.value), target: game.value });
+    function invite() {
+      socket.emit('INVITE', { userId: parseInt(user.value), target: game.value });
     }
     function send() {
       socket.emit('MSG', { userId: parseInt(user.value), channelId: parseInt(channel.value), content: message.value });
       message.value = null;
     }
     function enter() {
-      socket.emit('JOIN', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
+      socket.emit('JOIN', { userId: parseInt(user.value), channelId: parseInt(channel.value), password: input_password.value });
     }
     function quit() {
       socket.emit('QUIT', { userId: parseInt(user.value), channelId: parseInt(channel.value) });
+    }
+    function host() {
+      socket.emit('HOST', { userId: parseInt(user.value), title: channelName.value, password: password.value, limit: parseInt(limit.value) });
     }
     function accept_game() {
       if (gameRequest)

@@ -1,9 +1,10 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { Player } from "src/users/entities/player.entity";
-import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToOne, JoinColumn, ManyToOne } from "typeorm";
+import { Entity, PrimaryGeneratedColumn, Column, CreateDateColumn, OneToOne, JoinColumn, ManyToOne, UpdateDateColumn, Unique } from "typeorm";
 import { ChannelConfig } from "./channel-config.entity";
 
 @Entity({ name: "mute_list" })
+@Unique(['channel', 'user'])
 export class ChatMute {
   @ApiProperty()
   @PrimaryGeneratedColumn()
@@ -17,11 +18,14 @@ export class ChatMute {
   channel: ChannelConfig;
 
   @ApiProperty({ type: () => Player })
-  @ManyToOne(() => Player)
+  @ManyToOne(() => Player, { nullable: false })
   @JoinColumn({ name: 'user_id' })
   user: Player;
 
+  @Column({ nullable: true })
+  duplicate: number;
+
   @ApiProperty()
-  @CreateDateColumn({ type: 'timestamptz' })
+  @UpdateDateColumn({ type: 'timestamptz' })
   date: Date;
 }
