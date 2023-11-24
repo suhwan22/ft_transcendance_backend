@@ -311,6 +311,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MUTE')
   async muteClient(client: Socket, data) {
+    const roomId = data.changeId.toString();
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
       client.emit('NOTICE', log);
@@ -318,7 +319,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     try {
       const log = await this.chatsSocketService.commandMute(client, data.channelId, data.target);
-      client.to(data.channelId.toString()).emit('NOTICE', log);
+      client.to(roomId).emit('NOTICE', log);
     } catch(e) {
       const log = this.chatsSocketService.getNotice("DB Error", 200);
       client.emit("NOTICE", log);
@@ -338,6 +339,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('OP')
   async setOpClient(client: Socket, data) {
+    const roomId = data.changeId.toString();
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
       const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
       client.emit('NOTICE', 8);
@@ -345,7 +347,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
     this.chatsSocketService.sendChannelMember(client, data.changeId);
-    client.to(data.channelId.toString()).emit("NOTICE", msg);
+    client.to(roomId).emit("NOTICE", msg);
   }
 
   @SubscribeMessage('INVITE')
