@@ -96,6 +96,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       limit: userLimit,
       dm: false
     }
+
     const newChannelConfig = await this.chatsService.createChannelConfig(channelConfigDto);
     const roomId = newChannelConfig.id;
     this.clients.forEach((v, k, m) => this.chatsSocketService.sendChannelList(v, v.data.userId));
@@ -296,7 +297,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit("NOTICE", log);
   }
 
-
   @SubscribeMessage('BLOCK')
   async blockClient(client: Socket, message) {
     const log = await this.chatsSocketService.commandBlock(client, message.channelId, message.userId, message.target);
@@ -318,7 +318,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     try {
       const log = await this.chatsSocketService.commandMute(client, data.channelId, data.target);
-      client.emit("NOTICE", log);
+      client.to(data.channelId.toString()).emit('NOTICE', log);
     } catch(e) {
       const log = this.chatsSocketService.getNotice("DB Error", 200);
       client.emit("NOTICE", log);
@@ -344,7 +344,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return ;
     }
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
-    client.emit("NOTICE", msg);
+    client.to(data.channelId.toString()).emit("NOTICE", msg);
   }
 
   @SubscribeMessage('INVITE')
