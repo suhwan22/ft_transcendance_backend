@@ -99,10 +99,6 @@ export class GamesSocketService {
     return ({ updateRoom, flag: false });
   }
 
-  checkTimePause(roomId: string, userId: number) {
-
-  }
-
   resumeGame(client: Socket, gameRoom: GameRoom) {
     const updateRoom = gameRoom;
     updateRoom.stop = false;
@@ -122,8 +118,6 @@ export class GamesSocketService {
       right: gameRoom.gameInfo.right,
       left: gameRoom.gameInfo.left
     }
-    console.log(updateRoom.right.isPause);
-    console.log(updateRoom.left.isPause);
 
     if (!updateRoom.left.isPause && !updateRoom.right.isPause)
       client.to(gameRoom.roomId).emit("RESUME", gameInfo);

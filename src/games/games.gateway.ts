@@ -58,6 +58,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.data.roomId = null;
         targetClient.data.roomId = null;
       }
+      const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
     }
     else {
       const newQueue = this.queue.filter((e) => e.data.userId !== client.data.userId);
@@ -83,19 +84,18 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async matchMaking(client: Socket, userId: number) {
     const gameRoom = this.getGameRoomWithUserId(userId);
     if (gameRoom) {
-      if (!gameRoom.start) {
-        // 게임 시작 전 게임방에서 팅겼을 경우
-      }
       const roomId = gameRoom.roomId;
       client.data.roomId = roomId;
       client.join(roomId);
       client.emit("RELOAD", gameRoom);
       return ;
     }
-    if (this.queue.length <= 0) {
-      this.queue.push(client);
+    if (this.queue.find((v) => v.data.userId === userId)) {
+      client.emit("WAIT", "WAIT");
     }
-    else {
+    this.queue.push(client);
+    if (this.queue.length >= 2) {
+      const client = this.queue.shift();
       const targetClient = this.queue.shift();
       const roomId = client.id + targetClient.id;
       const gameRoom = await this.gamesSocketService.makeRoom(client, targetClient, roomId);
@@ -163,6 +163,30 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.gameRooms.delete(client.data.roomId);
       client.data.roomId = null;
       targetClient.data.roomId = null;
+    }
+    const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
+  }
+
+  checkTimePause(gameRoom: GameRoom, userId: number, intervalId: any) {
+    let time;
+    let winId;
+    if (gameRoom.getUserPosition(userId)) {
+      gameRoom.left.pauseTime++;
+      time = gameRoom.left.pauseTime;
+      winId = gameRoom.right.player.id;
+    }
+    else {
+      gameRoom.right.pauseTime++;
+      time = gameRoom.right.pauseTime;
+      winId = gameRoom.left.player.id;
+    }
+    this.gameRooms.set(gameRoom.roomId, gameRoom);
+    if (time === 20) {
+      clearInterval(intervalId);
+      this.gamesSocketService.endGameWithExtra(this.clients.get(userId), this.clients.get(winId), gameRoom);
+      this.gameRooms.delete(gameRoom.roomId);
+      this.clients.get(userId).data.roomId = null;
+      this.clients.get(winId).data.roomId = null;
     }
   }
 
