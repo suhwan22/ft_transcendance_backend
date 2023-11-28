@@ -21,6 +21,10 @@
     <button onclick="accept_friend()">yes</button>
     <button onclick="refuse_friend()">no</button>
   </div>
+  <div>
+    update: <input id="update" type="text" />
+    <button onclick="update()">update</button>
+  </div>
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
     crossorigin="anonymous"></script>
@@ -30,6 +34,7 @@
     const user = document.getElementById('user');
     const game = document.getElementById('game');
     const friend= document.getElementById('friend');
+    const update = document.getElementById('update');
     let socket = io('http://localhost:3131/lobby');
 
     socket.on('NOTICE', function (data) {
@@ -76,6 +81,9 @@
       if (gameRequest)
         socket.emit('REFUSE_GAME', gameRequest);
       gameRequest = null;
+    }
+    function update() {
+      socket.emit('UPDATE', { name: update.value, avatar: "testestestest" });
     }
   </script>
 </body>
