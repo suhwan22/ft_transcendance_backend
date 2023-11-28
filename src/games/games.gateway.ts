@@ -90,10 +90,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit("RELOAD", gameRoom);
       return ;
     }
-    if (this.queue.find((v) => v.data.userId === userId)) {
-      client.emit("WAIT", "WAIT");
-    }
     this.queue.push(client);
+    client.emit("WAIT", "WAIT");
     if (this.queue.length >= 2) {
       const client = this.queue.shift();
       const targetClient = this.queue.shift();
