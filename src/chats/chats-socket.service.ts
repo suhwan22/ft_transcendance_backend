@@ -373,15 +373,16 @@ export class ChatsSocketService {
     targetClient.emit("INVTE", gameRequest);
   }
 
-  async acceptGame(client: Socket, targetClient: Socket, gameRequest: Partial<GameRequest>, target: Player) {
-    const user = await this.usersService.readOnePurePlayer(gameRequest.recv.id);
-    const msg = this.getNotice("요청을 수락 하였습니다.", 26);
+  async acceptGame(client: Socket, targetClient: Socket) {
+    const msg = this.getNotice("게임이 성사되었습니다.", 26);
+
     client.emit("NOTICE", msg);
-    // 2명 게임 소캣 열도록 유도?
-    // 그리고 정해진 두명을 게임 소켓내 같은 룸으로 join 시켜야함
-    // 게임 roomId 생성
+    targetClient.emit("NOTICE", msg);
+
     const roomId = client.id + targetClient.id;
-    
+
+    client.emit("JOIN_GAME", { roomId });
+    targetClient.emit("JOIN_GAME", { roomId });
   }
 
   async refuseGame(client: Socket, targetClient: Socket, gameRequest: Partial<GameRequest>, target: Player) {

@@ -13,14 +13,6 @@ export class GamesSocketService {
     private readonly gamesService: GamesService,) { }
 
   async makeRoom(client: Socket, targetClient: Socket, roomId: string): Promise<GameRoom> {
-    client.rooms.clear();
-    client.rooms.add(roomId);
-    client.join(roomId);
-    client.data.roomId = roomId;
-    targetClient.rooms.clear();
-    targetClient.rooms.add(roomId);
-    targetClient.join(roomId);
-    targetClient.data.roomId = roomId;
     const user = await this.usersService.readOnePurePlayer(client.data.userId);
     const target = await this.usersService.readOnePurePlayer(targetClient.data.userId);
     const me = new PingPongPlayer(user, false);
@@ -29,7 +21,27 @@ export class GamesSocketService {
     client.emit("LOAD", gameRoom);
     targetClient.emit("LOAD", gameRoom);
 
-    return (new GameRoom(roomId, me, op));
+    return (gameRoom);
+  }
+
+  joinRoom(client:Socket, roomId: string) {
+    client.rooms.clear();
+    client.rooms.add(roomId);
+    client.join(roomId);
+    client.data.roomId = roomId;
+  }
+
+  async enterRoom(client: Socket, gameRoom: GameRoom, isLeft: boolean): Promise<GameRoom> {
+    const user = await this.usersService.readOnePurePlayer(client.data.userId);
+    const me = new PingPongPlayer(user, false);
+    const updateRoom = gameRoom;
+
+    if (isLeft)
+      updateRoom.left = me;
+    else
+      updateRoom.right = me;
+
+    return (updateRoom);
   }
 
   readyGame(client: Socket, gameRoom: GameRoom): GameRoom {
