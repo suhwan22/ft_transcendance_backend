@@ -22,8 +22,8 @@
     <button onclick="refuse_friend()">no</button>
   </div>
   <div>
-    update: <input id="update" type="text" />
-    <button onclick="update()">update</button>
+    edit: <input id="edit" type="text" />
+    <button onclick="edit()">edit</button>
   </div>
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
@@ -34,13 +34,17 @@
     const user = document.getElementById('user');
     const game = document.getElementById('game');
     const friend= document.getElementById('friend');
-    const update = document.getElementById('update');
+    const edit = document.getElementById('edit');
     let socket = io('http://localhost:3131/lobby');
 
     socket.on('NOTICE', function (data) {
       console.log(data);
     });
-    socket.on('INVATE', function (data) {
+    socket.on('JOIN_GAME', function (data) {
+      console.log(data);
+    });
+    socket.
+    on('INVITE', function (data) {
       gameRequest = data;
       console.log(gameRequest);
       console.log(gameRequest.send.name + " 님이 게임 초대하였습니다.");
@@ -69,7 +73,7 @@
         socket.emit('REFUSE_FRIEND', frinedRequest);
       frinedRequest = null;
     }
-    function invate() {
+    function invite() {
       socket.emit('INVITE', { userId: parseInt(user.value), target: game.value });
     }
     function accept_game() {
@@ -83,7 +87,7 @@
       gameRequest = null;
     }
     function update() {
-      socket.emit('UPDATE', { name: update.value, avatar: "testestestest" });
+      socket.emit('UPDATE', { name: edit.value, avatar: "testestestest" });
     }
   </script>
 </body>

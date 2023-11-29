@@ -11,6 +11,10 @@
     <button onclick="match()">Match Making</button>
   </div>
   <div>
+    RoomId: <input id="room" type="text" />
+    <button onclick="join()">join</button>
+  </div>
+  <div>
     speed: <input id="speed" type="text" />
     ballSize: <input id="ballSize" type="text" />
     barSize: <input id="barSize" type="text" />
@@ -38,6 +42,7 @@
     crossorigin="anonymous"></script>
   <script>
     const user = document.getElementById('user');
+    const room = document.getElementById('room');
     const bar = document.getElementById('bar');
     const x = document.getElementById('x');
     const y = document.getElementById('y');
@@ -58,7 +63,7 @@
       console.log(data);
     });
     socket.on('READY', function (data) {
-      "aaaaa";
+      console.log("ready");
     });
     socket.on('START', function (data) {
       console.log("게임 스타트");
@@ -88,6 +93,7 @@
         console.log(data.winnerUserId + " 승리")
       game = null;
     });
+
     function regist() {
       socket.emit('REGIST', parseInt(user.value));
     }
@@ -95,42 +101,61 @@
       socket.emit('MATCH', parseInt(user.value));
       console.log("waitting...");
     }
+    function join() {
+      console.log("join");
+      socket.emit("JOIN", {
+        roomId: room.value,
+        send: {
+          id: 1,
+          name: "amanda",
+          status: 1,
+          avatar: null
+        },
+        recv: {
+          id: 2,
+          name: "bread",
+          status: 1,
+          avatar: null
+        }
+      })
+    }
     function option() {
       if (!game)
         return;
-        socket.emit('OPTION', { speed: parseInt(speed.value), ballSize: parseInt(ballSize.value), barSize: parseInt(barSize.value) });
+      socket.emit('OPTION', { speed: parseInt(speed.value), ballSize: parseInt(ballSize.value), barSize: parseInt(barSize.value) });
     }
     function ready() {
       if (!game)
-        return ;
+        return;
+      console.log("emit ready");
       socket.emit('READY', game);
     }
     function ping() {
       if (!game)
-        return ;
-      const data =  { roomId: game.roomId, ball: { x: 2, y: 54 }, bar: parseInt(bar.value), isLeft: game.isLeft}
+        return;
+      const data = { roomId: game.roomId, ball: { x: 2, y: 54 }, bar: parseInt(bar.value), isLeft: game.isLeft }
       socket.emit('PING', data);
     }
     function hit() {
       if (!game)
-        return ;
-      const data =  { roomId: game.roomId, xv: parseInt(x.value), yv: parseInt(y.value) };
+        return;
+      const data = { roomId: game.roomId, xv: parseInt(x.value), yv: parseInt(y.value) };
       socket.emit('HIT', data);
     }
     function point() {
       if (!game)
-        return ;
-      const data =  { roomId: game.roomId, isLeft: game.isLeft };
+        return;
+      const data = { roomId: game.roomId, isLeft: game.isLeft };
       socket.emit('SCORE', data);
     }
     function pause() {
       if (!game)
-        return ;
+        return;
       socket.emit('PAUSE', {});
     }
     function resume() {
       if (!game)
-        return ;
+        return;
       socket.emit('RESUME', {});
     }
   </script>

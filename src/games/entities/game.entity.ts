@@ -30,9 +30,7 @@ export class GameRoom {
   constructor(roomId: string, left: PingPongPlayer, right: PingPongPlayer) {
     this.roomId = roomId;
     this.left = left;
-    this.left.pause = 0;
     this.right = right;
-    this.right.pause = 0;
     this.score = { left: 0, right: 0 };
     this.option = { speed: 3, ballSize: 1, barSize: 10 };
     this.gameInfo = new GameInfo();

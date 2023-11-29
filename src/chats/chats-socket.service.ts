@@ -370,7 +370,7 @@ export class ChatsSocketService {
       return;
     }
     const gameRequest = new GameRequest(target, user);
-    targetClient.emit("INVTE", gameRequest);
+    targetClient.emit("INVITE", gameRequest);
   }
 
   async acceptGame(client: Socket, targetClient: Socket) {
