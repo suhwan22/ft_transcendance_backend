@@ -87,6 +87,16 @@ export class UsersService {
     return (this.playerRepository.findOne({ where: { id } }));
   }
 
+  async updatePlayer(userId: number, name: string, avatar: string) {
+    const update = await this.dataSource
+      .getRepository(Player).createQueryBuilder('player')
+      .update()
+      .set({ name: name, avatar: avatar })
+      .where(`id = ${userId}`)
+      .execute()
+    return (update);
+  }
+
   async updatePlayerStatus(id: number, status: number): Promise<Player> {
     await this.playerRepository.update(id, { status: status });
     return (this.playerRepository.findOne({ where: { id } }));
