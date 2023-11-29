@@ -358,7 +358,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return ;
     }
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
-    const log = this.chatsSocketService.getNotice(`${data.target}님이 op권한을 획득했습니다.`,200);
+    const log = this.chatsSocketService.getNotice(`${data.target}님이 op권한을 획득했습니다.`, 36);
     this.chatsSocketService.sendChannelMember(client, data.channelId);
     client.emit("NOTICE", msg);
     client.join(client.id);
