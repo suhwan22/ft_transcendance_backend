@@ -130,4 +130,17 @@ export class LobbySocketService {
       client.emit("NOTICE", msg);
     }
   }
+
+  async updateProfile(client: Socket, data) {
+    try {
+      const userId = client.data.userId;
+      await this.usersService.updatePlayer(userId, data.name, data.avatar);
+      return (this.getNotice("성공적으로 변경 되었습니다.", 38));
+    }
+    catch(e) {
+      if (e.code === '23505')
+        return (this.getNotice('중복된 이름입니다.', 39));
+      return (this.getNotice("DB Error", 200));
+    }
+  }
 }

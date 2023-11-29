@@ -154,6 +154,18 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.refuseFriend(client, targetClient, data, target);
   }
 
+  @SubscribeMessage('UPDATE')
+  async updateProfile(client: Socket, data) {
+    const log = await this.lobbySocketService.updateProfile(client, data);
+    client.emit("NOTICE", log);
+    if (log.code === 38)
+      return ;
+    const userId = client.data.userId;
+    this.sendUpdateToFriends(userId);
+    this.chatsGateway.sendUpdateToChannelMember(userId);
+    return ;
+  }
+
   async sendUpdateToFriends(userId: number) {
     this.lobbySocketService.sendUpdateToFriends(this.clients, userId);
   }
