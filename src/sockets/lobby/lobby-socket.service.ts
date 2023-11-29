@@ -139,7 +139,7 @@ export class LobbySocketService {
     }
     catch(e) {
       if (e.code === '23505')
-        return (this.getNotice('중복된 이름입니다.', 12));
+        return (this.getNotice('중복된 이름입니다.', 39));
       return (this.getNotice("DB Error", 200));
     }
   }
