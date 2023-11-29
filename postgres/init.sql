@@ -144,23 +144,23 @@ insert into chat_log (id, channel_id, user_id, content, date)
               values (100004, 100001, 3, 'hello bread', now());
 
 -- init game_history data
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100001, 1, 2, true, 10, 6, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100002, 1, 3, true, 10, 3, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100003, 1, 4, true, 10, 1, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100004, 1, 5, true, 10, 9, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100005, 1, 6, false, 5, 10, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100006, 2, 1, false, 6, 10, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100007, 3, 1, false, 3, 10, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100008, 4, 1, false, 1, 10, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100009, 5, 1, false, 9, 10, now());
-insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, date)
-                        values (100010, 6, 1, true, 10, 5, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100001, 1, 2, true, 10, 6, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100002, 1, 3, true, 10, 3, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100003, 1, 4, true, 10, 1, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100004, 1, 5, true, 10, 9, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100005, 1, 6, false, 5, 10, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100006, 2, 1, false, 6, 10, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100007, 3, 1, false, 3, 10, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100008, 4, 1, false, 1, 10, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100009, 5, 1, false, 9, 10, true, now());
+insert into game_history (id, "user", opponent_id, result, user_score, opponent_score, rank, date)
+                        values (100010, 6, 1, true, 10, 5, true, now());

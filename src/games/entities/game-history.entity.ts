@@ -28,6 +28,10 @@ export class GameHistory {
   @Column({ name: "opponent_score"})
   opponentScore: number;
 
+  @ApiProperty()
+  @Column({ default: false })
+  rank: boolean;
+
   @CreateDateColumn()
   date: Date;
 }

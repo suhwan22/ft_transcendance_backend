@@ -38,6 +38,7 @@ export class GameRoom {
     this.gameInfo = new GameInfo();
     this.stop = false;
     this.start = false;
+    this.rank = false;
   }
   roomId: string;
   left: PingPongPlayer;
@@ -47,6 +48,7 @@ export class GameRoom {
   gameInfo: GameInfo;
   stop: boolean;
   start: boolean;
+  rank: boolean;
   
   getUserPosition(userId: number) {
     if (this.left.player.id === userId)

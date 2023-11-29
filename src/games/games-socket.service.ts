@@ -157,10 +157,10 @@ export class GamesSocketService {
       lossScore = gameRoom.score.left;
       winnerUserId = gameRoom.left.player.id;
     }
-    await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore);
-    await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore);
-    await this.usersService.updateUserGameRecord(win, true);
-    await this.usersService.updateUserGameRecord(loss, false);
+    await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
+    await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
+    await this.usersService.updateUserGameRecord(win, true, gameRoom.rank);
+    await this.usersService.updateUserGameRecord(loss, false, gameRoom.rank);
     client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerUserId: winnerUserId });
     client.leave(gameRoom.roomId);
     targetClient.leave(gameRoom.roomId);
@@ -183,10 +183,10 @@ export class GamesSocketService {
       lossScore = gameRoom.score.left;
       isLeft = false;
     }
-    await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore);
-    await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore);
-    await this.usersService.updateUserGameRecord(win, true);
-    await this.usersService.updateUserGameRecord(loss, false);
+    await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
+    await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
+    await this.usersService.updateUserGameRecord(win, true, gameRoom.rank);
+    await this.usersService.updateUserGameRecord(loss, false, gameRoom.rank);
     client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: isLeft });
     client.leave(gameRoom.roomId);
     targetClient.leave(gameRoom.roomId);

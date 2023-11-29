@@ -78,18 +78,17 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.usersService.updatePlayerStatus(userId, 2);
     this.chatsGateway.sendUpdateToChannelMember(userId);
     this.lobbyGateway.sendUpdateToFriends(userId);
-  }
-
-  @SubscribeMessage('MATCH')
-  async matchMaking(client: Socket, userId: number) {
     const gameRoom = this.getGameRoomWithUserId(userId);
     if (gameRoom) {
       const roomId = gameRoom.roomId;
       client.data.roomId = roomId;
       client.join(roomId);
       client.emit("RELOAD", gameRoom);
-      return ;
     }
+  }
+
+  @SubscribeMessage('MATCH')
+  async matchMaking(client: Socket, userId: number) {
     if (this.queue.find((v) => v.data.userId === userId)) {
       client.emit("WAIT", "WAIT");
     }
@@ -99,6 +98,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const targetClient = this.queue.shift();
       const roomId = client.id + targetClient.id;
       const gameRoom = await this.gamesSocketService.makeRoom(client, targetClient, roomId);
+      gameRoom.rank = true;
       this.gameRooms.set(roomId, gameRoom);
     }
   }
