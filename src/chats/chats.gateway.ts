@@ -87,22 +87,29 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // }
   @SubscribeMessage('HOST')
   async hostChatRoom(client: Socket, message) {
-    let isPassword = message.password ? false : true;
-    let userLimit = message.limit ? message.limit : 10;
-    const channelConfigDto = {
-      title: message.title,
-      password: message.password,
-      public: isPassword,
-      limit: userLimit,
-      dm: false
+    try {
+      let isPassword = message.password ? false : true;
+      let userLimit = message.limit ? message.limit : 10;
+      const channelConfigDto = {
+        title: message.title,
+        password: message.password,
+        public: isPassword,
+        limit: userLimit,
+        dm: false
+      }
+      const newChannelConfig = await this.chatsService.createChannelConfig(channelConfigDto);
+      const roomId = newChannelConfig.id;
+      this.clients.forEach((v, k, m) => this.chatsSocketService.sendChannelList(v, v.data.userId));
+      this.chatsSocketService.sendChannelMember(client, newChannelConfig.id);
+      this.chatsSocketService.createAndEnterChatRoom(client, roomId, message.userId);
+      client.emit('HOST', {channelId: newChannelConfig.id, title: newChannelConfig.title });
+    } catch (e) {
+      let log;
+      if (e.code === '23505')
+        log = this.chatsSocketService.getNotice('중복된 이름입니다.', 39);
+      log = this.chatsSocketService.getNotice("DB Error", 200);
+      client.emit('NOTICE', log);
     }
-
-    const newChannelConfig = await this.chatsService.createChannelConfig(channelConfigDto);
-    const roomId = newChannelConfig.id;
-    this.clients.forEach((v, k, m) => this.chatsSocketService.sendChannelList(v, v.data.userId));
-    this.chatsSocketService.sendChannelMember(client, newChannelConfig.id);
-    this.chatsSocketService.createAndEnterChatRoom(client, roomId, message.userId);
-    client.emit('HOST', {channelId: newChannelConfig.id, title: newChannelConfig.title });
   }
 
   //채팅방 들어가기
