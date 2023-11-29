@@ -107,7 +107,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       let log;
       if (e.code === '23505')
         log = this.chatsSocketService.getNotice('중복된 이름입니다.', 39);
-      log = this.chatsSocketService.getNotice("DB Error", 200);
+      else
+        log = this.chatsSocketService.getNotice("DB Error", 200);
       client.emit('NOTICE', log);
     }
   }
