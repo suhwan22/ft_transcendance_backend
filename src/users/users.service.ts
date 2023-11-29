@@ -167,12 +167,20 @@ export class UsersService {
     return (this.recordRepository.findOne({ where: { id } }));
   }
 
-  async updateUserGameRecord(user: Player, result: boolean): Promise<UserGameRecord> {
+  async updateUserGameRecord(user: Player, result: boolean, rank: boolean): Promise<UserGameRecord> {
     let updateResult: UpdateResult;
-    if (result)
-      updateResult = await this.updateUserGameRecordWin(user.id);
-    else 
-      updateResult = await this.updateUserGameRecordLoss(user.id);
+    if (rank) {
+      if (result)
+        updateResult = await this.updateUserGameRecordRankWin(user.id);
+      else 
+        updateResult = await this.updateUserGameRecordRankLoss(user.id);
+    }
+    else {
+      if (result)
+        updateResult = await this.updateUserGameRecordWin(user.id);
+      else 
+        updateResult = await this.updateUserGameRecordLoss(user.id);
+    }
     if (updateResult.affected === 0)
       return (this.createUserGameRecordWithResult(user, result));
     return (await this.readOneUserGameRecord(user.id));
@@ -182,13 +190,33 @@ export class UsersService {
     const update = await this.dataSource
       .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
       .update()
+      .set({ win: () => 'win + 1' })
+      .where(`user_id = ${userId}`)
+      .execute()
+    return (update);
+  }
+  
+  async updateUserGameRecordLoss(userId: number) {
+    const update = await this.dataSource
+      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
+      .update()
+      .set({ win: () => 'loss + 1' })
+      .where(`user_id = ${userId}`)
+      .execute()
+    return (update);
+  }
+
+  async updateUserGameRecordRankWin(userId: number) {
+    const update = await this.dataSource
+      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
+      .update()
       .set({ win: () => 'win + 1', score: () => 'score + 1'})
       .where(`user_id = ${userId}`)
       .execute()
     return (update);
   }
 
-  async updateUserGameRecordLoss(userId: number) {
+  async updateUserGameRecordRankLoss(userId: number) {
     const update = await this.dataSource
       .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
       .update()

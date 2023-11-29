@@ -37,13 +37,15 @@ export class GamesService {
                                  opponent: Player, 
                                  result: boolean, 
                                  userScore: number, 
-                                 opponentScore: number): Promise<GameHistory> {
+                                 opponentScore: number,
+                                 rank: boolean): Promise<GameHistory> {
     const temp = {
       user: user,
       opponent: opponent,
       result: result,
       userScore: userScore,
-      opponentScore: opponentScore
+      opponentScore: opponentScore,
+      rank: rank,
     }
     const newHistory = this.gameHistoryRepository.create(temp);
     return (this.gameHistoryRepository.save(newHistory));
