@@ -12,7 +12,6 @@ import { Server, Socket } from 'socket.io';
 import { ChatsSocketService } from './chats-socket.service';
 import { ChatsService } from './chats.service';
 import { UsersService } from 'src/users/users.service';
-import { UserSocket } from 'src/users/entities/user-socket.entity';
 import { GamesGateway } from 'src/games/games.gateway';
 import { forwardRef, Inject } from '@nestjs/common';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
@@ -46,17 +45,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //소켓 연결 해제시 유저목록에서 제거
   async handleDisconnect(client: Socket): Promise<void> {
-    const { roomId } = client.data;
-    // if (
-    //   roomId != 'room:lobby' &&
-    //   !this.server.sockets.adapter.rooms.get(roomId)
-    // ) {
-    //   this.chatsSocketService.deleteChatRoom(roomId);
-    //   this.server.emit(
-    //     'getChatRoomList',
-    //     this.chatsSocketService.getChatRoomList(),
-    //   );
-    // }
     const key = client.data.userId;
     if (!key)
       return ;
@@ -126,11 +114,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     //lobby인 경우 message.channelId === -1
     if (message.channelId < 0) {
-      // //이전 방이 만약 나 혼자있던 방이면 제거
-      // if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
-      //  this.chatsSocketService.deleteChatRoom(client.data.roomId);
-      //  //이것도 작동 안함...
-      // }
       this.chatsSocketService.connectLobby(client, message.userId);
       return;
     }
@@ -151,11 +134,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 맴버 조회 있으면 그냥 접속
     const isMember = await this.chatsService.readMemberInChannel(message.channelId, message.userId);
     if (isMember) {
-      // //이전 방이 만약 나 혼자있던 방이면 제거
-      // if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
-      //  this.chatsSocketService.deleteChatRoom(client.data.roomId);
-      //  //이것도 작동 안함...
-      // }
       this.chatsSocketService.connectChatRoom(client, message.channelId, message.userId);
       return;
     }
@@ -183,11 +161,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return;
     }
 
-    //이전 방이 만약 나 혼자있던 방이면 제거
-    // if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
-    //   this.chatsSocketService.deleteChatRoom(client.data.roomId);
-    // }
-
     this.chatsSocketService.enterChatRoom(client, roomId, message.userId);
   }
 
@@ -206,12 +179,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   // }
   @SubscribeMessage('QUIT')
   async quitChatRoom(client: Socket, message) {
-    //방이 만약 나 혼자인 방이면 제거
-    // if (client.data.roomId != 'room:lobby' && this.server.sockets.adapter.rooms.get(client.data.roomId).size == 1) {
-    //   this.chatsSocketService.deleteChatRoom(client.data.roomId);
-    //   // 외래키 되어있는거 어떻게 지우지?.. channel_config와 channel_member 지워야함
-    // }
-
     const channelMembers = await this.chatsService.readOneChannelMember(message.channelId);
     if (channelMembers.length === 1) {
       // member가 1명인 상태에서 나가기 때문에 방이 같이 제거되는 경우
@@ -220,6 +187,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return ('채널 맴버가 아닙니다. bug 상황');
       await this.chatsService.deleteChannelMember(member.id);
       await this.chatsService.deleteChannelConfig(message.channelId);
+      this.clients.forEach(user => {
+        if (user.data.userId !== client.data.userId)
+          this.chatsSocketService.sendChannelList(user, user.data.userId);
+      });
     }
     else {
       const member = channelMembers.find((member) => member.user.id == message.userId);
@@ -450,9 +421,4 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const targetClient = this.getClientWithStatus(target);
     this.chatsSocketService.refuseFriend(client, targetClient, data, target);
   }
-}
-
-export class ClientSocket {
-  socket: Socket;
-  userSocket: UserSocket;
 }
