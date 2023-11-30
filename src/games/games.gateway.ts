@@ -14,6 +14,7 @@ import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { UsersService } from 'src/users/users.service';
 import { GameRoom } from './entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
+import { SocketType } from 'dgram';
 
 @WebSocketGateway(3131, { namespace: '/games' })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -230,6 +231,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.saveGame(client, gameRoom, data);
     this.gameRooms.set(updateRoom.roomId, updateRoom);
+  }
+
+  @SubscribeMessage('CANCEL')
+  cancelGame(client: Socket, data) {
+    const updateQueue = this.queue.filter((v) => v.data.userId !== client.data.userId);
+    this.queue = updateQueue;
   }
 
   getGameRoomWithUserId(userId: number): GameRoom {
