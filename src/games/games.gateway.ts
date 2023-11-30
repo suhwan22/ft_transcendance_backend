@@ -12,8 +12,7 @@ import { Server, Socket } from 'socket.io';
 import { ChatsGateway } from 'src/chats/chats.gateway';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { UsersService } from 'src/users/users.service';
-import { GameRoom, PingPongPlayer } from './entities/game.entity';
-import { PlayerInfoDto } from './dtos/player-info.dto';
+import { GameRoom } from './entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
 
 @WebSocketGateway(3131, { namespace: '/games' })
@@ -81,9 +80,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const gameRoom = this.getGameRoomWithUserId(userId);
     if (gameRoom) {
       const roomId = gameRoom.roomId;
+      const isLeft = gameRoom.getUserPosition(userId);
       client.data.roomId = roomId;
       client.join(roomId);
-      client.emit("RELOAD", gameRoom);
+      client.emit("RELOAD", { gameRoom: gameRoom, isLeft: isLeft });
     }
   }
 
@@ -109,7 +109,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('READY')
   readyGame(client: Socket, data: GameRoom) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
-    const updateRoom = this.gamesSocketService.readyGame(client, gameRoom);
+    const targetId = client.data.userId === gameRoom.left.player.id ? gameRoom.right.player.id : gameRoom.left.player.id;
+    const targetClient = this.getTargetClient(gameRoom.roomId, targetId);
+    const updateRoom = this.gamesSocketService.readyGame(client, targetClient, gameRoom);
     this.gameRooms.set(client.data.roomId, updateRoom);
   }
 
@@ -185,7 +187,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.gamesSocketService.joinRoom(client, data.roomId);
     if (updateRoom.left && updateRoom.right) {
-      client.to(client.data.roomId).emit("LOAD", updateRoom);
+      const isLeft = updateRoom.getUserPosition(client.data.userId);
+      const targetId = isLeft === true ? gameRoom.right.player.id : gameRoom.left.player.id;
+      const targetClient = this.getTargetClient(gameRoom.roomId, targetId);
+      client.emit("LOAD", { gameRoom: updateRoom, isLeft: isLeft });
+      targetClient.emit("LOAD", { gameRoom: updateRoom, isLeft: !isLeft });
     }
   }
 
