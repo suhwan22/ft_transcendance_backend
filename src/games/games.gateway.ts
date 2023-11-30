@@ -101,6 +101,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const gameRoom = await this.gamesSocketService.makeRoom(client, targetClient, roomId);
       gameRoom.rank = true;
       this.gameRooms.set(roomId, gameRoom);
+      this.gamesSocketService.joinRoom(client, roomId);
+      this.gamesSocketService.joinRoom(targetClient, roomId);
     }
   }
 
@@ -166,6 +168,25 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       targetClient.data.roomId = null;
     }
     const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
+  }
+
+  @SubscribeMessage('JOIN')
+  async join(client: Socket, data) {
+    let gameRoom;
+
+    gameRoom = this.gameRooms.get(data.roomId);
+    if (!gameRoom) {
+      gameRoom = new GameRoom(data.roomId, null, null);
+      gameRoom.rank = false;
+    }
+
+    const updateRoom = await this.gamesSocketService.enterRoom(client, gameRoom, data.send.id === client.data.userId ? true : false);
+    this.gameRooms.set(data.roomId, updateRoom);
+
+    this.gamesSocketService.joinRoom(client, data.roomId);
+    if (updateRoom.left && updateRoom.right) {
+      client.to(client.data.roomId).emit("LOAD", updateRoom);
+    }
   }
 
   checkTimePause(gameRoom: GameRoom, userId: number, intervalId: any) {

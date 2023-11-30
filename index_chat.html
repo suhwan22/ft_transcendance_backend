@@ -11,7 +11,7 @@
   </div>
   <div>
     game: <input id="game" type="text" />
-    <button onclick="invate()">invate </button>
+    <button onclick="invite()">invite </button>
     <button onclick="accept_game()">yes </button>
     <button onclick="refuse_game()">no </button>
   </div>
@@ -96,7 +96,10 @@
     socket.on('BLOCK', function (data) {
       console.log(data);
     });
-    socket.on('INVATE', function (data) {
+    socket.on('JOIN_GAME', function (data) {
+      console.log(data);
+    });
+    socket.on('INVITE', function (data) {
       gameRequest = data;
       console.log(gameRequest);
       console.log(gameRequest.send.name + " 님이 게임 초대하였습니다.");

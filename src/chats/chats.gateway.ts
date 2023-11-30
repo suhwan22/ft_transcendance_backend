@@ -403,7 +403,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit("NOTICE", msg);
       return;
     }
-    this.chatsSocketService.acceptGame(client, targetClient, data, target);
+    this.chatsSocketService.acceptGame(client, targetClient);
   }
 
   @SubscribeMessage('REFUSE_GAME')
