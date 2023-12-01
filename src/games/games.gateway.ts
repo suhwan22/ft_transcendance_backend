@@ -114,7 +114,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   readyGame(client: Socket, data: GameRoom) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const targetClient = this.getTargetClient(gameRoom.roomId, client.data.userId);
-    console.log(targetClient.data.userId);
     const updateRoom = this.gamesSocketService.readyGame(client, targetClient, gameRoom);
     this.gameRooms.set(client.data.roomId, updateRoom);
   }

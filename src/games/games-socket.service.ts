@@ -46,11 +46,13 @@ export class GamesSocketService {
 
   readyGame(client: Socket, targetClient: Socket, gameRoom: GameRoom): GameRoom {
     const updateRoom = gameRoom;
-    const isLeft = client.data.userId;
+    let isLeft = true;
     if (gameRoom.getUserPosition(client.data.userId))
       updateRoom.left.isReady = !updateRoom.left.isReady;
-    else
+    else {
       updateRoom.right.isReady = !updateRoom.right.isReady;
+      isLeft = false;
+    }
     client.emit("READY", { room: updateRoom, isLeft: isLeft });
     targetClient.emit("READY", { room: updateRoom, isLeft: !isLeft });
     if (updateRoom.left.isReady && updateRoom.right.isReady) {
