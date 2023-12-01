@@ -65,7 +65,8 @@ export class GamesSocketService {
 
   updateGameInfo(client: Socket, gameRoom: GameRoom, data): GameRoom {
     const updateRoom = gameRoom;
-    updateRoom.gameInfo.ball = data.ball;
+    updateRoom.gameInfo.ball.x = data.ball.x;
+    updateRoom.gameInfo.ball.y = data.ball.y;
     if (data.isLeft)
       updateRoom.gameInfo.left = data.bar;
     else
