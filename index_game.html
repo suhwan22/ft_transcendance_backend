@@ -88,6 +88,12 @@
       console.log(data);
       console.log("게임복구");
     });
+    socket.on('WAIT', function (data) {
+      console.log("상대 찾는 중...( 경과 시간: " + data + " )");
+    });
+    socket.on('MATCH', function (data) {
+      console.log(data);
+    });
     socket.on('END', function (data) {
       if (game)
         console.log(data.winnerUserId + " 승리")

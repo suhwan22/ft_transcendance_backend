@@ -15,6 +15,8 @@ import { UsersService } from 'src/users/users.service';
 import { GameRoom, PingPongPlayer } from './entities/game.entity';
 import { PlayerInfoDto } from './dtos/player-info.dto';
 import { GamesSocketService } from './games-socket.service';
+import { DefaultAuthentication } from 'typeorm/driver/sqlserver/authentication/DefaultAuthentication';
+import { GameQueue } from './entities/game-queue';
 
 @WebSocketGateway(3131, { namespace: '/games' })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -26,14 +28,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly usersService: UsersService,
     private readonly gamesSocketService: GamesSocketService,) {
     this.clients = new Map<number, Socket>();
-    this.queue = [];
+    this.queue = new Map<number, GameQueue[]>();
     this.gameRooms = new Map<string, GameRoom>();
   }
 
   @WebSocketServer()
   server: Server;
   clients: Map<number, Socket>;
-  queue: Socket[];
+  queue: Map<number, GameQueue[]>;
   gameRooms:  Map<string, GameRoom>;
 
   //소켓 연결시 유저목록에 추가
@@ -44,6 +46,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //소켓 연결 해제시 유저목록에서 제거
   async handleDisconnect(client: Socket): Promise<void> {
+    console.log('game disonnected', client.id);
     const key = client.data.userId;
     if (!key)
       return ;
@@ -61,14 +64,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
     }
     else {
-      const newQueue = this.queue.filter((e) => e.data.userId !== client.data.userId);
-      this.queue = newQueue;
+      /* queue cancel 필요
+       */
       this.clients.delete(key);
       this.usersService.updatePlayerStatus(key, 3);
       this.chatsGateway.sendUpdateToChannelMember(key);
       this.lobbyGateway.sendUpdateToFriends(key);
     }
-    console.log('game disonnected', client.id);
   }
   
   @SubscribeMessage('REGIST')
@@ -89,21 +91,61 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
-    if (this.queue.find((v) => v.data.userId === userId)) {
-      client.emit("WAIT", "WAIT");
+    const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).score; 
+    const ratingGroup = Math.floor(score / 100);
+    const gameQueue = new GameQueue(client, score, 0);
+
+    // enter waiting queue
+    if (this.queue.get(ratingGroup)) {
+      this.queue.get(ratingGroup).push(gameQueue);
     }
-    this.queue.push(client);
-    client.emit("WAIT", "WAIT");
-    if (this.queue.length >= 2) {
-      const client = this.queue.shift();
-      const targetClient = this.queue.shift();
-      const roomId = client.id + targetClient.id;
-      const gameRoom = await this.gamesSocketService.makeRoom(client, targetClient, roomId);
-      gameRoom.rank = true;
-      this.gameRooms.set(roomId, gameRoom);
-      this.gamesSocketService.joinRoom(client, roomId);
-      this.gamesSocketService.joinRoom(targetClient, roomId);
+    else {
+      const groupQueue = [];
+      groupQueue.push(gameQueue);
+      this.queue.set(ratingGroup, groupQueue);
     }
+
+    // find match
+    const intervalId = setInterval(() => this.findMath(gameQueue, ratingGroup, intervalId), 1000);
+  }
+
+  async findMath(gameQueue: GameQueue, ratingGroup:number, intervalId: any) {
+    if (gameQueue.matched) {
+      clearInterval(intervalId);
+      return ;
+    }
+
+    gameQueue.client.emit('WAIT', gameQueue.time);
+    const searchRange = Math.floor(gameQueue.time / 10);
+    for (let i = ratingGroup - searchRange; i <= ratingGroup + searchRange; i++) {
+      const groupQueue = this.queue.get(i);
+      if (groupQueue) {
+        if ((groupQueue.length > 0 && i !== ratingGroup) || (groupQueue.length > 1 && i === ratingGroup)) {
+          const newQueue = this.queue.get(ratingGroup).filter((v) => v.client.data.userId !== gameQueue.client.data.userId);
+          this.queue.set(ratingGroup, newQueue);
+
+          const targetQueue = this.queue.get(i).shift();
+          gameQueue.matched = true;
+          targetQueue.matched = true;
+
+          const client = gameQueue.client;
+          const targetClient = targetQueue.client;
+          client.emit('MATCH', "매치 성사");
+          targetClient.emit('MATCH', "매치 성사");
+
+          const roomId = client.id + targetClient.id;
+          const gameRoom = await this.gamesSocketService.makeRoom(client, targetClient, roomId);
+          gameRoom.rank = true;
+          this.gameRooms.set(roomId, gameRoom);
+          this.gamesSocketService.joinRoom(client, roomId);
+          this.gamesSocketService.joinRoom(targetClient, roomId);
+          console.log(this.queue);
+          clearInterval(intervalId);
+          break;
+        }
+      }
+    }
+    gameQueue.time++;
   }
 
   @SubscribeMessage('READY')
