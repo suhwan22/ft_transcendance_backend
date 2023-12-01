@@ -197,6 +197,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @SubscribeMessage('MSG')
+  async sendMessage(client: Socket, message) {
+    const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
+    targetClient.emit('MSG', message);
+  }
+
   checkTimePause(gameRoom: GameRoom, userId: number, intervalId: any) {
     let time;
     let winId;
