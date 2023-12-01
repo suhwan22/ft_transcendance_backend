@@ -301,6 +301,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gameRooms.set(gameRoom.roomId, gameRoom);
     if (time === 20) {
       clearInterval(intervalId);
+      gameRoom.start = true;
       client.emit("START", { room: gameRoom, isLeft: isLeft });
       targetClient.emit("START", { room: gameRoom, isLeft: !isLeft });
     }
