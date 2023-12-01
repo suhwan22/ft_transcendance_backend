@@ -162,18 +162,18 @@ export class GamesSocketService {
 
     //pause를 건 쪽이 left인 경우
     if (gameRoom.getUserPosition(client.data.userId)) {
-      win = gameRoom.left.player;
-      loss = gameRoom.right.player;
-      winScore = gameRoom.score.left;
-      lossScore = gameRoom.score.right;
-      winnerIsLeft = true;
-    }
-    else {
       win = gameRoom.right.player;
       loss = gameRoom.left.player;
       winScore = gameRoom.score.right;
       lossScore = gameRoom.score.left;
       winnerIsLeft = false;
+    }
+    else {
+      win = gameRoom.left.player;
+      loss = gameRoom.right.player;
+      winScore = gameRoom.score.left;
+      lossScore = gameRoom.score.right;
+      winnerIsLeft = true;
     }
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
