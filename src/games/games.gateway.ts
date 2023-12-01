@@ -113,8 +113,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('READY')
   readyGame(client: Socket, data: GameRoom) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
-    const targetId = client.data.userId === gameRoom.left.player.id ? gameRoom.right.player.id : gameRoom.left.player.id;
-    const targetClient = this.getTargetClient(gameRoom.roomId, targetId);
+    const targetClient = this.getTargetClient(gameRoom.roomId, client.data.userId);
+    console.log(targetClient.data.userId);
     const updateRoom = this.gamesSocketService.readyGame(client, targetClient, gameRoom);
     this.gameRooms.set(client.data.roomId, updateRoom);
   }
@@ -192,8 +192,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gamesSocketService.joinRoom(client, data.roomId);
     if (updateRoom.left && updateRoom.right) {
       const isLeft = updateRoom.getUserPosition(client.data.userId);
-      const targetId = isLeft === true ? gameRoom.right.player.id : gameRoom.left.player.id;
-      const targetClient = this.getTargetClient(gameRoom.roomId, targetId);
+      const targetClient = this.getTargetClient(gameRoom.roomId, client.data.userId);
       client.emit("LOAD", { room: updateRoom, isLeft: isLeft });
       targetClient.emit("LOAD", { room: updateRoom, isLeft: !isLeft });
     }
