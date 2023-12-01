@@ -238,8 +238,13 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('CANCEL')
   cancelGame(client: Socket, data) {
+    const gameRoom = this.getGameRoomWithUserId(client.data.userId);
+    if (gameRoom) {
+      return ;
+    }
     const updateQueue = this.queue.filter((v) => v.data.userId !== client.data.userId);
     this.queue = updateQueue;
+    client.emit('CANCEL', 'CANCEL');
   }
 
   getGameRoomWithUserId(userId: number): GameRoom {
