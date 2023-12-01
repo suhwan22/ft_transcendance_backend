@@ -86,6 +86,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.join(roomId);
       client.emit("RELOAD", { gameRoom: gameRoom, isLeft: isLeft });
     }
+    else {
+      client.emit("RELOAD", { gameRoom: null, isLeft: null });
+    }
   }
 
   @SubscribeMessage('MATCH')
