@@ -145,13 +145,13 @@ export class GamesSocketService {
   saveGame(client: Socket, gameRoom: GameRoom, data) {
     const updateRoom = gameRoom;
     updateRoom.gameInfo.ball = {
-      x: data.ball.x,
-      xv: data.ball.xv,
-      y: data.ball.y,
-      yv: data.ball.yv
+      x: data.x,
+      xv: data.xv,
+      y: data.y,
+      yv: data.yv
     };
-    updateRoom.gameInfo.right = data.right;
-    updateRoom.gameInfo.left = data.left;
+    // updateRoom.gameInfo.right = data.right;
+    // updateRoom.gameInfo.left = data.left;
     return (updateRoom);
   }
 
