@@ -207,15 +207,19 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let time;
     let winId;
     if (gameRoom.getUserPosition(userId)) {
-      if (!gameRoom.left.isPause)
+      if (!gameRoom.left.isPause) {
         clearInterval(intervalId);
+        return ;
+      }
       gameRoom.left.pauseTime++;
       time = gameRoom.left.pauseTime;
       winId = gameRoom.right.player.id;
     }
     else {
-      if (!gameRoom.right.isPause)
+      if (!gameRoom.right.isPause) {
         clearInterval(intervalId);
+        return ;
+      }
       gameRoom.right.pauseTime++;
       time = gameRoom.right.pauseTime;
       winId = gameRoom.left.player.id;
