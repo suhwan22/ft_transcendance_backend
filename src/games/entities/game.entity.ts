@@ -18,12 +18,14 @@ export class PingPongPlayer {
     this.isPause = false;
     this.pause = 0;
     this.pauseTime = 0;
+    this.readyTime = 0;
   }
   player: Player;
   isReady: boolean;
   isPause: boolean;
   pause: number;
   pauseTime: number;
+  readyTime: number;
 }
 
 export class GameRoom {

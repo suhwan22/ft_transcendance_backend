@@ -116,6 +116,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const targetClient = this.getTargetClient(gameRoom.roomId, client.data.userId);
     const updateRoom = this.gamesSocketService.readyGame(client, targetClient, gameRoom);
     this.gameRooms.set(client.data.roomId, updateRoom);
+    const intervalId = setInterval(() => this.checkTimeReady(client, targetClient, updateRoom, intervalId), 1000);
   }
 
   @SubscribeMessage('PING')
@@ -203,37 +204,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     targetClient.emit('MSG', message);
   }
 
-  checkTimePause(gameRoom: GameRoom, userId: number, intervalId: any) {
-    let time;
-    let winId;
-    if (gameRoom.getUserPosition(userId)) {
-      if (!gameRoom.left.isPause) {
-        clearInterval(intervalId);
-        return ;
-      }
-      gameRoom.left.pauseTime++;
-      time = gameRoom.left.pauseTime;
-      winId = gameRoom.right.player.id;
-    }
-    else {
-      if (!gameRoom.right.isPause) {
-        clearInterval(intervalId);
-        return ;
-      }
-      gameRoom.right.pauseTime++;
-      time = gameRoom.right.pauseTime;
-      winId = gameRoom.left.player.id;
-    }
-    this.gameRooms.set(gameRoom.roomId, gameRoom);
-    if (time === 20) {
-      clearInterval(intervalId);
-      this.gamesSocketService.endGameWithExtra(this.clients.get(userId), this.clients.get(winId), gameRoom);
-      this.gameRooms.delete(gameRoom.roomId);
-      this.clients.get(userId).data.roomId = null;
-      this.clients.get(winId).data.roomId = null;
-    }
-  }
-
   @SubscribeMessage('RESUME')
   sendResumeGame(client: Socket, data) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
@@ -274,6 +244,66 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return (this.clients.get(gameRoom.right.player.id));
     else
       return (this.clients.get(gameRoom.left.player.id));
+  }
+
+  checkTimePause(gameRoom: GameRoom, userId: number, intervalId: any) {
+    let time;
+    let winId;
+    if (gameRoom.getUserPosition(userId)) {
+      if (!gameRoom.left.isPause) {
+        clearInterval(intervalId);
+        return ;
+      }
+      gameRoom.left.pauseTime++;
+      time = gameRoom.left.pauseTime;
+      winId = gameRoom.right.player.id;
+    }
+    else {
+      if (!gameRoom.right.isPause) {
+        clearInterval(intervalId);
+        return ;
+      }
+      gameRoom.right.pauseTime++;
+      time = gameRoom.right.pauseTime;
+      winId = gameRoom.left.player.id;
+    }
+    this.gameRooms.set(gameRoom.roomId, gameRoom);
+    if (time === 20) {
+      clearInterval(intervalId);
+      this.gamesSocketService.endGameWithExtra(this.clients.get(userId), this.clients.get(winId), gameRoom);
+      this.gameRooms.delete(gameRoom.roomId);
+      this.clients.get(userId).data.roomId = null;
+      this.clients.get(winId).data.roomId = null;
+    }
+  }
+
+  checkTimeReady(client: Socket, targetClient: Socket, gameRoom: GameRoom, intervalId: any) {
+    let time;
+    let isLeft;
+    if (gameRoom.getUserPosition(client.data.userId)) {
+      if (!gameRoom.left.isReady) {
+        gameRoom.left.readyTime = 0;
+        clearInterval(intervalId);
+        return ;
+      }
+      time = gameRoom.left.readyTime++;
+      isLeft = true;
+    }
+    else {
+      if (!gameRoom.right.isReady) {
+        gameRoom.left.readyTime = 0;
+        clearInterval(intervalId);
+        return ;
+      }
+      time = gameRoom.right.readyTime++;
+      isLeft = false;
+    }
+    this.gameRooms.set(gameRoom.roomId, gameRoom);
+    if (time === 20) {
+      clearInterval(intervalId);
+      client.emit("START", { room: gameRoom, isLeft: isLeft });
+      targetClient.emit("START", { room: gameRoom, isLeft: !isLeft });
+    }
   }
 }
 
