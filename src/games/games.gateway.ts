@@ -84,10 +84,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const isLeft = gameRoom.getUserPosition(userId);
       client.data.roomId = roomId;
       client.join(roomId);
-      client.emit("RELOAD", { gameRoom: gameRoom, isLeft: isLeft });
+      client.emit("RELOAD", { room: gameRoom, isLeft: isLeft });
     }
     else {
-      client.emit("RELOAD", { gameRoom: null, isLeft: null });
+      client.emit("RELOAD", { room: null, isLeft: null });
     }
   }
 
@@ -194,8 +194,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const isLeft = updateRoom.getUserPosition(client.data.userId);
       const targetId = isLeft === true ? gameRoom.right.player.id : gameRoom.left.player.id;
       const targetClient = this.getTargetClient(gameRoom.roomId, targetId);
-      client.emit("LOAD", { gameRoom: updateRoom, isLeft: isLeft });
-      targetClient.emit("LOAD", { gameRoom: updateRoom, isLeft: !isLeft });
+      client.emit("LOAD", { room: updateRoom, isLeft: isLeft });
+      targetClient.emit("LOAD", { room: updateRoom, isLeft: !isLeft });
     }
   }
 

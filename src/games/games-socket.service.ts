@@ -18,8 +18,8 @@ export class GamesSocketService {
     const me = new PingPongPlayer(user, false);
     const op = new PingPongPlayer(target, false);
     const gameRoom = new GameRoom(roomId, me, op);
-    client.emit("LOAD", { gameRoom: gameRoom, isLeft: true });
-    targetClient.emit("LOAD", { gameRoom: gameRoom, isLeft: false });
+    client.emit("LOAD", { room: gameRoom, isLeft: true });
+    targetClient.emit("LOAD", { room: gameRoom, isLeft: false });
 
     return (gameRoom);
   }
@@ -51,12 +51,12 @@ export class GamesSocketService {
       updateRoom.left.isReady = !updateRoom.left.isReady;
     else
       updateRoom.right.isReady = !updateRoom.right.isReady;
-    client.emit("READY", { gameRoom: updateRoom, isLeft: isLeft });
-    targetClient.emit("READY", { gameRoom: updateRoom, isLeft: !isLeft });
+    client.emit("READY", { room: updateRoom, isLeft: isLeft });
+    targetClient.emit("READY", { room: updateRoom, isLeft: !isLeft });
     if (updateRoom.left.isReady && updateRoom.right.isReady) {
       updateRoom.start = true;
-      client.emit("START", { gameRoom: updateRoom, isLeft: isLeft });
-      targetClient.emit("START", { gameRoom: updateRoom, isLeft: !isLeft });
+      client.emit("START", { room: updateRoom, isLeft: isLeft });
+      targetClient.emit("START", { room: updateRoom, isLeft: !isLeft });
     }
     return (updateRoom);
   }
