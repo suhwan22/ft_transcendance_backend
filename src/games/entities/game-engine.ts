@@ -12,8 +12,10 @@ export class Panel {
       this.x = width - 16 - 40;
     this.y = height / 2 - 70;
     this.width = 16;
-    this.height = 140 * size;
+    this.height = 140 * size/5;
     this.update(this.y);
+    this.left = this.x;
+    this.right = this.x + this.width;
   }
   x: number;
   y: number;
@@ -26,6 +28,7 @@ export class Panel {
   right: number;
 
   update(y: number) {
+    this.y = y;
     this.top = this.y;
     this.bottom = this.y + this.height;
   }
@@ -35,8 +38,8 @@ export class Ball {
   constructor(width: number, height: number, size: number, speed: number) {
     this.x = width / 2;
     this.y = height / 2;
-    this.radius = 10 * size;
-    this.speed = 20 * speed;
+    this.radius = 10 * size/5;
+    this.speed = 1 * speed;
     this.vX = 10 * speed;
     this.vY = 10 * speed;
     this.turn = 1;
@@ -71,10 +74,15 @@ export class Ball {
   }
 
   isHitBy(panel: Panel) : boolean {
-    return (this.right > panel.left
+    console.log(panel);
+    console.log(this.right > panel.left
       && this.left < panel.right
       && this.top < panel.bottom
       && this.bottom > panel.top)
+    return this.right > panel.left
+      && this.left < panel.right
+      && this.top < panel.bottom
+      && this.bottom > panel.top
   }
 
   isOut(width: number) {
@@ -85,7 +93,7 @@ export class Ball {
 		this.x = width / 2;
 		this.y = height / 2;
 		this.turn *= -1;
-		this.vX = 20 * speed * this.turn;
+		this.vX = 1 * speed * this.turn;
 		this.vY = 0;
   }
 }
@@ -128,6 +136,7 @@ export class GameEngine {
     if (this.ball.isHitByWall(this.height))
       this.ball.vY *= -1;
     else if (this.ball.isHitBy(panel)) {
+      console.log("collision");
       const fPoint = this.ball.y - (panel.y + panel.height / 2);
       const angle = (fPoint / panel.height / 2) * Math.PI / 1.5;
 
@@ -154,13 +163,17 @@ export class GameEngine {
       this.leftSocket.emit("SCORE", { left: this.room.score.left, right: this.room.score.right });
       this.rightSocket.emit("SCORE", { left: this.room.score.left, right: this.room.score.right });
 
-      if (this.room.score.left >= 11 || this.room.score.right >= 11) {
-        cancelAnimationFrame(this.rafId);
-      }
+      // if (this.room.score.left >= 11 || this.room.score.right >= 11) {
+      //   cancelAnimationFrame(this.rafId);
+      // }
       // setTimeOut 으로 3초 지연 시키기
       // ...
       this.ball.initBall(this.width, this.height, this.room.option.speed);
     }
+    this.room.gameInfo.ball.x = this.ball.x;
+    this.room.gameInfo.ball.xv = this.ball.vX;
+    this.room.gameInfo.ball.y = this.ball.y;
+    this.room.gameInfo.ball.yv = this.ball.vY;
   }
 
   update() {
@@ -172,16 +185,19 @@ export class GameEngine {
   }
 
   gameLoop() {
+
     // 볼 업데이트
     this.update();
 
     // game info 전송
+
     this.leftSocket.emit('PONG', this.room.gameInfo);
     this.rightSocket.emit('PONG', this.room.gameInfo);
-    this.rafId = requestAnimationFrame(this.gameLoop);
   }
 
   start() {
-    this.rafId = requestAnimationFrame(this.gameLoop);
+    console.log("a");
+    setInterval(() => this.gameLoop(), 10);
+
   }
 }
