@@ -68,6 +68,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.queue.get(client.data.ratingGroup).remove((v) => v.client.data.userId === client.data.userId);
         clearInterval(client.data.intervalId);
         client.data.intervalId = null;
+        client.emit('CANCEL', 'CANCEL');
       }
       this.clients.delete(key);
       this.usersService.updatePlayerStatus(key, 3);
