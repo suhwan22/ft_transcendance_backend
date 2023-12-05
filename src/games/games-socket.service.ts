@@ -57,6 +57,7 @@ export class GamesSocketService {
     targetClient.emit("READY", { room: updateRoom, isLeft: !isLeft });
     if (updateRoom.left.isReady && updateRoom.right.isReady) {
       updateRoom.start = true;
+
       client.emit("START", { room: updateRoom, isLeft: isLeft });
       targetClient.emit("START", { room: updateRoom, isLeft: !isLeft });
     }
@@ -71,7 +72,6 @@ export class GamesSocketService {
       updateRoom.gameInfo.left = data.bar;
     else
       updateRoom.gameInfo.right = data.bar;
-    client.to(client.data.roomId).emit("PONG", updateRoom.gameInfo);
     return (updateRoom);
   }
 

@@ -177,6 +177,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.updateGameInfo(client, gameRoom, data);
     this.gameRooms.set(client.data.roomId, updateRoom);
+    console.log("a");
   }
 
   @SubscribeMessage('HIT')
