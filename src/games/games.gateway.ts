@@ -268,6 +268,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       winId = gameRoom.left.player.id;
     }
     this.gameRooms.set(gameRoom.roomId, gameRoom);
+    const msg = `remaining pause time: ${10 - time}s`;
+    this.clients.get(userId).emit('ANNOUNCE', msg);
+    this.clients.get(winId).emit('ANNOUNCE', msg);
     if (time === 20) {
       clearInterval(intervalId);
       this.gamesSocketService.endGameWithExtra(this.clients.get(userId), this.clients.get(winId), gameRoom);
@@ -299,7 +302,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       isLeft = false;
     }
     this.gameRooms.set(gameRoom.roomId, gameRoom);
-    if (time === 20) {
+    const msg = `game will be started in ${10 - time}s`;
+    client.emit('ANNOUNCE', msg);
+    targetClient.emit('ANNOUNCE', msg);
+    if (time === 10) {
       clearInterval(intervalId);
       gameRoom.start = true;
       client.emit("START", { room: gameRoom, isLeft: isLeft });
