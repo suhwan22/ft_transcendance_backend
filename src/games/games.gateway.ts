@@ -129,6 +129,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const groupQueue = this.queue.get(i);
       if (groupQueue) {
         if ((groupQueue.size > 0 && i !== ratingGroup) || (groupQueue.size > 1 && i === ratingGroup)) {
+          this.queue.get(gameQueue.client.data.ratingGroup).remove((v) => v.client.data.userId === gameQueue.client.data.userId);
           const targetQueue = this.queue.get(i).dequeue();
           gameQueue.matched = true;
           targetQueue.matched = true;
