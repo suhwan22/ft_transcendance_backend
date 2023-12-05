@@ -148,24 +148,28 @@ export class GameEngine {
     else if (this.ball.isOut(this.width)) {
       let winClient;
       let lossClient;
+      let winnerIsLeft = true;
       if (this.ball.x > this.width) {
         this.room.score.left++;
         winClient = this.leftSocket;
         lossClient = this.rightSocket;
+        winnerIsLeft = true;
       }
       else if (this.ball.x < 0) {
         this.room.score.right++;
         winClient = this.rightSocket;
         lossClient = this.leftSocket;
-        
+        winnerIsLeft = false;
       }
 
       this.leftSocket.emit("SCORE", { left: this.room.score.left, right: this.room.score.right });
       this.rightSocket.emit("SCORE", { left: this.room.score.left, right: this.room.score.right });
 
-      // if (this.room.score.left >= 11 || this.room.score.right >= 11) {
-      //   cancelAnimationFrame(this.rafId);
-      // }
+      if (this.room.score.left >= 11 || this.room.score.right >= 11) {
+        clearInterval(this.rafId);
+        winClient.emit("END", { score: this.room.score, winnerIsLeft: winnerIsLeft });
+        lossClient.emit("END", { score: this.room.score, winnerIsLeft: winnerIsLeft });
+      }
       // setTimeOut 으로 3초 지연 시키기
       // ...
       this.ball.initBall(this.width, this.height, this.room.option.speed);
@@ -196,7 +200,6 @@ export class GameEngine {
   }
 
   start() {
-    console.log("a");
     setInterval(() => this.gameLoop(), 10);
 
   }
