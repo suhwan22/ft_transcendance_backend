@@ -108,8 +108,9 @@ export class AuthService {
         status: 3
       };
       user = await this.usersService.createPlayer(newPlayer);
-      this.usersService.createUserAuth(user.id);
-      this.usersService.createUserSocket(user.id);
+      await this.usersService.createUserAuth(user.id);
+      await this.usersService.createUserSocket(user.id);
+      await this.usersService.createUserGameRecord({ user: user.id, win: 0, loss: 0, score: 1500 });
     }
     return (user);
   }
@@ -118,7 +119,7 @@ export class AuthService {
     const secret = authenticator.generateSecret();
     const optAuthUrl = authenticator.keyuri(payload.userName, "otpauth://", secret);
     
-    this.usersService.updateTwoFactorAuthSecret(secret, payload.userId);
+    await this.usersService.updateTwoFactorAuthSecret(secret, payload.userId);
 
     return ({ secret, optAuthUrl });
   }

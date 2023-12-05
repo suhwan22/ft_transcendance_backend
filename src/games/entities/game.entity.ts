@@ -2,7 +2,7 @@ import { Player } from "src/users/entities/player.entity";
 
 export class GameInfo {
   constructor() {
-      this.ball = { x: 400, xv: 0, y: 350, yv: 0 };
+      this.ball = { x: 400, xv: 10, y: 350, yv: 10 };
       this.right = 280;
       this.left = 280;
   }
@@ -18,12 +18,14 @@ export class PingPongPlayer {
     this.isPause = false;
     this.pause = 0;
     this.pauseTime = 0;
+    this.readyTime = 0;
   }
   player: Player;
   isReady: boolean;
   isPause: boolean;
   pause: number;
   pauseTime: number;
+  readyTime: number;
 }
 
 export class GameRoom {
@@ -32,7 +34,7 @@ export class GameRoom {
     this.left = left;
     this.right = right;
     this.score = { left: 0, right: 0 };
-    this.option = { speed: 3, ballSize: 1, barSize: 10 };
+    this.option = { speed: 5, ballSize: 5, barSize: 5 };
     this.gameInfo = new GameInfo();
     this.stop = false;
     this.start = false;

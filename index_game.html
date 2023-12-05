@@ -9,6 +9,7 @@
     userId: <input id="user" type="text" />
     <button onclick="regist()">regist socket</button>
     <button onclick="match()">Match Making</button>
+    <button onclick="cancel()">Match Cancel</button>
   </div>
   <div>
     RoomId: <input id="room" type="text" />
@@ -163,6 +164,9 @@
       if (!game)
         return;
       socket.emit('RESUME', {});
+    }
+    function cancel() {
+      socket.emit('CANCEL', {});
     }
   </script>
 </body>

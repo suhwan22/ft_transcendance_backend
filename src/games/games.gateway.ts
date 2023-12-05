@@ -12,11 +12,9 @@ import { Server, Socket } from 'socket.io';
 import { ChatsGateway } from 'src/chats/chats.gateway';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { UsersService } from 'src/users/users.service';
-import { GameRoom, PingPongPlayer } from './entities/game.entity';
-import { PlayerInfoDto } from './dtos/player-info.dto';
+import { GameRoom } from './entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
-import { DefaultAuthentication } from 'typeorm/driver/sqlserver/authentication/DefaultAuthentication';
-import { GameQueue } from './entities/game-queue';
+import { Queue, GameQueue } from './entities/game-queue';
 
 @WebSocketGateway(3131, { namespace: '/games' })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -28,14 +26,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly usersService: UsersService,
     private readonly gamesSocketService: GamesSocketService,) {
     this.clients = new Map<number, Socket>();
-    this.queue = new Map<number, GameQueue[]>();
+    this.queue = new Map<number, Queue<GameQueue>>();
     this.gameRooms = new Map<string, GameRoom>();
   }
 
   @WebSocketServer()
   server: Server;
   clients: Map<number, Socket>;
-  queue: Map<number, GameQueue[]>;
+  queue: Map<number, Queue<GameQueue>>;
   gameRooms:  Map<string, GameRoom>;
 
   //소켓 연결시 유저목록에 추가
@@ -61,11 +59,16 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         client.data.roomId = null;
         targetClient.data.roomId = null;
       }
-      const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
+      else {
+        const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
+      }
     }
     else {
-      /* queue cancel 필요
-       */
+      if (client.data.intervalId) {
+        this.queue.get(client.data.ratingGroup).remove((v) => v.client.data.userId === client.data.userId);
+        clearInterval(client.data.intervalId);
+        client.data.intervalId = null;
+      }
       this.clients.delete(key);
       this.usersService.updatePlayerStatus(key, 3);
       this.chatsGateway.sendUpdateToChannelMember(key);
@@ -83,30 +86,37 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const gameRoom = this.getGameRoomWithUserId(userId);
     if (gameRoom) {
       const roomId = gameRoom.roomId;
+      const isLeft = gameRoom.getUserPosition(userId);
       client.data.roomId = roomId;
       client.join(roomId);
-      client.emit("RELOAD", gameRoom);
+      client.emit("RELOAD", { room: gameRoom, isLeft: isLeft });
+    }
+    else {
+      client.emit("RELOAD", { room: null, isLeft: null });
     }
   }
 
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
-    const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).score; 
+    const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).score;
     const ratingGroup = Math.floor(score / 100);
     const gameQueue = new GameQueue(client, score, 0);
+    client.data.ratingGroup = ratingGroup;
 
     // enter waiting queue
     if (this.queue.get(ratingGroup)) {
-      this.queue.get(ratingGroup).push(gameQueue);
+      this.queue.get(ratingGroup).enqueue(gameQueue);
     }
     else {
-      const groupQueue = [];
-      groupQueue.push(gameQueue);
+      const groupQueue = new Queue<GameQueue>();
+      groupQueue.enqueue(gameQueue);
       this.queue.set(ratingGroup, groupQueue);
     }
 
     // find match
+    gameQueue.client.emit('WAIT', 'WAIT');
     const intervalId = setInterval(() => this.findMath(gameQueue, ratingGroup, intervalId), 1000);
+    client.data.intervalId = intervalId;
   }
 
   async findMath(gameQueue: GameQueue, ratingGroup:number, intervalId: any) {
@@ -114,22 +124,20 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       clearInterval(intervalId);
       return ;
     }
-
-    gameQueue.client.emit('WAIT', gameQueue.time);
     const searchRange = Math.floor(gameQueue.time / 10);
     for (let i = ratingGroup - searchRange; i <= ratingGroup + searchRange; i++) {
       const groupQueue = this.queue.get(i);
       if (groupQueue) {
-        if ((groupQueue.length > 0 && i !== ratingGroup) || (groupQueue.length > 1 && i === ratingGroup)) {
-          const newQueue = this.queue.get(ratingGroup).filter((v) => v.client.data.userId !== gameQueue.client.data.userId);
-          this.queue.set(ratingGroup, newQueue);
-
-          const targetQueue = this.queue.get(i).shift();
+        if ((groupQueue.size > 0 && i !== ratingGroup) || (groupQueue.size > 1 && i === ratingGroup)) {
+          const targetQueue = this.queue.get(i).dequeue();
           gameQueue.matched = true;
           targetQueue.matched = true;
+          gameQueue.client.data.intervalId = null;
+          targetQueue.client.data.intervalId = null;
 
           const client = gameQueue.client;
           const targetClient = targetQueue.client;
+
           client.emit('MATCH', "매치 성사");
           targetClient.emit('MATCH', "매치 성사");
 
@@ -139,7 +147,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.gameRooms.set(roomId, gameRoom);
           this.gamesSocketService.joinRoom(client, roomId);
           this.gamesSocketService.joinRoom(targetClient, roomId);
-          console.log(this.queue);
           clearInterval(intervalId);
           break;
         }
@@ -151,19 +158,21 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('READY')
   readyGame(client: Socket, data: GameRoom) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
-    const updateRoom = this.gamesSocketService.readyGame(client, gameRoom);
+    const targetClient = this.getTargetClient(gameRoom.roomId, client.data.userId);
+    const updateRoom = this.gamesSocketService.readyGame(client, targetClient, gameRoom);
     this.gameRooms.set(client.data.roomId, updateRoom);
+    const intervalId = setInterval(() => this.checkTimeReady(client, targetClient, updateRoom, intervalId), 1000);
   }
 
   @SubscribeMessage('PING')
-  ping(client: Socket, data) {
+  ping(client: Socket, data: any) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.updateGameInfo(client, gameRoom, data);
     this.gameRooms.set(client.data.roomId, updateRoom);
   }
 
   @SubscribeMessage('HIT')
-  sendBallVector(client: Socket, data) {
+  sendBallVector(client: Socket, data: any) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.saveGame(client, gameRoom, data);
     this.gameRooms.set(updateRoom.roomId, updateRoom);
@@ -171,7 +180,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('SCORE')
-  sendScore(client: Socket, data) {
+  sendScore(client: Socket, data: any) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.updateGameScore(client, gameRoom, data);
     this.gameRooms.set(data.roomId, updateRoom);
@@ -192,14 +201,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('OPTION')
-  sendOption(client: Socket, data) {
+  sendOption(client: Socket, data: any) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.updateGameOption(client, gameRoom, data);
     this.gameRooms.set(updateRoom.roomId, updateRoom);
   }
 
   @SubscribeMessage('PAUSE')
-  sendPauseGame(client: Socket, data) {
+  sendPauseGame(client: Socket, data: any) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
     const {updateRoom, flag} = this.gamesSocketService.pauseGame(client, targetClient, gameRoom, client.data.userId);
@@ -213,7 +222,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @SubscribeMessage('JOIN')
-  async join(client: Socket, data) {
+  async join(client: Socket, data: any) {
     let gameRoom;
 
     gameRoom = this.gameRooms.get(data.roomId);
@@ -227,45 +236,43 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     this.gamesSocketService.joinRoom(client, data.roomId);
     if (updateRoom.left && updateRoom.right) {
-      client.to(client.data.roomId).emit("LOAD", updateRoom);
+      const isLeft = updateRoom.getUserPosition(client.data.userId);
+      const targetClient = this.getTargetClient(gameRoom.roomId, client.data.userId);
+      client.emit("LOAD", { room: updateRoom, isLeft: isLeft });
+      targetClient.emit("LOAD", { room: updateRoom, isLeft: !isLeft });
     }
   }
 
-  checkTimePause(gameRoom: GameRoom, userId: number, intervalId: any) {
-    let time;
-    let winId;
-    if (gameRoom.getUserPosition(userId)) {
-      gameRoom.left.pauseTime++;
-      time = gameRoom.left.pauseTime;
-      winId = gameRoom.right.player.id;
-    }
-    else {
-      gameRoom.right.pauseTime++;
-      time = gameRoom.right.pauseTime;
-      winId = gameRoom.left.player.id;
-    }
-    this.gameRooms.set(gameRoom.roomId, gameRoom);
-    if (time === 20) {
-      clearInterval(intervalId);
-      this.gamesSocketService.endGameWithExtra(this.clients.get(userId), this.clients.get(winId), gameRoom);
-      this.gameRooms.delete(gameRoom.roomId);
-      this.clients.get(userId).data.roomId = null;
-      this.clients.get(winId).data.roomId = null;
-    }
+  @SubscribeMessage('MSG')
+  async sendMessage(client: Socket, data: any) {
+    const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
+    targetClient.emit('MSG', data);
   }
 
   @SubscribeMessage('RESUME')
-  sendResumeGame(client: Socket, data) {
+  sendResumeGame(client: Socket, data: any) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.resumeGame(client, gameRoom);
     this.gameRooms.set(updateRoom.roomId, updateRoom);
   }
 
   @SubscribeMessage('SAVE')
-  saveGame(client: Socket, data) {
+  saveGame(client: Socket, data: any) {
     const gameRoom = this.gameRooms.get(client.data.roomId);
     const updateRoom = this.gamesSocketService.saveGame(client, gameRoom, data);
     this.gameRooms.set(updateRoom.roomId, updateRoom);
+  }
+
+  @SubscribeMessage('CANCEL')
+  cancelGame(client: Socket, data: any) {
+    const gameRoom = this.getGameRoomWithUserId(client.data.userId);
+    if (gameRoom) {
+      return ;
+    }
+    this.queue.get(client.data.ratingGroup).remove((v) => v.client.data.userId === client.data.userId);
+    clearInterval(client.data.intervalId);
+    client.data.intervalId = null;
+    client.emit('CANCEL', 'CANCEL');
   }
 
   getGameRoomWithUserId(userId: number): GameRoom {
@@ -283,6 +290,67 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       return (this.clients.get(gameRoom.right.player.id));
     else
       return (this.clients.get(gameRoom.left.player.id));
+  }
+
+  checkTimePause(gameRoom: GameRoom, userId: number, intervalId: any) {
+    let time;
+    let winId;
+    if (gameRoom.getUserPosition(userId)) {
+      if (!gameRoom.left.isPause) {
+        clearInterval(intervalId);
+        return ;
+      }
+      gameRoom.left.pauseTime++;
+      time = gameRoom.left.pauseTime;
+      winId = gameRoom.right.player.id;
+    }
+    else {
+      if (!gameRoom.right.isPause) {
+        clearInterval(intervalId);
+        return ;
+      }
+      gameRoom.right.pauseTime++;
+      time = gameRoom.right.pauseTime;
+      winId = gameRoom.left.player.id;
+    }
+    this.gameRooms.set(gameRoom.roomId, gameRoom);
+    if (time === 20) {
+      clearInterval(intervalId);
+      this.gamesSocketService.endGameWithExtra(this.clients.get(userId), this.clients.get(winId), gameRoom);
+      this.gameRooms.delete(gameRoom.roomId);
+      this.clients.get(userId).data.roomId = null;
+      this.clients.get(winId).data.roomId = null;
+    }
+  }
+
+  checkTimeReady(client: Socket, targetClient: Socket, gameRoom: GameRoom, intervalId: any) {
+    let time;
+    let isLeft;
+    if (gameRoom.getUserPosition(client.data.userId)) {
+      if (!gameRoom.left.isReady) {
+        gameRoom.left.readyTime = 0;
+        clearInterval(intervalId);
+        return ;
+      }
+      time = gameRoom.left.readyTime++;
+      isLeft = true;
+    }
+    else {
+      if (!gameRoom.right.isReady) {
+        gameRoom.left.readyTime = 0;
+        clearInterval(intervalId);
+        return ;
+      }
+      time = gameRoom.right.readyTime++;
+      isLeft = false;
+    }
+    this.gameRooms.set(gameRoom.roomId, gameRoom);
+    if (time === 20) {
+      clearInterval(intervalId);
+      gameRoom.start = true;
+      client.emit("START", { room: gameRoom, isLeft: isLeft });
+      targetClient.emit("START", { room: gameRoom, isLeft: !isLeft });
+    }
   }
 }
 
