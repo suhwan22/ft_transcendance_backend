@@ -15,6 +15,7 @@ import { UsersService } from 'src/users/users.service';
 import { GameRoom } from './entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
 import { Queue, GameQueue } from './entities/game-queue';
+import { GameEngine } from './entities/game-engine';
 
 @WebSocketGateway(3131, { namespace: '/games' })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -163,6 +164,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const targetClient = this.getTargetClient(gameRoom.roomId, client.data.userId);
     const updateRoom = this.gamesSocketService.readyGame(client, targetClient, gameRoom);
     this.gameRooms.set(client.data.roomId, updateRoom);
+    if (updateRoom.start) {
+      const gameEngine = new GameEngine(client, targetClient, updateRoom);
+      gameEngine.start();
+      console.log("game start");
+    }
     const intervalId = setInterval(() => this.checkTimeReady(client, targetClient, updateRoom, intervalId), 1000);
   }
 
