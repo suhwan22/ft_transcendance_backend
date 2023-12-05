@@ -46,25 +46,31 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //소켓 연결 해제시 유저목록에서 제거
   async handleDisconnect(client: Socket): Promise<void> {
-    const { roomId } = client.data;
-    // if (
-    //   roomId != 'room:lobby' &&
-    //   !this.server.sockets.adapter.rooms.get(roomId)
-    // ) {
-    //   this.chatsSocketService.deleteChatRoom(roomId);
-    //   this.server.emit(
-    //     'getChatRoomList',
-    //     this.chatsSocketService.getChatRoomList(),
-    //   );
-    // }
-    const key = client.data.userId;
-    if (!key)
-      return ;
-    this.clients.delete(key);
-    this.usersService.updatePlayerStatus(key, 3);
-    this.sendUpdateToChannelMember(key);
-    this.lobbyGateway.sendUpdateToFriends(key);
-    console.log('chat disonnected', client.id);
+    try {
+      const { roomId } = client.data;
+      // if (
+      //   roomId != 'room:lobby' &&
+      //   !this.server.sockets.adapter.rooms.get(roomId)
+      // ) {
+      //   this.chatsSocketService.deleteChatRoom(roomId);
+      //   this.server.emit(
+      //     'getChatRoomList',
+      //     this.chatsSocketService.getChatRoomList(),
+      //   );
+      // }
+      const key = client.data.userId;
+      if (!key)
+        return ;
+      this.clients.delete(key);
+      this.usersService.updatePlayerStatus(key, 3);
+      this.sendUpdateToChannelMember(key);
+      this.lobbyGateway.sendUpdateToFriends(key);
+      console.log('chat disonnected', client.id);
+
+    }
+    catch(e) {
+      console.log(e.stack);
+    }
   }
 
   getClientWithStatus(target: Player): Socket {
@@ -232,21 +238,36 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
-    this.clients.set(userId, client);
-    client.data.userId = userId;
-    this.usersService.updatePlayerStatus(userId, 1);
-    this.sendUpdateToChannelMember(userId);
-    this.lobbyGateway.sendUpdateToFriends(userId);
+    try {
+      this.clients.set(userId, client);
+      client.data.userId = userId;
+      this.usersService.updatePlayerStatus(userId, 1);
+      this.sendUpdateToChannelMember(userId);
+      this.lobbyGateway.sendUpdateToFriends(userId);
+    }
+    catch(e) {
+      console.log(e.stack);
+    }
   }
 
   @SubscribeMessage('INFO_CH_LIST')
   async sendChannelList(client: Socket, userId: number) {
-    this.chatsSocketService.sendChannelList(client, userId);
+    try {
+      this.chatsSocketService.sendChannelList(client, userId);
+    }
+    catch(e) {
+      console.log(e.stack);
+    }
   }
 
   @SubscribeMessage('INFO_CH_MEMBER')
   async sendChannelMember(client: Socket, channelId: number) {
-    this.chatsSocketService.sendChannelMember(client,channelId);
+    try {
+      this.chatsSocketService.sendChannelMember(client,channelId);
+    }
+    catch(e) {
+      console.log(e.stack);
+    }
   }
 
   @SubscribeMessage('MSG')
