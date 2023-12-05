@@ -63,7 +63,7 @@ export class GamesSocketService {
     return (updateRoom);
   }
 
-  updateGameInfo(client: Socket, gameRoom: GameRoom, data): GameRoom {
+  updateGameInfo(client: Socket, gameRoom: GameRoom, data: any): GameRoom {
     const updateRoom = gameRoom;
     updateRoom.gameInfo.ball.x = data.ball.x;
     updateRoom.gameInfo.ball.y = data.ball.y;
@@ -75,14 +75,14 @@ export class GamesSocketService {
     return (updateRoom);
   }
 
-  updateGameOption(client: Socket, gameRoom: GameRoom, data): GameRoom {
+  updateGameOption(client: Socket, gameRoom: GameRoom, data: any): GameRoom {
     const updateRoom = gameRoom;
     updateRoom.option = data;
     client.to(client.data.roomId).emit("OPTION", updateRoom.option);
     return (updateRoom);
   }
 
-  updateGameScore(client: Socket, gameRoom: GameRoom, data): GameRoom {
+  updateGameScore(client: Socket, gameRoom: GameRoom, data: any): GameRoom {
     const updateRoom = gameRoom;
     if (data.isLeft)
       updateRoom.score.left++;
@@ -142,7 +142,7 @@ export class GamesSocketService {
     return (updateRoom);
   }
 
-  saveGame(client: Socket, gameRoom: GameRoom, data) {
+  saveGame(client: Socket, gameRoom: GameRoom, data: any) {
     const updateRoom = gameRoom;
     updateRoom.gameInfo.ball = {
       x: data.x,

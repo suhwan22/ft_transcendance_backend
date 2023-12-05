@@ -115,7 +115,7 @@ export class UsersService {
 
   /* [C] UserGameRecord 생성 */
   async createUserGameRecord(record: Partial<UserGameRecordRequestDto>): Promise<UserGameRecord> {
-    const user = await this.readOnePlayer(record.user);
+    const user = await this.readOnePurePlayer(record.user);
     const temp = {
       user: user,
       win: record.win,
