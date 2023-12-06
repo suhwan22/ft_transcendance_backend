@@ -52,17 +52,25 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     
     // 해당 user가 gameRoom 안에 있는 경우
     if (client.data.roomId) {
-      const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
-      const { updateRoom, flag } = this.gamesSocketService.pauseGame(client, targetClient, this.gameRooms.get(client.data.roomId), key);
-      this.gameRooms.set(updateRoom.roomId, updateRoom);
-      if (flag) {
+      const gameRoom = this.gameRooms.get(client.data.roomId);
+      if (gameRoom.start === false) {
+        const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
+        targetClient.emit("DODGE", "DODGE");
         this.gameRooms.delete(client.data.roomId);
         client.data.roomId = null;
         targetClient.data.roomId = null;
       }
-      else {
-        const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
-      }
+      // const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
+      // const { updateRoom, flag } = this.gamesSocketService.pauseGame(client, targetClient, this.gameRooms.get(client.data.roomId), key);
+      // this.gameRooms.set(updateRoom.roomId, updateRoom);
+      // if (flag) {
+      //   this.gameRooms.delete(client.data.roomId);
+      //   client.data.roomId = null;
+      //   targetClient.data.roomId = null;
+      // }
+      // else {
+      //   const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
+      // }
     }
     else {
       if (client.data.intervalId) {
@@ -338,6 +346,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   checkTimeReady(client: Socket, targetClient: Socket, gameRoom: GameRoom, intervalId: any) {
     let time;
     let isLeft;
+    if (gameRoom.start) {
+      clearInterval(intervalId);
+      return ;
+    }
     if (gameRoom.getUserPosition(client.data.userId)) {
       if (!gameRoom.left.isReady) {
         gameRoom.left.readyTime = 0;
@@ -349,7 +361,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     else {
       if (!gameRoom.right.isReady) {
-        gameRoom.left.readyTime = 0;
+        gameRoom.right.readyTime = 0;
         clearInterval(intervalId);
         return ;
       }
@@ -360,6 +372,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const msg = `game will be started in ${10 - time}s`;
     client.emit('ANNOUNCE', msg);
     targetClient.emit('ANNOUNCE', msg);
+
     if (time === 10) {
       clearInterval(intervalId);
       gameRoom.start = true;
