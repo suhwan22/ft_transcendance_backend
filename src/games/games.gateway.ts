@@ -389,6 +389,12 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       gameRoom.start = true;
       client.emit("START", { room: gameRoom, isLeft: isLeft });
       targetClient.emit("START", { room: gameRoom, isLeft: !isLeft });
+
+      if (gameRoom.start) {
+        const gameEngine = new GameEngine(client, targetClient, gameRoom);
+        const id = setInterval(() => this.gameStart(gameEngine, id), 10);
+        console.log("game start");
+      }
     }
   }
 
