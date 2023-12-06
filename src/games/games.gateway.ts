@@ -59,6 +59,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.gameRooms.delete(client.data.roomId);
         client.data.roomId = null;
         targetClient.data.roomId = null;
+        gameRoom.left.isReady = false;
+        gameRoom.right.isReady = false;
       }
       // const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
       // const { updateRoom, flag } = this.gamesSocketService.pauseGame(client, targetClient, this.gameRooms.get(client.data.roomId), key);
