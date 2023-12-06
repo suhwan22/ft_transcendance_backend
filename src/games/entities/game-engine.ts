@@ -74,15 +74,10 @@ export class Ball {
   }
 
   isHitBy(panel: Panel) : boolean {
-    console.log(panel);
-    console.log(this.right > panel.left
+    return (this.right > panel.left
       && this.left < panel.right
       && this.top < panel.bottom
-      && this.bottom > panel.top)
-    return this.right > panel.left
-      && this.left < panel.right
-      && this.top < panel.bottom
-      && this.bottom > panel.top
+      && this.bottom > panel.top);
   }
 
   isOut(width: number) {
@@ -111,22 +106,24 @@ export class GameEngine {
     this.leftPanel = new Panel(true, 800, 700, room.option.barSize);
     this.rightPanel = new Panel(false, 800, 700, room.option.barSize);
     this.ball = new Ball(this.width, this.height, room.option.ballSize, room.option.speed);
+    this.reset = false;
   }
   gameSocketsService: GamesSocketService;
 
-  leftSocket: Socket
-  rightSocket: Socket
+  leftSocket: Socket;
+  rightSocket: Socket;
 
-  leftPanel: Panel
-  rightPanel: Panel
-  ball: Ball
+  leftPanel: Panel;
+  rightPanel: Panel;
+  ball: Ball;
 
-  width: number
-  height: number
+  width: number;
+  height: number;
 
-  room: GameRoom
+  room: GameRoom;
 
-  rafId: any
+  rafId: any;
+  reset: boolean;
 
 
   updateBall() {
@@ -136,7 +133,6 @@ export class GameEngine {
     if (this.ball.isHitByWall(this.height))
       this.ball.vY *= -1;
     else if (this.ball.isHitBy(panel)) {
-      console.log("collision");
       const fPoint = this.ball.y - (panel.y + panel.height / 2);
       const angle = (fPoint / panel.height / 2) * Math.PI / 1.5;
 
@@ -146,32 +142,18 @@ export class GameEngine {
       this.ball.vY = this.ball.speed * Math.sin(angle);
     }
     else if (this.ball.isOut(this.width)) {
-      let winClient;
-      let lossClient;
-      let winnerIsLeft = true;
       if (this.ball.x > this.width) {
         this.room.score.left++;
-        winClient = this.leftSocket;
-        lossClient = this.rightSocket;
-        winnerIsLeft = true;
       }
       else if (this.ball.x < 0) {
         this.room.score.right++;
-        winClient = this.rightSocket;
-        lossClient = this.leftSocket;
-        winnerIsLeft = false;
       }
-
       this.leftSocket.emit("SCORE", { left: this.room.score.left, right: this.room.score.right });
       this.rightSocket.emit("SCORE", { left: this.room.score.left, right: this.room.score.right });
-
-      if (this.room.score.left >= 11 || this.room.score.right >= 11) {
-        clearInterval(this.rafId);
-        winClient.emit("END", { score: this.room.score, winnerIsLeft: winnerIsLeft });
-        lossClient.emit("END", { score: this.room.score, winnerIsLeft: winnerIsLeft });
+      this.reset = true;
+      if (this.reset) {
+        setTimeout(() => this.reset = false, 2000);
       }
-      // setTimeOut 으로 3초 지연 시키기
-      // ...
       this.ball.initBall(this.width, this.height, this.room.option.speed);
     }
     this.room.gameInfo.ball.x = this.ball.x;
@@ -184,23 +166,27 @@ export class GameEngine {
     this.updateBall();
     this.leftPanel.update(this.room.gameInfo.left);
     this.rightPanel.update(this.room.gameInfo.right);
-    if (this.leftSocket.data.roomId === null)
-      console.log("test");
   }
 
   gameLoop() {
-
-    // 볼 업데이트
-    this.update();
-
-    // game info 전송
-
-    this.leftSocket.emit('PONG', this.room.gameInfo);
-    this.rightSocket.emit('PONG', this.room.gameInfo);
+    if (!this.room.stop) {
+      // 볼 업데이트
+      if (!this.reset)
+        this.update();
+  
+      // game info 전송
+      this.leftSocket.emit('PONG', this.room.gameInfo);
+      this.rightSocket.emit('PONG', this.room.gameInfo);
+    }
   }
 
   start() {
-    setInterval(() => this.gameLoop(), 10);
+    this.rafId = setInterval(() => this.gameLoop(), 10);
+  }
 
+  checkGameOver(): boolean {
+    if (this.room.score.left >= 11 || this.room.score.right >= 11) 
+      return (true);
+    return (false);
   }
 }

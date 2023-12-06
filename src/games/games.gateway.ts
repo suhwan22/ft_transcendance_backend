@@ -166,7 +166,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gameRooms.set(client.data.roomId, updateRoom);
     if (updateRoom.start) {
       const gameEngine = new GameEngine(client, targetClient, updateRoom);
-      gameEngine.start();
+      const id = setInterval(() => this.gameStart(gameEngine, id), 10);
       console.log("game start");
     }
     const intervalId = setInterval(() => this.checkTimeReady(client, targetClient, updateRoom, intervalId), 1000);
@@ -365,6 +365,22 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       gameRoom.start = true;
       client.emit("START", { room: gameRoom, isLeft: isLeft });
       targetClient.emit("START", { room: gameRoom, isLeft: !isLeft });
+    }
+  }
+
+  gameStart(game: GameEngine, intervalId: any) {
+    if (!game.room.stop) {
+      if (!game.reset)
+        game.update();
+      game.leftSocket.emit('PONG', game.room.gameInfo);
+      game.rightSocket.emit('PONG', game.room.gameInfo);
+    }
+    if (game.checkGameOver()) {
+      this.gamesSocketService.endGame(game.leftSocket, game.rightSocket, game.room);
+      clearInterval(intervalId);
+      this.gameRooms.delete(game.room.roomId);
+      game.leftSocket.data.roomId = null;
+      game.rightSocket.data.roomId = null;
     }
   }
 }
