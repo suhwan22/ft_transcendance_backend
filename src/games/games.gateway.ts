@@ -347,12 +347,18 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let time;
     let isLeft;
     if (gameRoom.start) {
+      const msg = ``;
+      client.emit('ANNOUNCE', msg);
+      targetClient.emit('ANNOUNCE', msg);
       clearInterval(intervalId);
       return ;
     }
     if (gameRoom.getUserPosition(client.data.userId)) {
       if (!gameRoom.left.isReady) {
         gameRoom.left.readyTime = 0;
+        const msg = ``;
+        client.emit('ANNOUNCE', msg);
+        targetClient.emit('ANNOUNCE', msg);
         clearInterval(intervalId);
         return ;
       }
@@ -362,6 +368,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     else {
       if (!gameRoom.right.isReady) {
         gameRoom.right.readyTime = 0;
+        const msg = ``;
+        client.emit('ANNOUNCE', msg);
+        targetClient.emit('ANNOUNCE', msg);
         clearInterval(intervalId);
         return ;
       }
