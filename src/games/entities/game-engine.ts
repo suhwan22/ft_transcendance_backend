@@ -1,8 +1,6 @@
 import { Socket } from "socket.io";
 import { GameRoom } from "./game.entity";
-import { initialize } from "passport";
 import { GamesSocketService } from "../games-socket.service";
-import { callbackify } from "util";
 
 export class Panel {
   constructor(isLeft: boolean, width: number, height: number, size: number) {
@@ -46,8 +44,10 @@ export class Ball {
   }
   x: number;
   y: number;
+  
   radius: number;
   speed: number;
+
   vX: number;
   vY: number;
 
@@ -101,14 +101,12 @@ export class GameEngine {
     this.width = 800;
     this.height = 700;
     this.room = room;
-    this.rafId = null;
 
     this.leftPanel = new Panel(true, 800, 700, room.option.barSize);
     this.rightPanel = new Panel(false, 800, 700, room.option.barSize);
     this.ball = new Ball(this.width, this.height, room.option.ballSize, room.option.speed);
     this.reset = false;
   }
-  gameSocketsService: GamesSocketService;
 
   leftSocket: Socket;
   rightSocket: Socket;
@@ -121,8 +119,6 @@ export class GameEngine {
   height: number;
 
   room: GameRoom;
-
-  rafId: any;
   reset: boolean;
 
 
@@ -150,10 +146,7 @@ export class GameEngine {
       }
       this.leftSocket.emit("SCORE", { left: this.room.score.left, right: this.room.score.right });
       this.rightSocket.emit("SCORE", { left: this.room.score.left, right: this.room.score.right });
-      this.reset = true;
-      if (this.reset) {
-        setTimeout(() => this.reset = false, 2000);
-      }
+      this.stopBall(2000);
       this.ball.initBall(this.width, this.height, this.room.option.speed);
     }
     this.room.gameInfo.ball.x = this.ball.x;
@@ -168,25 +161,16 @@ export class GameEngine {
     this.rightPanel.update(this.room.gameInfo.right);
   }
 
-  gameLoop() {
-    if (!this.room.stop) {
-      // 볼 업데이트
-      if (!this.reset)
-        this.update();
-  
-      // game info 전송
-      this.leftSocket.emit('PONG', this.room.gameInfo);
-      this.rightSocket.emit('PONG', this.room.gameInfo);
-    }
-  }
-
-  start() {
-    this.rafId = setInterval(() => this.gameLoop(), 10);
-  }
-
   checkGameOver(): boolean {
     if (this.room.score.left >= 11 || this.room.score.right >= 11) 
       return (true);
     return (false);
+  }
+
+  stopBall(msec: number) {
+    this.reset = true;
+    if (this.reset) {
+      setTimeout(() => this.reset = false, msec);
+    }
   }
 }

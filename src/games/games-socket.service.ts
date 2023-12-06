@@ -5,23 +5,106 @@ import { GameRoom, PingPongPlayer } from "./entities/game.entity";
 import { PlayerInfoDto } from "./dtos/player-info.dto";
 import { GamesService } from "./games.service";
 import { Player } from "src/users/entities/player.entity";
+import { GameEngine } from "./entities/game-engine";
+import { GameQueue, Queue } from "./entities/game-queue";
 
 @Injectable()
 export class GamesSocketService {
   constructor(
     private readonly usersService: UsersService,
-    private readonly gamesService: GamesService,) { }
+    private readonly gamesService: GamesService,) { 
+      this.games = new Map<string, GameEngine>();
+      this.queue = new Map<number, Queue<GameQueue>>();
+    }
 
-  async makeRoom(client: Socket, targetClient: Socket, roomId: string): Promise<GameRoom> {
-    const user = await this.usersService.readOnePurePlayer(client.data.userId);
-    const target = await this.usersService.readOnePurePlayer(targetClient.data.userId);
-    const me = new PingPongPlayer(user, false);
-    const op = new PingPongPlayer(target, false);
-    const gameRoom = new GameRoom(roomId, me, op);
-    client.emit("LOAD", { room: gameRoom, isLeft: true });
-    targetClient.emit("LOAD", { room: gameRoom, isLeft: false });
+  games: Map<string, GameEngine>;
+  queue: Map<number, Queue<GameQueue>>;
 
-    return (gameRoom);
+  async matchMaking(client: Socket) {
+    const score = client.data.score;
+    const ratingGroup = Math.floor(score / 100);
+    const gameQueue = new GameQueue(client, score, 0);
+
+    // enter waiting queue
+    if (this.queue.get(ratingGroup)) {
+      this.queue.get(ratingGroup).enqueue(gameQueue);
+    }
+    else {
+      const groupQueue = new Queue<GameQueue>();
+      groupQueue.enqueue(gameQueue);
+      this.queue.set(ratingGroup, groupQueue);
+    }
+
+    // find match
+    gameQueue.client.emit('WAIT', 'WAIT');
+    const intervalId = setInterval(() => this.findMath(gameQueue, ratingGroup, intervalId), 1000);
+    client.data.intervalId = intervalId;
+  }
+
+  async findMath(gameQueue: GameQueue, ratingGroup: number, intervalId: any) {
+    if (gameQueue.matched) {
+      clearInterval(intervalId);
+      return ;
+    }
+    const searchRange = Math.floor(gameQueue.time / 10);
+    for (let i = ratingGroup - searchRange; i <= ratingGroup + searchRange; i++) {
+      const groupQueue = this.queue.get(i);
+      if (groupQueue) {
+        if ((groupQueue.size > 0 && i !== ratingGroup) || (groupQueue.size > 1 && i === ratingGroup)) {
+          this.queue.get(ratingGroup).remove((v) => v.client.data.userId === gameQueue.client.data.userId);
+          const targetQueue = this.queue.get(i).dequeue();
+          gameQueue.matched = true;
+          targetQueue.matched = true;
+          gameQueue.client.data.intervalId = null;
+          targetQueue.client.data.intervalId = null;
+
+          const client = gameQueue.client;
+          const targetClient = targetQueue.client;
+
+          client.emit('MATCH', "MATCH");
+          targetClient.emit('MATCH', "MATCH");
+
+          const roomId = client.id + targetClient.id;
+          await this.enterGame(client, roomId, true, true);
+          await this.enterGame(targetClient, roomId, true, false);
+          clearInterval(intervalId);
+          break;
+        }
+      }
+    }
+    gameQueue.time++;
+  }
+
+  cancelGame(client:Socket) {
+    const ratingGroup = Math.floor(client.data.score / 100);
+    this.queue.get(ratingGroup).remove((v) => v.client.data.userId === client.data.userId);
+    clearInterval(client.data.intervalId);
+    client.data.intervalId = null;
+    client.emit('CANCEL', 'CANCEL');
+  }
+  
+  async enterGame(client: Socket, roomId: string, rank: boolean, isLeft: boolean) {
+    let game = this.games.get(roomId);
+    if (!game) {
+      const gameRoom = new GameRoom(roomId, null, null);
+      gameRoom.rank = rank;
+      game = new GameEngine(null, null, gameRoom);
+      this.games.set(roomId, game);
+    }
+    
+    if (isLeft)
+      game.leftSocket = client;
+    else
+      game.rightSocket = client;
+    
+    await this.enterRoom(client, game.room, isLeft);
+    this.joinRoom(client, roomId);
+    
+    if (game.room.left && game.room.right) {
+      const targetClient = isLeft === true ? game.rightSocket : game.leftSocket;
+      client.emit("LOAD", { room: game.room, isLeft: isLeft });
+      targetClient.emit("LOAD", { room: game.room, isLeft: !isLeft });
+    }
   }
 
   joinRoom(client:Socket, roomId: string) {
@@ -33,124 +116,194 @@ export class GamesSocketService {
 
   async enterRoom(client: Socket, gameRoom: GameRoom, isLeft: boolean): Promise<GameRoom> {
     const user = await this.usersService.readOnePurePlayer(client.data.userId);
-    const me = new PingPongPlayer(user, false);
+    const me = new PingPongPlayer(user, false, client.data.score);
     const updateRoom = gameRoom;
-
     if (isLeft)
       updateRoom.left = me;
     else
       updateRoom.right = me;
-
     return (updateRoom);
   }
 
-  readyGame(client: Socket, targetClient: Socket, gameRoom: GameRoom): GameRoom {
-    const updateRoom = gameRoom;
-    let isLeft = true;
-    if (gameRoom.getUserPosition(client.data.userId))
-      updateRoom.left.isReady = !updateRoom.left.isReady;
+  readyGame(client: Socket) {
+    const game = this.games.get(client.data.roomId);
+    let time;
+    let isLeft = game.room.getUserPosition(client.data.userId);
+    if (isLeft) {
+      game.room.left.isReady = !game.room.left.isReady;
+      time = game.room.left.readyTime;
+    }
     else {
-      updateRoom.right.isReady = !updateRoom.right.isReady;
-      isLeft = false;
+      game.room.right.isReady = !game.room.right.isReady;
+      time = game.room.right.readyTime;
     }
-    client.emit("READY", { room: updateRoom, isLeft: isLeft });
-    targetClient.emit("READY", { room: updateRoom, isLeft: !isLeft });
-    if (updateRoom.left.isReady && updateRoom.right.isReady) {
-      updateRoom.start = true;
+    
+    game.leftSocket.emit("READY", { room: game.room, isLeft: true });
+    game.rightSocket.emit("READY", { room: game.room, isLeft: false });
 
-      client.emit("START", { room: updateRoom, isLeft: isLeft });
-      targetClient.emit("START", { room: updateRoom, isLeft: !isLeft });
+    const msg = `game will be started in ${10 - time}s`;
+    game.leftSocket.emit('ANNOUNCE', msg);
+    game.rightSocket.emit('ANNOUNCE', msg);
+
+    if (game.room.left.isReady && game.room.right.isReady) {
+      this.startGame(game);
     }
-    return (updateRoom);
+    // interval
+    const intervalId = setInterval(() => this.checkTimeReady(game, isLeft, intervalId), 1000);
+  }
+  
+  checkTimeReady(game: GameEngine, isLeft: boolean, intervalId: any) {
+    let time;
+    if (game.room.start || (isLeft && !game.room.left.isReady) || (!isLeft && !game.room.right.isReady)) {
+      const msg = ``;
+      game.leftSocket.emit('ANNOUNCE', msg);
+      game.rightSocket.emit('ANNOUNCE', msg);
+      if (isLeft)
+        game.room.left.readyTime = 0;
+      else
+        game.room.right.readyTime = 0;
+      clearInterval(intervalId);
+      return ;
+    }
+
+    if (isLeft)
+      time = game.room.left.readyTime++;
+    else 
+      time = game.room.right.readyTime++;
+
+    const msg = `game will be started in ${10 - time}s`;
+    game.leftSocket.emit('ANNOUNCE', msg);
+    game.rightSocket.emit('ANNOUNCE', msg);
+
+    if (time === 10) {
+      clearInterval(intervalId);
+      // start game
+      this.startGame(game);
+    }
   }
 
-  updateGameInfo(client: Socket, gameRoom: GameRoom, data: any): GameRoom {
-    const updateRoom = gameRoom;
+  startGame(game: GameEngine) {
+    game.room.start = true;
+
+    game.leftSocket.emit("START", { room: game.room, isLeft: true });
+    game.rightSocket.emit("START", { room: game.room, isLeft: false });
+
+    const id = setInterval(() => this.startPongGame(game, id), 10);
+  }
+
+  startPongGame(game: GameEngine, intervalId: any) {
+    if (!game.room.stop) {
+      if (!game.reset)
+        game.update();
+      game.leftSocket.emit('PONG', game.room.gameInfo);
+      game.rightSocket.emit('PONG', game.room.gameInfo);
+    }
+    if (game.checkGameOver()) {
+      this.endGame(game.leftSocket, game.rightSocket, game.room);
+      clearInterval(intervalId);
+      this.games.delete(game.room.roomId);
+      game.leftSocket.data.roomId = null;
+      game.rightSocket.data.roomId = null;
+    }
+  }
+
+  updateGameInfo(client: Socket, data: any) {
+    const game = this.games.get(client.data.roomId);
     if (data.isLeft)
-      updateRoom.gameInfo.left = data.bar;
+      game.room.gameInfo.left = data.bar;
     else
-      updateRoom.gameInfo.right = data.bar;
-    return (updateRoom);
+      game.room.gameInfo.right = data.bar;
   }
 
-  updateGameOption(client: Socket, gameRoom: GameRoom, data: any): GameRoom {
-    const updateRoom = gameRoom;
-    updateRoom.option = data;
-    client.to(client.data.roomId).emit("OPTION", updateRoom.option);
-    return (updateRoom);
+  updateGameOption(client: Socket, data: any) {
+    const game = this.games.get(client.data.roomId);
+    game.room.option = data;
+    client.to(client.data.roomId).emit("OPTION", game.room.option);
   }
 
-  updateGameScore(client: Socket, gameRoom: GameRoom, data: any): GameRoom {
-    const updateRoom = gameRoom;
+  updateGameScore(client: Socket, data: any) {
+    const game = this.games.get(client.data.roomId);
     if (data.isLeft)
-      updateRoom.score.left++;
+      game.room.score.left++;
     else
-      updateRoom.score.right++;
-    client.to(client.data.roomId).emit("SCORE", updateRoom.score);
-    return (updateRoom);
+      game.room.score.right++;
+    client.to(client.data.roomId).emit("SCORE", game.room.score);
   }
 
-  pauseGame(client: Socket, targetClient: Socket, gameRoom: GameRoom, userId: number) {
-    const updateRoom = gameRoom;
-    updateRoom.stop = true;
+  pauseGame(client: Socket) {
+    const game = this.games.get(client.data.roomId);
+    const targetClient = game.leftSocket.data.userId === client.data.userId ? game.rightSocket : game.leftSocket;
+    const isLeft = game.room.getUserPosition(client.data.userId);
+    game.room.stop = true;
 
-    if (updateRoom.getUserPosition(userId)) {
-      if (updateRoom.left.pause === 3) {
-        this.endGameWithExtra(client, targetClient, gameRoom);
-        return ({updateRoom, flag: true});
-      }
-      updateRoom.left.isPause = true;
-      updateRoom.left.pause++;
+    if ((isLeft && game.room.left.pause === 3) || (!isLeft && game.room.right.pause === 3)) {
+        this.endGameWithExtra(client, targetClient, game.room);
+        this.games.delete(client.data.roomId);
+        client.data.roomId = null;
+        targetClient.data.roomId = null;
+        return ;
+    }
+    if (isLeft) {
+      game.room.left.isPause = true;
+      game.room.left.pause++;
     }
     else {
-      if (updateRoom.right.pause === 3) {
-        this.endGameWithExtra(client, targetClient, gameRoom);
-        return ({updateRoom, flag: true});
-      }
-      updateRoom.right.isPause = true;
-      updateRoom.right.pause++;
+      game.room.right.isPause = true;
+      game.room.right.pause++;
     }
 
-    client.to(gameRoom.roomId).emit("PAUSE", "PAUSE");
-    return ({ updateRoom, flag: false });
+    client.to(game.room.roomId).emit("PAUSE", "PAUSE");
+    const intervalId = setInterval(() => this.checkTimePause(client, targetClient, game.room, isLeft, intervalId), 1000);
   }
 
-  resumeGame(client: Socket, gameRoom: GameRoom) {
-    const updateRoom = gameRoom;
-    updateRoom.stop = false;
-    if (updateRoom.getUserPosition(client.data.userId)) {
-      updateRoom.left.isPause = false;
+  checkTimePause(client: Socket, targetClient: Socket, gameRoom: GameRoom, isLeft: boolean, intervalId: any) {
+    let time;
+    if ((isLeft && !gameRoom.left.isPause) || (!isLeft && !gameRoom.right.isPause)) {
+        clearInterval(intervalId);
+        return ;
+    }
+    if (isLeft) {
+      gameRoom.left.pauseTime++;
+      time = gameRoom.left.pauseTime;
     }
     else {
-      updateRoom.right.isPause = false;
+      gameRoom.right.pauseTime++;
+      time = gameRoom.right.pauseTime;
+    }
+    const msg = `remaining pause time: ${10 - time}s`;
+    client.emit('ANNOUNCE', msg);
+    targetClient.emit('ANNOUNCE', msg);
+    if (time === 20) {
+      clearInterval(intervalId);
+      this.endGameWithExtra(client, targetClient, gameRoom);
+      this.games.delete(client.data.roomId);
+      client.data.roomId = null;
+      targetClient.data.roomId = null;
+    }
+  }
+
+  resumeGame(client: Socket) {
+    const game = this.games.get(client.data.roomId);
+    game.room.stop = false;
+    if (game.room.getUserPosition(client.data.userId)) {
+      game.room.left.isPause = false;
+    }
+    else {
+      game.room.right.isPause = false;
     }
     const gameInfo = {
       ball: {
-        x: gameRoom.gameInfo.ball.x,
-        xv: gameRoom.gameInfo.ball.xv,
-        y: gameRoom.gameInfo.ball.y,
-        yv: gameRoom.gameInfo.ball.yv
+        x: game.room.gameInfo.ball.x,
+        xv: game.room.gameInfo.ball.xv,
+        y: game.room.gameInfo.ball.y,
+        yv: game.room.gameInfo.ball.yv
       },
-      right: gameRoom.gameInfo.right,
-      left: gameRoom.gameInfo.left
+      right: game.room.gameInfo.right,
+      left: game.room.gameInfo.left
     }
 
-    if (!updateRoom.left.isPause && !updateRoom.right.isPause)
-      client.to(gameRoom.roomId).emit("RESUME", gameInfo);
-    return (updateRoom);
-  }
-
-  saveGame(client: Socket, gameRoom: GameRoom, data: any) {
-    const updateRoom = gameRoom;
-    updateRoom.gameInfo.ball = {
-      x: data.x,
-      xv: data.xv,
-      y: data.y,
-      yv: data.yv
-    };
-    // updateRoom.gameInfo.right = data.right;
-    // updateRoom.gameInfo.left = data.left;
-    return (updateRoom);
+    if (!game.room.left.isPause && !game.room.right.isPause)
+      client.to(game.room.roomId).emit("RESUME", gameInfo);
   }
 
   // 몰수패 client가 4번째 pause를 건쪽이기 때문에 targetClient 가 무조건 승리
@@ -207,4 +360,55 @@ export class GamesSocketService {
     client.leave(gameRoom.roomId);
     targetClient.leave(gameRoom.roomId);
   }
+
+  existGameRoom(client: Socket) {
+    const game = this.games.get(client.data.roomId);
+    if (game.room.start === false) 
+      this.dodgeGame(client, game);
+    else 
+    {
+      // pause
+      // this.pauseGame(client);
+    }
+  }
+
+  dodgeGame(client:Socket, game: GameEngine) {
+    const targetClient = game.leftSocket === client ? game.rightSocket : game.leftSocket;
+    targetClient.emit("DODGE", "DODGE");
+    this.games.delete(client.data.roomId);
+    client.data.roomId = null;
+    targetClient.data.roomId = null;
+  }
+
+  checkGameAlready(client: Socket) {
+    const userId = client.data.userId;
+    let game;
+    this.games.forEach((v, k, m) => {
+      if (userId === v.leftSocket.data.userId || userId === v.rightSocket.data.userId) {
+        game = v;
+        return ;
+      }
+    });
+    if (game) {
+      const roomId = game.room.roomId;
+      const isLeft = game.room.getUserPosition(client.data.userId);
+      if (isLeft)
+        game.leftSocket = client;
+      else
+        game.rightSocket = client;
+      client.data.roomId = roomId;
+      client.join(roomId);
+      client.emit("RELOAD", { room: game.room, isLeft: isLeft });
+    }
+    else {
+      client.emit("RELOAD", { room: null, isLeft: null });
+    }
+  }
+
+  async sendMessage(client: Socket, data: any) {
+    const game = this.games.get(client.data.roomId);
+    const targetClient = client.data.userId === game.leftSocket.data.userId ? game.rightSocket : game.leftSocket;
+    targetClient.emit("MSG", data);
+  }
+
 }
