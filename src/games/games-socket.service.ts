@@ -128,20 +128,34 @@ export class GamesSocketService {
   readyGame(client: Socket) {
     const game = this.games.get(client.data.roomId);
     let time;
+    let msg = ``;
+    let isReady;
     let isLeft = game.room.getUserPosition(client.data.userId);
     if (isLeft) {
       game.room.left.isReady = !game.room.left.isReady;
       time = game.room.left.readyTime;
+      isReady = game.room.left.isReady;
     }
     else {
       game.room.right.isReady = !game.room.right.isReady;
       time = game.room.right.readyTime;
+      isReady = game.room.right.isReady;
+    }
+
+    if (isReady) 
+      msg = `game will be started in ${10 - time}s`;
+    else {
+      if (isLeft)
+        game.room.left.readyTime = 0;
+      else
+        game.room.right.readyTime = 0;
+      clearInterval(client.data.readyInterval);
+      client.data.readyInterval = null;
     }
     
     game.leftSocket.emit("READY", { room: game.room, isLeft: true });
     game.rightSocket.emit("READY", { room: game.room, isLeft: false });
 
-    const msg = `game will be started in ${10 - time}s`;
     game.leftSocket.emit('ANNOUNCE', msg);
     game.rightSocket.emit('ANNOUNCE', msg);
 
@@ -149,10 +163,17 @@ export class GamesSocketService {
       this.startGame(game);
     }
     // interval
-    const intervalId = setInterval(() => this.checkTimeReady(game, isLeft, intervalId), 1000);
+    if (isReady) {
+      if (client.data.readyInterval) {
+        clearInterval(client.data.readyInterval);
+        client.data.readyInterval = null;
+      }
+      const intervalId = setInterval(() => this.checkTimeReady(client, game, isLeft, intervalId), 1000);
+      client.data.readyInterval = intervalId;
+    }
   }
   
-  checkTimeReady(game: GameEngine, isLeft: boolean, intervalId: any) {
+  checkTimeReady(client: Socket, game: GameEngine, isLeft: boolean, intervalId: any) {
     let time;
     if (game.room.start || (isLeft && !game.room.left.isReady) || (!isLeft && !game.room.right.isReady)) {
       const msg = ``;
@@ -163,6 +184,7 @@ export class GamesSocketService {
       else
         game.room.right.readyTime = 0;
       clearInterval(intervalId);
+      client.data.readyInterval = null;
       return ;
     }
 
@@ -171,12 +193,13 @@ export class GamesSocketService {
     else 
       time = game.room.right.readyTime++;
 
-    const msg = `game will be started in ${10 - time}s`;
+    const msg = `game will be started in ${9 - time}s`;
     game.leftSocket.emit('ANNOUNCE', msg);
     game.rightSocket.emit('ANNOUNCE', msg);
 
     if (time === 10) {
       clearInterval(intervalId);
+      client.data.readyInterval = null;
       // start game
       this.startGame(game);
     }
@@ -188,6 +211,7 @@ export class GamesSocketService {
     game.leftSocket.emit("START", { room: game.room, isLeft: true });
     game.rightSocket.emit("START", { room: game.room, isLeft: false });
 
+    game.stopBall(2000);
     const id = setInterval(() => this.startPongGame(game, id), 10);
   }
 

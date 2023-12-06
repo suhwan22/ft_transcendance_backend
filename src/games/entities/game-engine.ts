@@ -34,17 +34,14 @@ export class Panel {
 
 export class Ball {
   constructor(width: number, height: number, size: number, speed: number) {
-    this.x = width / 2;
-    this.y = height / 2;
     this.radius = 10 * size/5;
     this.speed = 1 * speed;
-    this.vX = 10 * speed;
-    this.vY = 10 * speed;
     this.turn = 1;
+    this.initBall(width, height, speed);
   }
   x: number;
   y: number;
-  
+
   radius: number;
   speed: number;
 
