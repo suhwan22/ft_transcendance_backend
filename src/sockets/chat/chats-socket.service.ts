@@ -1,10 +1,9 @@
 import { Injectable } from "@nestjs/common";
-import { ChatsService } from "./chats.service";
+import { ChatsService } from "../../chats/chats.service";
 import { Server, Socket } from 'socket.io';
-import { ChannelConfig } from "./entities/channel-config.entity";
+import { ChannelConfig } from "../../chats/entities/channel-config.entity";
 import { UsersService } from "src/users/users.service";
-import { ChatMute } from "./entities/chat-mute.entity";
-import { ClientSocket } from "./chats.gateway";
+import { ChatMute } from "../../chats/entities/chat-mute.entity";
 import { FriendRequest } from "src/users/entities/friend-request.entity";
 import { Player } from "src/users/entities/player.entity";
 import { GameRequest } from "src/games/entities/game-request";

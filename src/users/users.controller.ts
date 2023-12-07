@@ -205,7 +205,7 @@ export class UsersController {
   @ApiOperation({ summary: '받은 친구 요청 목록 API' })
   @ApiOkResponse({ description: 'Ok' , isArray: true})
   @Get('friend-requests-recv/:id')
-  async readRecvFriendRequest(recv: number): Promise<FriendRequest[]> {
+  async readRecvFriendRequest(@Param('id') recv: number): Promise<FriendRequest[]> {
     return (this.usersService.readRecvFriendRequest( recv ));
   }
 
@@ -213,7 +213,7 @@ export class UsersController {
   @ApiOperation({ summary: '보낸 친구 요청 목록 API' })
   @ApiOkResponse({ description: 'Ok' , isArray: true})
   @Get('friend-requests-sned/:id')
-  async readSendFriendRequest(send: number): Promise<FriendRequest[]> {
+  async readSendFriendRequest(@Param('id') send: number): Promise<FriendRequest[]> {
     return (this.usersService.readSendFriendRequest( send ));
   }
 

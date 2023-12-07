@@ -1,12 +1,12 @@
 import { Injectable } from "@nestjs/common";
 import { Socket } from "socket.io";
 import { UsersService } from "src/users/users.service";
-import { GameRoom, PingPongPlayer } from "./entities/game.entity";
-import { PlayerInfoDto } from "./dtos/player-info.dto";
-import { GamesService } from "./games.service";
+import { GameRoom, PingPongPlayer } from "../../games/entities/game.entity";
+import { PlayerInfoDto } from "../../games/dtos/player-info.dto";
+import { GamesService } from "../../games/games.service";
 import { Player } from "src/users/entities/player.entity";
-import { GameEngine } from "./entities/game-engine";
-import { GameQueue, Queue } from "./entities/game-queue";
+import { GameEngine } from "../../games/entities/game-engine";
+import { GameQueue, Queue } from "../../games/entities/game-queue";
 
 @Injectable()
 export class GamesSocketService {

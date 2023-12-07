@@ -10,9 +10,9 @@ import {
 
 import { Server, Socket } from 'socket.io';
 import { ChatsSocketService } from './chats-socket.service';
-import { ChatsService } from './chats.service';
+import { ChatsService } from '../../chats/chats.service';
 import { UsersService } from 'src/users/users.service';
-import { GamesGateway } from 'src/games/games.gateway';
+import { GamesGateway } from 'src/sockets/game/games.gateway';
 import { forwardRef, Inject } from '@nestjs/common';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { Player } from 'src/users/entities/player.entity';

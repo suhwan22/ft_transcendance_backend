@@ -10,7 +10,7 @@ import {
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
-import { ChatsGateway } from 'src/chats/chats.gateway';
+import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
 import { UsersService } from 'src/users/users.service';
 import { LobbySocketService } from './lobby-socket.service';
 import { Player } from 'src/users/entities/player.entity';

@@ -9,10 +9,10 @@ import {
   ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
-import { ChatsGateway } from 'src/chats/chats.gateway';
+import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { UsersService } from 'src/users/users.service';
-import { GameRoom } from './entities/game.entity';
+import { GameRoom } from '../../games/entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
 
 @WebSocketGateway(3131, { namespace: '/games' })
@@ -40,29 +40,30 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결 해제시 유저목록에서 제거
   async handleDisconnect(client: Socket): Promise<void> {
     try {
-    console.log('game disonnected', client.id);
-    const key = client.data.userId;
-    if (!key)
-      return ;
-    
-    // 해당 user가 gameRoom 안에 있는 경우
-    if (client.data.roomId) {
-      this.gamesSocketService.existGameRoom(client);
-    }
-    else {
-      if (client.data.intervalId !== null) {
-        this.gamesSocketService.cancelGame(client);
+      console.log('game disonnected', client.id);
+      const key = client.data.userId;
+      if (!key)
+        return;
+
+      // 해당 user가 gameRoom 안에 있는 경우
+      if (client.data.roomId) {
+        this.gamesSocketService.existGameRoom(client);
       }
-      this.clients.delete(key);
-      this.usersService.updatePlayerStatus(key, 3);
-      this.chatsGateway.sendUpdateToChannelMember(key);
-      this.lobbyGateway.sendUpdateToFriends(key);
+      else {
+        if (client.data.intervalId !== null) {
+          this.gamesSocketService.cancelGame(client);
+        }
+        this.clients.delete(key);
+        this.usersService.updatePlayerStatus(key, 3);
+        this.chatsGateway.sendUpdateToChannelMember(key);
+        this.lobbyGateway.sendUpdateToFriends(key);
+      }
     }
-    catch(e) {
+    catch (e) {
       console.log(e);
     }
   }
-  
+
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
     try {
@@ -75,9 +76,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.lobbyGateway.sendUpdateToFriends(userId);
 
       this.gamesSocketService.checkGameAlready(client);
-      
+
     }
-    catch(e) {
+    catch (e) {
       console.log(e.stack);
     }
   }

@@ -1,6 +1,6 @@
 import { Socket } from "socket.io";
 import { GameRoom } from "./game.entity";
-import { GamesSocketService } from "../games-socket.service";
+import { GamesSocketService } from "../../sockets/game/games-socket.service";
 
 export class Panel {
   constructor(isLeft: boolean, width: number, height: number, size: number) {
