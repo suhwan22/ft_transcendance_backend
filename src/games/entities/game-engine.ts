@@ -25,6 +25,11 @@ export class Panel {
   left: number;
   right: number;
 
+  updateOption(size: number) {
+    this.height = 140 * size / 5;
+    this.update(this.y);
+  }
+
   update(y: number) {
     this.y = y;
     this.top = this.y;
@@ -34,7 +39,7 @@ export class Panel {
 
 export class Ball {
   constructor(width: number, height: number, size: number, speed: number) {
-    this.radius = 10 * size/5;
+    this.radius = 10 * size / 5;
     this.speed = 1 * speed;
     this.turn = 1;
     this.initBall(width, height, speed);
@@ -55,6 +60,12 @@ export class Ball {
   left: number;
   right: number;
 
+  updateOption(size: number, speed: number) {
+    this.radius = 10 * size / 5;
+    this.speed = 1 * speed;
+    this.update();
+  }
+
   update() {
     this.x += this.vX;
     this.y += this.vY;
@@ -64,7 +75,6 @@ export class Ball {
     this.left = this.x - this.radius;
     this.right = this.x + this.radius;
   }
-
 
   isHitByWall(height: number): boolean {
     return (this.y + this.radius > height || this.y - this.radius < 0);
@@ -118,6 +128,11 @@ export class GameEngine {
   room: GameRoom;
   reset: boolean;
 
+  updateOption() {
+    this.leftPanel.updateOption(this.room.option.barSize);
+    this.rightPanel.updateOption(this.room.option.barSize);
+    this.ball.updateOption(this.room.option.ballSize, this.room.option.speed);
+  }
 
   updateBall() {
     this.ball.update();

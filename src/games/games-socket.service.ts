@@ -232,6 +232,7 @@ export class GamesSocketService {
     const game = this.games.get(client.data.roomId);
     const option = Object.keys(data);
     game.room.option[option[0]] = data[option[0]];
+    game.updateOption();
     client.to(client.data.roomId).emit("OPTION", game.room.option);
   }
 
