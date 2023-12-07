@@ -21,9 +21,9 @@ export class GamesSocketService {
   queue: Map<number, Queue<GameQueue>>;
 
   async matchMaking(client: Socket) {
-    const score = client.data.score;
-    const ratingGroup = Math.floor(score / 100);
-    const gameQueue = new GameQueue(client, score, 0);
+    const rating = client.data.rating;
+    const ratingGroup = Math.floor(rating / 100);
+    const gameQueue = new GameQueue(client, rating, 0);
 
     // enter waiting queue
     if (this.queue.get(ratingGroup)) {
@@ -83,7 +83,7 @@ export class GamesSocketService {
   }
 
   cancelGame(client: Socket) {
-    const ratingGroup = Math.floor(client.data.score / 100);
+    const ratingGroup = Math.floor(client.data.rating / 100);
     this.queue.get(ratingGroup).remove((v) => v.client.data.userId === client.data.userId);
     clearInterval(client.data.matchInterval);
     client.data.matchInterval = null;
@@ -131,6 +131,7 @@ export class GamesSocketService {
       updateRoom.left = me;
     else
       updateRoom.right = me;
+    client.data.player = me;
     return (updateRoom);
   }
 
@@ -212,7 +213,10 @@ export class GamesSocketService {
       game.rightSocket.emit('PONG', game.room.gameInfo);
     }
     if (game.checkGameOver()) {
-      this.endGame(game.leftSocket, game.rightSocket, game.room);
+      if (game.IsWinnerLeft())
+        this.endGame(game.leftSocket, game.rightSocket, game.room);
+      else
+        this.endGame(game.rightSocket, game.leftSocket, game.room);
       clearInterval(intervalId);
       this.games.delete(game.room.roomId);
       game.leftSocket.data.roomId = null;
@@ -250,7 +254,7 @@ export class GamesSocketService {
     const targetClient = game.leftSocket.data.userId === client.data.userId ? game.rightSocket : game.leftSocket;
     const isLeft = game.room.getUserPosition(client.data.userId);
     const player = isLeft === true ? game.room.left : game.room.right;
-    
+
     game.room.stop = true;
     player.isPause = true;
     player.pause++;
@@ -318,65 +322,59 @@ export class GamesSocketService {
 
   // 몰수패 client가 4번째 pause를 건쪽이기 때문에 targetClient 가 무조건 승리
   async endGameWithExtra(client: Socket, targetClient: Socket, gameRoom: GameRoom): Promise<void> {
+    let winner: Socket, loser: Socket;
     let win: Player, loss: Player;
     let winScore: number, lossScore: number, winnerIsLeft: boolean;
 
     //pause를 건 쪽이 left인 경우
     if (gameRoom.getUserPosition(client.data.userId)) {
-      win = gameRoom.right.player;
-      loss = gameRoom.left.player;
-      winScore = gameRoom.score.right;
-      lossScore = gameRoom.score.left;
-      winnerIsLeft = false;
+      winner = targetClient.data.player;
+      loser = client.data.player;
     }
     else {
-      win = gameRoom.left.player;
-      loss = gameRoom.right.player;
-      winScore = gameRoom.score.left;
-      lossScore = gameRoom.score.right;
-      winnerIsLeft = true;
+      winner = client.data.player;
+      loser = targetClient.data.player;
     }
+
+    win = winner.data.player.player;
+    loss = loser.data.player.player;
+    winScore = gameRoom.left === winner.data.player ? gameRoom.score.left : gameRoom.score.right;
+    lossScore = gameRoom.left === loser.data.player ? gameRoom.score.left : gameRoom.score.right;
+
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
-    await this.usersService.updateUserGameRecord(win, true, gameRoom.rank);
-    await this.usersService.updateUserGameRecord(loss, false, gameRoom.rank);
-    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
+    await this.usersService.updateRating(winner, loser, gameRoom);
+
+    client.to(gameRoom.roomId).emit("END");
     client.leave(gameRoom.roomId);
     targetClient.leave(gameRoom.roomId);
   }
 
-  async endGame(client: Socket, targetClient: Socket, gameRoom: GameRoom): Promise<void> {
+  async endGame(winner: Socket, loser: Socket, gameRoom: GameRoom): Promise<void> {
     let win: Player, loss: Player;
-    let winScore: number, lossScore: number, winnerIsLeft: boolean;
-    if (gameRoom.score.left > gameRoom.score.right) {
-      win = gameRoom.left.player;
-      loss = gameRoom.right.player;
-      winScore = gameRoom.score.left;
-      lossScore = gameRoom.score.right;
-      winnerIsLeft = true;
-    }
-    else {
-      win = gameRoom.right.player;
-      loss = gameRoom.left.player;
-      winScore = gameRoom.score.right;
-      lossScore = gameRoom.score.left;
-      winnerIsLeft = false;
-    }
+    let winScore: number, lossScore: number;
+
+    win = winner.data.player.player;
+    loss = loser.data.player.player;
+    winScore = gameRoom.left === winner.data.player ? gameRoom.score.left : gameRoom.score.right;
+    lossScore = gameRoom.left === loser.data.player ? gameRoom.score.left : gameRoom.score.right;
+
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
-    await this.usersService.updateUserGameRecord(win, true, gameRoom.rank);
-    await this.usersService.updateUserGameRecord(loss, false, gameRoom.rank);
-    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
-    client.leave(gameRoom.roomId);
-    targetClient.leave(gameRoom.roomId);
+
+    await this.usersService.updateRating(winner, loser, gameRoom);
+
+    winner.to(gameRoom.roomId).emit("END");
+    winner.leave(gameRoom.roomId);
+    loser.leave(gameRoom.roomId);
   }
 
   existGameRoom(client: Socket) {
     const game = this.games.get(client.data.roomId);
-    
+
     if (game.room.start === false)
       this.dodgeGame(client, game);
-    else 
+    else
       this.pauseGame(client);
   }
 

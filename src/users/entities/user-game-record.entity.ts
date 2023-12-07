@@ -22,7 +22,7 @@ export class UserGameRecord {
 
   @ApiProperty()
   @Column()
-  score: number;
+  rating: number;
 
   rank: number;
 

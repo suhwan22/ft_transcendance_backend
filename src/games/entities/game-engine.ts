@@ -185,4 +185,11 @@ export class GameEngine {
       setTimeout(() => this.reset = false, msec);
     }
   }
+
+  IsWinnerLeft(): boolean {
+    if (this.room.score.left > this.room.score.right)
+      return (true);
+    else
+      return (false);
+  }
 }
