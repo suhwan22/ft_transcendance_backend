@@ -105,7 +105,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.emit("NOTICE", msg);
       return;
     }
-    this.lobbySocketService.acceptGame(client, targetClient);
+    this.lobbySocketService.acceptGame(client, targetClient, data);
   }
 
   @SubscribeMessage('REFUSE_GAME')

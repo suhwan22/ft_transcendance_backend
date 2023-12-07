@@ -104,7 +104,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('JOIN')
   async join(client: Socket, data: any) {
-    const isLeft = data.send.id === client.data.userId ? true : false;
+    const isLeft = data.gameRequest.send.id === client.data.userId ? true : false;
     this.gamesSocketService.enterGame(client, data.roomId, false, isLeft);
   }
 
