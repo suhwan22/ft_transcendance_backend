@@ -44,46 +44,56 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //소켓 연결 해제시 유저목록에서 제거
   async handleDisconnect(client: Socket): Promise<void> {
-    const key = client.data.userId;
-    if (!key)
-      return ;
-    
-    // 해당 user가 gameRoom 안에 있는 경우
-    if (client.data.roomId) {
-      const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
-      const { updateRoom, flag } = this.gamesSocketService.pauseGame(client, targetClient, this.gameRooms.get(client.data.roomId), key);
-      this.gameRooms.set(updateRoom.roomId, updateRoom);
-      if (flag) {
-        this.gameRooms.delete(client.data.roomId);
-        client.data.roomId = null;
-        targetClient.data.roomId = null;
+    try {
+      const key = client.data.userId;
+      if (!key)
+        return ;
+      
+      // 해당 user가 gameRoom 안에 있는 경우
+      if (client.data.roomId) {
+        const targetClient = this.getTargetClient(client.data.roomId, client.data.userId);
+        const { updateRoom, flag } = this.gamesSocketService.pauseGame(client, targetClient, this.gameRooms.get(client.data.roomId), key);
+        this.gameRooms.set(updateRoom.roomId, updateRoom);
+        if (flag) {
+          this.gameRooms.delete(client.data.roomId);
+          client.data.roomId = null;
+          targetClient.data.roomId = null;
+        }
+        const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
       }
-      const intervalId = setInterval(() => this.checkTimePause(updateRoom, client.data.userId, intervalId), 1000);
+      else {
+        const newQueue = this.queue.filter((e) => e.data.userId !== client.data.userId);
+        this.queue = newQueue;
+        this.clients.delete(key);
+        this.usersService.updatePlayerStatus(key, 3);
+        this.chatsGateway.sendUpdateToChannelMember(key);
+        this.lobbyGateway.sendUpdateToFriends(key);
+      }
+      console.log('game disonnected', client.id);
     }
-    else {
-      const newQueue = this.queue.filter((e) => e.data.userId !== client.data.userId);
-      this.queue = newQueue;
-      this.clients.delete(key);
-      this.usersService.updatePlayerStatus(key, 3);
-      this.chatsGateway.sendUpdateToChannelMember(key);
-      this.lobbyGateway.sendUpdateToFriends(key);
+    catch(e) {
+      console.log(e);
     }
-    console.log('game disonnected', client.id);
   }
   
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
-    client.data.userId = userId;
-    this.clients.set(userId, client);
-    this.usersService.updatePlayerStatus(userId, 2);
-    this.chatsGateway.sendUpdateToChannelMember(userId);
-    this.lobbyGateway.sendUpdateToFriends(userId);
-    const gameRoom = this.getGameRoomWithUserId(userId);
-    if (gameRoom) {
-      const roomId = gameRoom.roomId;
-      client.data.roomId = roomId;
-      client.join(roomId);
-      client.emit("RELOAD", gameRoom);
+    try {
+      client.data.userId = userId;
+      this.clients.set(userId, client);
+      this.usersService.updatePlayerStatus(userId, 2);
+      this.chatsGateway.sendUpdateToChannelMember(userId);
+      this.lobbyGateway.sendUpdateToFriends(userId);
+      const gameRoom = this.getGameRoomWithUserId(userId);
+      if (gameRoom) {
+        const roomId = gameRoom.roomId;
+        client.data.roomId = roomId;
+        client.join(roomId);
+        client.emit("RELOAD", gameRoom);
+      }
+    }
+    catch(e) {
+      console.log(e.stack);
     }
   }
 
