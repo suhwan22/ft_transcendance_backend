@@ -37,8 +37,10 @@ export class GamesSocketService {
 
     // find match
     gameQueue.client.emit('WAIT', 'WAIT');
-    if (client.data.matchInterval)
+    if (client.data.matchInterval) {
       clearInterval(client.data.matchInterval);
+      client.data.matchInterval = null;
+    }
     const intervalId = setInterval(() => this.findMath(gameQueue, ratingGroup, intervalId), 1000);
     client.data.matchInterval = intervalId;
   }
@@ -46,6 +48,7 @@ export class GamesSocketService {
   async findMath(gameQueue: GameQueue, ratingGroup: number, intervalId: any) {
     if (gameQueue.matched) {
       clearInterval(intervalId);
+      gameQueue.client.data.matchInterval = null;
       return;
     }
     const searchRange = Math.floor(gameQueue.time / 10);
@@ -70,6 +73,8 @@ export class GamesSocketService {
           await this.enterGame(client, roomId, true, true);
           await this.enterGame(targetClient, roomId, true, false);
           clearInterval(intervalId);
+          client.data.matchInterval = null;
+          targetClient.data.matchInterval = null;
           break;
         }
       }
@@ -338,26 +343,26 @@ export class GamesSocketService {
 
   async endGame(client: Socket, targetClient: Socket, gameRoom: GameRoom): Promise<void> {
     let win: Player, loss: Player;
-    let winScore: number, lossScore: number, isLeft: boolean;
+    let winScore: number, lossScore: number, winnerIsLeft: boolean;
     if (gameRoom.score.left > gameRoom.score.right) {
       win = gameRoom.left.player;
       loss = gameRoom.right.player;
       winScore = gameRoom.score.left;
       lossScore = gameRoom.score.right;
-      isLeft = true;
+      winnerIsLeft = true;
     }
     else {
       win = gameRoom.right.player;
       loss = gameRoom.left.player;
       winScore = gameRoom.score.right;
       lossScore = gameRoom.score.left;
-      isLeft = false;
+      winnerIsLeft = false;
     }
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
     await this.usersService.updateUserGameRecord(win, true, gameRoom.rank);
     await this.usersService.updateUserGameRecord(loss, false, gameRoom.rank);
-    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: isLeft });
+    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
     client.leave(gameRoom.roomId);
     targetClient.leave(gameRoom.roomId);
   }
@@ -405,10 +410,9 @@ export class GamesSocketService {
     }
   }
 
-  async sendMessage(client: Socket, data: any) {
+  sendMessage(client: Socket, data: any) {
     const game = this.games.get(client.data.roomId);
     const targetClient = client.data.userId === game.leftSocket.data.userId ? game.rightSocket : game.leftSocket;
     targetClient.emit("MSG", data);
   }
-
 }
