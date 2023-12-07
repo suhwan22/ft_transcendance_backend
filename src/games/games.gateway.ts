@@ -14,8 +14,6 @@ import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { UsersService } from 'src/users/users.service';
 import { GameRoom } from './entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
-import { Queue, GameQueue } from './entities/game-queue';
-import { GameEngine } from './entities/game-engine';
 
 @WebSocketGateway(3131, { namespace: '/games' })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -117,7 +115,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('RESUME')
   sendResumeGame(client: Socket, data: any) {
-    const updateRoom = this.gamesSocketService.resumeGame(client);
+    this.gamesSocketService.resumeGame(client);
   }
 
   @SubscribeMessage('CANCEL')
