@@ -37,14 +37,19 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //소켓 연결 해제시 유저목록에서 제거
   async handleDisconnect(client: Socket): Promise<void> {
-    const key = client.data.userId;
-    if (!key)
-      return;
-    this.clients.delete(key);
-    this.usersService.updatePlayerStatus(key, 3);
-    this.chatsGateway.sendUpdateToChannelMember(key);
-    this.sendUpdateToFriends(key);
-    console.log('lobby disonnected', client.id);
+    try {
+      const key = client.data.userId;
+      if (!key)
+        return;
+      this.clients.delete(key);
+      this.usersService.updatePlayerStatus(key, 3);
+      this.chatsGateway.sendUpdateToChannelMember(key);
+      this.sendUpdateToFriends(key);
+      console.log('lobby disonnected', client.id);
+    }
+    catch(e) {
+      console.log(e.stack);
+    }
   }
 
   getClientWithStatus(target: Player): Socket {
@@ -60,13 +65,19 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
-    this.clients.set(userId, client);
-    client.data.userId = userId;
-
-    // 내 status 변경 -> 친구 & 채팅 맴버에게 뿌려주기
-    this.usersService.updatePlayerStatus(userId, 0);
-    this.sendUpdateToFriends(userId);
-    this.chatsGateway.sendUpdateToChannelMember(userId);
+    try {
+      this.clients.set(userId, client);
+      client.data.userId = userId;
+  
+      // 내 status 변경 -> 친구 & 채팅 맴버에게 뿌려주기
+      this.usersService.updatePlayerStatus(userId, 0);
+      this.sendUpdateToFriends(userId);
+      this.chatsGateway.sendUpdateToChannelMember(userId);
+    }
+    catch(e) {
+      console.log("aaaaaaatesates");
+      console.log(e.stack);
+    }
   }
 
   @SubscribeMessage('INVITE')
@@ -117,7 +128,12 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('INFO_FRIENDS')
   async sendFriendList(client: Socket, data) {
-    this.lobbySocketService.sendFriendList(client, data.userId);
+    try {
+      this.lobbySocketService.sendFriendList(client, data.userId);
+    }
+    catch(e) {
+      console.log(e.stack);
+    }
   }
 
   @SubscribeMessage('REQUEST_FRIEND')
@@ -156,14 +172,20 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('UPDATE')
   async updateProfile(client: Socket, data) {
-    const log = await this.lobbySocketService.updateProfile(client, data);
-    client.emit("NOTICE", log);
-    if (log.code === 38)
+    try {
+      const log = await this.lobbySocketService.updateProfile(client, data);
+      client.emit("NOTICE", log);
+      if (log.code === 38)
+        return ;
+      const userId = client.data.userId;
+      this.sendUpdateToFriends(userId);
+      this.chatsGateway.sendUpdateToChannelMember(userId);
       return ;
-    const userId = client.data.userId;
-    this.sendUpdateToFriends(userId);
-    this.chatsGateway.sendUpdateToChannelMember(userId);
-    return ;
+
+    }
+    catch(e) {
+      console.log(e.stack);
+    }
   }
 
   async sendUpdateToFriends(userId: number) {

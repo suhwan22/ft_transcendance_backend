@@ -39,6 +39,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //소켓 연결 해제시 유저목록에서 제거
   async handleDisconnect(client: Socket): Promise<void> {
+    try {
     console.log('game disonnected', client.id);
     const key = client.data.userId;
     if (!key)
@@ -57,19 +58,28 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatsGateway.sendUpdateToChannelMember(key);
       this.lobbyGateway.sendUpdateToFriends(key);
     }
+    catch(e) {
+      console.log(e);
+    }
   }
   
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
-    client.data.userId = userId;
-    const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).score;
-    client.data.score = score;
-    this.clients.set(userId, client);
-    this.usersService.updatePlayerStatus(userId, 2);
-    this.chatsGateway.sendUpdateToChannelMember(userId);
-    this.lobbyGateway.sendUpdateToFriends(userId);
+    try {
+      client.data.userId = userId;
+      const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).score;
+      client.data.score = score;
+      this.clients.set(userId, client);
+      this.usersService.updatePlayerStatus(userId, 2);
+      this.chatsGateway.sendUpdateToChannelMember(userId);
+      this.lobbyGateway.sendUpdateToFriends(userId);
 
-    this.gamesSocketService.checkGameAlready(client);
+      this.gamesSocketService.checkGameAlready(client);
+      
+    }
+    catch(e) {
+      console.log(e.stack);
+    }
   }
 
   @SubscribeMessage('MATCH')
