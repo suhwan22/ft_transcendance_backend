@@ -49,7 +49,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.gamesSocketService.existGameRoom(client);
     }
     else {
-      if (client.data.intervalId) {
+      if (client.data.intervalId !== null) {
         this.gamesSocketService.cancelGame(client);
       }
       this.clients.delete(key);
@@ -120,7 +120,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('CANCEL')
   cancelGame(client: Socket, data: any) {
-    if (client.data.intervalId) {
+    if (client.data.intervalId !== null) {
       this.gamesSocketService.cancelGame(client);
     }
   }
