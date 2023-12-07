@@ -25,7 +25,7 @@ export class LobbySocketService {
     targetClient.emit("INVITE", gameRequest);
   }
 
-  async acceptGame(client: Socket, targetClient: Socket) {
+  async acceptGame(client: Socket, targetClient: Socket, data) {
     const msg = this.getNotice("게임이 성사되었습니다.", 26);
 
     client.emit("NOTICE", msg);
@@ -33,8 +33,8 @@ export class LobbySocketService {
 
     const roomId = client.id + targetClient.id;
 
-    client.emit("JOIN_GAME", { roomId });
-    targetClient.emit("JOIN_GAME", { roomId });
+    client.emit("JOIN_GAME", { roomId, gameRequest: data});
+    targetClient.emit("JOIN_GAME", { roomId, gameRequest: data });
   }
 
   async refuseGame(client: Socket, targetClient: Socket, gameRequest: Partial<GameRequest>, target: Player) {
