@@ -17,6 +17,8 @@ import { UserAuth } from './entities/user-auth.entity';
 import { compare, hash } from 'bcrypt';
 import { UserSocket } from './entities/user-socket.entity';
 import { FriendRequestDto } from './dtos/friend-request.request.dto';
+import { Socket } from 'socket.io';
+import { GameRoom } from 'src/games/entities/game.entity';
 
 @Injectable()
 export class UsersService {
@@ -120,21 +122,21 @@ export class UsersService {
       user: user,
       win: record.win,
       loss: record.loss,
-      score: record.score
+      score: record.rating
     }
     const newRecord = this.recordRepository.create(temp);
     return (this.recordRepository.save(newRecord));
   }
 
   async createUserGameRecordWithResult(user: Player, result: boolean): Promise<UserGameRecord> {
-    let record = { win: 0, loss: 1, score: -1 };
+    let record = { win: 0, loss: 1, rating: -1 };
     if (result) 
-      record = { win: 1, loss: 0, score: 1 };
+      record = { win: 1, loss: 0, rating: 1 };
     const newRecord = this.recordRepository.create({ 
       user: user, 
       win: record.win, 
       loss: record.loss, 
-      score: record.score });
+      rating: record.rating });
     return (this.recordRepository.save(newRecord));
   }
 
@@ -144,7 +146,7 @@ export class UsersService {
       .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
       .leftJoinAndSelect('win_loss_record.user', 'user')
       .select(['win_loss_record.id', 'user.id', 'user.name'
-        , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.score'])
+        , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.rating'])
       .getMany();
     return (recordList)
   }
@@ -155,7 +157,7 @@ export class UsersService {
       .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
       .leftJoinAndSelect('win_loss_record.user', 'user')
       .select(['win_loss_record.id', 'user.id', 'user.name'
-        , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.score'])
+        , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.rating'])
       .where('win_loss_record.user = :id', { id: user })
       .getOne();
     return (recordList)
@@ -167,23 +169,21 @@ export class UsersService {
     return (this.recordRepository.findOne({ where: { id } }));
   }
 
-  async updateUserGameRecord(user: Player, result: boolean, rank: boolean): Promise<UserGameRecord> {
-    let updateResult: UpdateResult;
-    if (rank) {
-      if (result)
-        updateResult = await this.updateUserGameRecordRankWin(user.id);
-      else 
-        updateResult = await this.updateUserGameRecordRankLoss(user.id);
+  async updateRating(winner: Socket, loser: Socket, gameRoom: GameRoom) {
+    if (gameRoom.rank) {
+      const k = 20;
+      let winExpect = 1 / (1 + 10**((loser.data.rating - winner.data.rating) / 400));
+      let lossExpect = 1 / (1 + 10**((winner.data.rating - loser.data.rating) / 400));
+
+      let winRating = winner.data.rating + k * (1 - winExpect);
+      let lossRating = loser.data.rating + k * (0 - lossExpect);
+      await this.updateUserGameRecordRankWin(winner.data.userId, Math.round(winRating));
+      await this.updateUserGameRecordRankLoss(loser.data.userId, Math.round(lossRating));
     }
     else {
-      if (result)
-        updateResult = await this.updateUserGameRecordWin(user.id);
-      else 
-        updateResult = await this.updateUserGameRecordLoss(user.id);
+      await this.updateUserGameRecordWin(winner.data.userId);
+      await this.updateUserGameRecordLoss(loser.data.userId);
     }
-    if (updateResult.affected === 0)
-      return (this.createUserGameRecordWithResult(user, result));
-    return (await this.readOneUserGameRecord(user.id));
   }
 
   async updateUserGameRecordWin(userId: number) {
@@ -206,21 +206,21 @@ export class UsersService {
     return (update);
   }
 
-  async updateUserGameRecordRankWin(userId: number) {
+  async updateUserGameRecordRankWin(userId: number, rating: number) {
     const update = await this.dataSource
       .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
       .update()
-      .set({ win: () => 'win + 1', score: () => 'score + 1'})
+      .set({ win: () => 'win + 1', rating: () => `${rating}`})
       .where(`user_id = ${userId}`)
       .execute()
     return (update);
   }
 
-  async updateUserGameRecordRankLoss(userId: number) {
+  async updateUserGameRecordRankLoss(userId: number, rating: number) {
     const update = await this.dataSource
       .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
       .update()
-      .set({ win: () => 'loss + 1', score: () => 'score - 1'})
+      .set({ win: () => 'loss + 1', rating: () => `${rating}`})
       .where(`user_id = ${userId}`)
       .execute()
     return (update);

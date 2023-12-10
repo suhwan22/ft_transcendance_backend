@@ -110,7 +110,7 @@ export class AuthService {
       user = await this.usersService.createPlayer(newPlayer);
       await this.usersService.createUserAuth(user.id);
       await this.usersService.createUserSocket(user.id);
-      await this.usersService.createUserGameRecord({ user: user.id, win: 0, loss: 0, score: 1500 });
+      await this.usersService.createUserGameRecord({ user: user.id, win: 0, loss: 0, rating: 1500 });
     }
     return (user);
   }

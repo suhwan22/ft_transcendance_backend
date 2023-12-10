@@ -12,16 +12,16 @@ export class GameInfo {
 }
 
 export class PingPongPlayer {
-  constructor(player: Player, isReady: boolean, score: number) {
+  constructor(player: Player, isReady: boolean, rating: number) {
     this.player = player;
     this.isReady = isReady;
     this.isPause = false;
     this.pause = 0;
     this.pauseTime = 0;
     this.readyTime = 0;
-    this.score = score;
+    this.rating = rating;
   }
-  score: number;
+  rating: number;
   player: Player;
   isReady: boolean;
   isPause: boolean;

@@ -11,5 +11,5 @@ export class UserGameRecordRequestDto {
   loss: number;
 
   @ApiProperty()
-  score: number;
+  rating: number;
 }

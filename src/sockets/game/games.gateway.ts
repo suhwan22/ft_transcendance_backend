@@ -68,8 +68,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async registUserSocket(client: Socket, userId: number) {
     try {
       client.data.userId = userId;
-      const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).score;
-      client.data.score = score;
+      const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).rating;
+      client.data.rating = score;
       this.clients.set(userId, client);
       this.usersService.updatePlayerStatus(userId, 2);
       this.chatsGateway.sendUpdateToChannelMember(userId);

@@ -59,17 +59,17 @@ insert into block_list (id, "user", target_id) values (100001, 1, 5);
 insert into block_list (id, "user", target_id) values (100002, 1, 6);
 
 -- init win_loss_record data
-insert into win_loss_record (id, user_id, win, loss, score, date) 
+insert into win_loss_record (id, user_id, win, loss, rating, date) 
                     values (100001, 1, 10, 3, 1672, now());
-insert into win_loss_record (id, user_id, win, loss, score, date) 
+insert into win_loss_record (id, user_id, win, loss, rating, date) 
                     values (100002, 2, 3, 3, 1503, now());
-insert into win_loss_record (id, user_id, win, loss, score, date) 
+insert into win_loss_record (id, user_id, win, loss, rating, date) 
                     values (100003, 3, 15, 6, 1508, now());
-insert into win_loss_record (id, user_id, win, loss, score, date) 
+insert into win_loss_record (id, user_id, win, loss, rating, date) 
                     values (100004, 4, 7, 4, 1432, now());
-insert into win_loss_record (id, user_id, win, loss, score, date) 
+insert into win_loss_record (id, user_id, win, loss, rating, date) 
                     values (100005, 5, 6, 12, 1800, now());
-insert into win_loss_record (id, user_id, win, loss, score, date) 
+insert into win_loss_record (id, user_id, win, loss, rating, date) 
                     values (100006, 6, 5, 2, 1592, now());
 
 -- init channel_config data

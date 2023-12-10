@@ -83,10 +83,10 @@ export class GamesService {
   async readRankInfo(): Promise<UserGameRecord[]> {
     const records = await this.usersService.readAllUserGameRecord();
     records.sort((a, b) => {
-      if (a.score === b.score) {
+      if (a.rating === b.rating) {
         return (b.win - a.win);
       }
-      else return (b.score - a.score);
+      else return (b.rating - a.rating);
     });
     return (records);
   }
