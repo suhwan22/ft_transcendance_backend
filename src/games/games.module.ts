@@ -7,6 +7,7 @@ import { UsersModule } from 'src/users/users.module';
 import { ChatsModule } from 'src/chats/chats.module';
 import { SocketsModule } from 'src/sockets/sockets.module';
 import { GamesSocketService } from '../sockets/game/games-socket.service';
+import { GameDodge } from './entities/game-dodge.entity';
 
 @Module({
   imports: [
@@ -14,7 +15,8 @@ import { GamesSocketService } from '../sockets/game/games-socket.service';
     forwardRef(() => (ChatsModule)),
     forwardRef(() => (SocketsModule)),
     TypeOrmModule.forFeature([
-    GameHistory])],
+    GameHistory,
+    GameDodge])],
   controllers: [GamesController],
   providers: [GamesService, GamesSocketService],
   exports: [TypeOrmModule, GamesService]

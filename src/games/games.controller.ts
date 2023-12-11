@@ -71,4 +71,12 @@ export class GamesController {
   async getMyRank(@Param('userId') userId: number): Promise<number> {
     return (this.gamesService.getMyRank(userId));
   }
+
+
+  @ApiOperation({ summary: '내 최근 전적 조회 API' })
+  @ApiOkResponse({ description: 'Ok'})
+  @Get('history/latest/:userId')
+  async getCurrentMyHistroy(@Param('userId') userId: number): Promise<GameHistory> {
+    return (this.gamesService.getCurrentMyHistroy(userId));
+  }
 }

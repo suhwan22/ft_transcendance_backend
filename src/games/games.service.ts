@@ -7,12 +7,15 @@ import { GameHistory } from './entities/game-history.entity';
 import { GameHistoryRequestDto } from './dtos/game-history.request.dto';
 import { GameRoom } from './entities/game.entity';
 import { Player } from 'src/users/entities/player.entity';
+import { GameDodge } from './entities/game-dodge.entity';
 
 @Injectable()
 export class GamesService {
   constructor(
     @InjectRepository(GameHistory)
     private gameHistoryRepository: Repository<GameHistory>,
+    @InjectRepository(GameDodge)
+    private gameDodgeRepository: Repository<GameDodge>,
 
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
@@ -33,12 +36,12 @@ export class GamesService {
     return (this.gameHistoryRepository.save(newHistory));
   }
 
-  async createGameHistoryWitData(user: number, 
-                                 opponent: Player, 
-                                 result: boolean, 
-                                 userScore: number, 
-                                 opponentScore: number,
-                                 rank: boolean): Promise<GameHistory> {
+  async createGameHistoryWitData(user: number,
+    opponent: Player,
+    result: boolean,
+    userScore: number,
+    opponentScore: number,
+    rank: boolean): Promise<GameHistory> {
     const temp = {
       user: user,
       opponent: opponent,
@@ -99,5 +102,47 @@ export class GamesService {
       }
     }
     return (null);
+  }
+
+  async createGameDodge(userId: number) {
+    const gameDodge = this.gameDodgeRepository
+      .createQueryBuilder('game_dodge')
+      .insert()
+      .into(GameDodge)
+      .values({ user: () => `${userId}` })
+      .execute();
+  }
+
+  async readGameDodge(userId: number) {
+    const gameDodge = await this.gameDodgeRepository
+      .createQueryBuilder('game_dodge')
+      .select(['game_dodge.id', 'game_dodge.date'])
+      .getOne();
+    return (gameDodge);
+  }
+
+  async deleteGameDodge(userId: number) {
+    const deleteResult = await this.gameDodgeRepository
+      .createQueryBuilder('game_dodge')
+      .delete()
+      .where(`user_id = ${userId}`)
+      .execute();
+  }
+
+  async getCurrentMyHistroy(userId: number): Promise<GameHistory> {
+    const gameHistroy = this.gameHistoryRepository.createQueryBuilder('game_history')
+      .leftJoinAndSelect('game_history.opponent', 'player')
+      .select(['game_history.id',
+        'game_history.result',
+        'game_history.userScore',
+        'game_history.opponentScore',
+        'player.id',
+        'player.name',
+        'game_history.date'])
+      .where(`game_history.user = ${userId}`)
+      .orderBy('game_history.date', 'DESC')
+      .limit(1)
+      .getOne();
+    return (gameHistroy);
   }
 }

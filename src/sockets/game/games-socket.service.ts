@@ -20,7 +20,23 @@ export class GamesSocketService {
   games: Map<string, GameEngine>;
   queue: Map<number, Queue<GameQueue>>;
 
+  getNotice(message: string, code: number) {
+    return ({
+      code: code,
+      content: message,
+      date: new Date(),
+    });
+  }
+
   async matchMaking(client: Socket) {
+    if (await this.checkDodgePenalty(client.data.userId)) {
+      const msg = this.getNotice("패널티로 인하여 1분간 매치 이용이 불가합니다.", 40);
+      client.emit("NOTICE", msg);
+      return ;
+    }
+    else {
+      await this.gamesService.deleteGameDodge(client.data.userId);
+    }
     const rating = client.data.rating;
     const ratingGroup = Math.floor(rating / 100);
     const gameQueue = new GameQueue(client, rating, 0);
@@ -43,6 +59,19 @@ export class GamesSocketService {
     }
     const intervalId = setInterval(() => this.findMath(gameQueue, ratingGroup, intervalId), 1000);
     client.data.matchInterval = intervalId;
+  }
+
+  async checkDodgePenalty(userId: number) {
+    const gameDodge = await this.gamesService.readGameDodge(userId);
+    if (gameDodge === null) {
+      return (false);
+    }
+    const date = gameDodge.date.getTime();
+    const now = new Date().getTime();
+    if (((now - date) / 1000) > 60) {
+      return (false);
+    }
+    return (true);
   }
 
   async findMath(gameQueue: GameQueue, ratingGroup: number, intervalId: any) {
@@ -378,12 +407,20 @@ export class GamesSocketService {
       this.pauseGame(client);
   }
 
-  dodgeGame(client: Socket, game: GameEngine) {
+  async dodgeGame(client: Socket, game: GameEngine) {
     const targetClient = game.leftSocket === client ? game.rightSocket : game.leftSocket;
     targetClient.emit("DODGE", "DODGE");
     this.games.delete(client.data.roomId);
     client.data.roomId = null;
     targetClient.data.roomId = null;
+
+    try {
+      await this.gamesService.createGameDodge(client.data.userId);
+    }
+    catch(e) {
+      const msg = this.getNotice("DB Error", 200);
+      client.emit("NOTICE", msg);
+    }
   }
 
   checkGameAlready(client: Socket) {
