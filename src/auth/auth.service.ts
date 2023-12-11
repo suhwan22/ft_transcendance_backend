@@ -20,14 +20,14 @@ export class AuthService {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
-      expiresIn: '900s'
+      expiresIn: '3600s'
     });
     return {
       accessToken: token,
       domain: 'localhost',
       path: '/',
       httpOnly: true,
-      maxAge: 15 * 60 * 1000
+      maxAge: 60 * 60 * 1000
     };
   }
 
@@ -60,10 +60,6 @@ export class AuthService {
         httpOnly: true,
         maxAge: 0,
       },
-      userIdOption: {
-        httpOnly: true,
-        maxAge: 0,
-      }
     };
   }
 
@@ -132,5 +128,10 @@ export class AuthService {
     const userAuth = await this.usersService.readUserAuth(payload.userId);
     const secret = userAuth.twoFactorAuthSecret;
     return (authenticator.verify({ token: code, secret: secret}));
+  }
+
+  verifyBearToken(bearerToken: string) {
+    const token = bearerToken.split(' ')[1];
+    return (this.jwtService.verify(token, { secret: "accessSecret" }));
   }
 }

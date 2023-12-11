@@ -18,6 +18,7 @@ import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
+import { AuthService } from 'src/auth/auth.service';
 
 @WebSocketGateway(3131, { cors: '*', namespace: '/chats' })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -25,6 +26,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly chatsSocketService: ChatsSocketService,
     private readonly chatsService: ChatsService,
     private readonly usersService: UsersService,
+    private readonly authServeice: AuthService,
     @Inject(forwardRef(() => GamesGateway))
     private readonly gamesGateway: GamesGateway,
     @Inject(forwardRef(() => LobbyGateway))
@@ -36,11 +38,33 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
-  public handleConnection(client: Socket): void {
-    client.leave(client.id);
-    client.data.roomId = `room:lobby`;
-    client.join('room:lobby');
-    console.log('chat connected', client.id);
+  public handleConnection(client: Socket, data) {
+    try {
+      const payload = this.authServeice.verifyBearToken(client.handshake.headers.authorization);
+
+      client.leave(client.id);
+      client.data.roomId = `room:lobby`;
+      client.join('room:lobby');
+      client.data.userId = payload.sub;
+      this.clients.set(client.data.userId, client);
+      this.usersService.updatePlayerStatus(client.data.userId, 0);
+      this.lobbyGateway.sendUpdateToFriends(client.data.userId);
+      this.sendUpdateToChannelMember(client.data.userId);
+    }
+    catch (e) {
+      if (e.name === 'JsonWebTokenError') {
+        const msg = this.chatsSocketService.getNotice("Invaild Token", 201);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.name === 'TokenExpiredError') {
+        const msg = this.chatsSocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else {
+        const msg = this.chatsSocketService.getNotice("DB Error", 200);
+        client.emit("NOTICE", msg);
+      }
+    }
   }
 
   //소켓 연결 해제시 유저목록에서 제거
@@ -205,20 +229,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       await this.chatsService.deleteChannelMember(member.id);
     }
     await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
-  }
-
-  @SubscribeMessage('REGIST')
-  async registUserSocket(client: Socket, userId: number) {
-    try {
-      this.clients.set(userId, client);
-      client.data.userId = userId;
-      this.usersService.updatePlayerStatus(userId, 1);
-      this.sendUpdateToChannelMember(userId);
-      this.lobbyGateway.sendUpdateToFriends(userId);
-    }
-    catch(e) {
-      console.log(e.stack);
-    }
   }
 
   @SubscribeMessage('INFO_CH_LIST')

@@ -1,11 +1,12 @@
-import { Controller, Get, Post, Body, Put, Param, Delete, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Put, Param, Delete, NotFoundException, UseGuards, Req } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { GamesService } from './games.service';
 import { GameHistory } from './entities/game-history.entity';
 import { GameHistoryRequestDto } from './dtos/game-history.request.dto';
 import { UserGameRecord } from 'src/users/entities/user-game-record.entity';
+import { JwtTwoFactorAuthGuard } from 'src/auth/guards/jwt-2fa.guard';
 
-
+@UseGuards(JwtTwoFactorAuthGuard)
 @ApiTags('games')
 @Controller('games')
 export class GamesController {
@@ -15,10 +16,11 @@ export class GamesController {
 
 /* History Part */
   //get history by id
-  @ApiOperation({ summary: '특정 게임 기록 조회 API' })
+  @ApiOperation({ summary: '내 게임 기록 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: GameHistory, isArray: true})
-  @Get('historys/:id')
-  async readOneHistory(@Param('id') id: number): Promise<GameHistory[]> {
+  @Get('historys/me')
+  async readMeHistory(@Req() req): Promise<GameHistory[]> {
+    const id = req.user.uesrId;
     const history = await this.gamesService.readOneGameHistory(id);
     if (!history) {
       throw new NotFoundException('History does not exist!');
@@ -26,37 +28,16 @@ export class GamesController {
     return (history);
   }
 
-  //create history
-  @ApiBody({ type: GameHistoryRequestDto })
-  @ApiOperation({ summary: '게임 기록 추가 API' })
-  @ApiCreatedResponse({ description: 'success', type: GameHistory })
-  @Post('historys')
-  async createHistory(@Body() game: GameHistoryRequestDto): Promise<GameHistory> {
-    return (this.gamesService.createGameHistory(game));
+  @ApiOperation({ summary: '특정 유저 게임 기록 조회 API' })
+  @ApiOkResponse({ description: 'Ok', type: GameHistory, isArray: true})
+  @Get('historys/:userId')
+  async readOneHistory(@Param('userId') id: number): Promise<GameHistory[]> {
+    const history = await this.gamesService.readOneGameHistory(id);
+    if (!history) {
+      throw new NotFoundException('History does not exist!');
+    }
+    return (history);
   }
-
-  //update history
-  @ApiBody({ type: GameHistory })
-  @ApiOperation({ summary: '게임 기록 내용 변경 API' })
-  @ApiCreatedResponse({ description: 'success', type: GameHistory })
-  @Put('historys/:id')
-  async updateGameHistoryInfo(@Param('id') id: number, @Body() game: GameHistory): Promise<any> {
-    return (this.gamesService.updateGameHistoryInfo(id, game));
-  }
-
-//   //delete history
-//   @ApiOperation({ summary: '게임 기록 제거 API' })
-//   @ApiOkResponse({ description: 'Ok' })
-//   // @ApiQuery({ name: 'channel', type: 'number' })
-//   // @ApiQuery({ name: 'user', type: 'number' }) // 현재는 {id}로 만 제거되는 상태
-//   @Delete('history/:id')
-//   async deleteGameHistory(@Param('id') id: number): Promise<any> {
-//     const history = await this.gamesService.readOneGameHistory(id);
-//     if (!history) {
-//       throw new NotFoundException('History does not exist!');
-//     }
-//     return (this.gamesService.deleteGameHistory(id));
-//   }
 
   @ApiOperation({ summary: '랭킹목록 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: UserGameRecord, isArray: true })
@@ -67,8 +48,9 @@ export class GamesController {
 
   @ApiOperation({ summary: '내 랭킹 조회 API' })
   @ApiOkResponse({ description: 'Ok'})
-  @Get('ranks/:userId')
-  async getMyRank(@Param('userId') userId: number): Promise<number> {
-    return (this.gamesService.getMyRank(userId));
+  @Get('ranks/me')
+  async getMyRank(@Req() req): Promise<number> {
+    const id = req.user.userId;
+    return (this.gamesService.getMyRank(id));
   }
 }

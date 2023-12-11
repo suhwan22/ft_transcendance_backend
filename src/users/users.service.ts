@@ -122,7 +122,7 @@ export class UsersService {
       user: user,
       win: record.win,
       loss: record.loss,
-      score: record.rating
+      rating: record.rating
     }
     const newRecord = this.recordRepository.create(temp);
     return (this.recordRepository.save(newRecord));

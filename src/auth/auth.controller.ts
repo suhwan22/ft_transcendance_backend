@@ -4,7 +4,6 @@ import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Request, Response } from 'express';
 import { UsersService } from 'src/users/users.service';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
-import { JwtTwoFactorAuthGuard } from './guards/jwt-2fa.guard';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CodeRequestDto } from './dtos/codeRequestDto';
 
@@ -21,8 +20,9 @@ export class AuthController {
   @ApiOkResponse({ description: 'Ok'})
   @Post('/login')
   async login(@Body('code') code: string, @Res({ passthrough: true }) response: Response) {
-    console.log("hell");
+    console.log(code);
     const token = await this.authService.getAccessTokenWithOauth(code);
+    console.log(token);
     const oauthUser = await this.authService.getUserWithOauth(token);
     const user = await this.authService.signUpUser(oauthUser);
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id);
@@ -32,7 +32,6 @@ export class AuthController {
 
     response.cookie('Authentication', accessToken, accessOption);
     response.cookie('Refresh', refreshToken, refreshOption);
-    response.cookie('user.id', user.id);
     return ('login success');
   }
 
@@ -41,12 +40,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('/logout')
   async logout(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessOption, refreshOption, userIdOption } = await this.authService.removeCookieWithTokens();
+    const { accessOption, refreshOption } = await this.authService.removeCookieWithTokens();
     await this.usersService.updateRefreshToken(null, request.user.userId);
     response.cookie('Authentication', '', accessOption);
     response.cookie('Refresh', '', refreshOption);
     response.cookie('TwoFactorAuth', '', accessOption);
-    response.cookie('user.id', '', userIdOption);
     return ('logout success');
   }
 
@@ -84,11 +82,5 @@ export class AuthController {
   async getQrImageWithTwoFactorAuth(@Req() request: Request, @Res() response: Response) {
     const { optAuthUrl } = await this.authService.generateTwoFactorAuthenticationSecret(request.user);
     return (await this.authService.pipeQrCodeStream(response, optAuthUrl));
-  }
-
-  @UseGuards(JwtTwoFactorAuthGuard)
-  @Get('/test')
-  test() {
-    return 'test success';
   }
 }

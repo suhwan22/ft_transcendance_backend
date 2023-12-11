@@ -13,9 +13,11 @@ import { ChatsGateway } from '../sockets/chat/chats.gateway';
 import { ChatsSocketService } from '../sockets/chat/chats-socket.service';
 import { ChannelPassword } from './entities/channel-password.entity';
 import { SocketsModule } from 'src/sockets/sockets.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
+    forwardRef(() => AuthModule),
     forwardRef(() => GamesModule),
     forwardRef(() => UsersModule),
     forwardRef(() => SocketsModule),

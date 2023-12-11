@@ -6,8 +6,9 @@
 
 <body>
   <div>
-    userId: <input id="user" type="text" />
-    <button onclick="regist()">regist socket</button>
+    user: <input id="user" type="text" />
+    token: <input id="token" type="text" />
+    <button onclick="connect()">connect socket</button>
   </div>
   <div>
     game: <input id="game" type="text" />
@@ -22,8 +23,8 @@
     <button onclick="refuse_friend()">no</button>
   </div>
   <div>
-    edit: <input id="edit" type="text" />
-    <button onclick="edit()">edit</button>
+    update: <input id="update" type="text" />
+    <button onclick="update()">update</button>
   </div>
   <script src="https://cdn.socket.io/4.3.2/socket.io.min.js"
     integrity="sha384-KAZ4DtjNhLChOB/hxXuKqhMLYvx3b5MlT55xPEiNmREKRzeEm+RVPlTnAn0ajQNs"
@@ -34,17 +35,24 @@
     const user = document.getElementById('user');
     const game = document.getElementById('game');
     const friend= document.getElementById('friend');
-    const edit = document.getElementById('edit');
-    let socket = io('http://localhost:3131/lobby');
+    const update1 = document.getElementById('update');
+    const token = document.getElementById('token');
+    let socket = io('http://localhost:3131/lobby', {
+    autoConnect: false,
+    transportOptions: {
+        polling: {
+            extraHeaders: {
+                Authorization: `Bearer ${token.value}`,
+            }
+        }
+    }
+});
 
     socket.on('NOTICE', function (data) {
+      console.log("aaaaa");
       console.log(data);
     });
-    socket.on('JOIN_GAME', function (data) {
-      console.log(data);
-    });
-    socket.
-    on('INVITE', function (data) {
+    socket.on('INVATE', function (data) {
       gameRequest = data;
       console.log(gameRequest);
       console.log(gameRequest.send.name + " 님이 게임 초대하였습니다.");
@@ -57,8 +65,8 @@
       console.log(frinedRequest);
       console.log(frinedRequest.send.name + " 님이 친구요청 하였습니다.");
     });
-    function regist() {
-      socket.emit('REGIST', parseInt(user.value));
+    function connect() {
+      socket.connect();
     }
     function request_friend() {
       socket.emit('REQUEST_FRIEND', { userId: parseInt(user.value), target: friend.value });
@@ -87,7 +95,7 @@
       gameRequest = null;
     }
     function update() {
-      socket.emit('UPDATE', { name: edit.value, avatar: "testestestest" });
+      socket.emit('UPDATE', { name: update1.value, avatar: "testestestest" });
     }
   </script>
 </body>

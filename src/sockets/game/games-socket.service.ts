@@ -20,6 +20,14 @@ export class GamesSocketService {
   games: Map<string, GameEngine>;
   queue: Map<number, Queue<GameQueue>>;
 
+  getNotice(message: string, code: number) {
+    return ({
+      code: code,
+      content: message,
+      date: new Date(),
+    });
+  }
+  
   async matchMaking(client: Socket) {
     const rating = client.data.rating;
     const ratingGroup = Math.floor(rating / 100);

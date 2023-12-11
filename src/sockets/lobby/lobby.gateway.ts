@@ -1,4 +1,4 @@
-import { forwardRef, Inject } from '@nestjs/common';
+import { forwardRef, Inject, Req, UseGuards } from '@nestjs/common';
 import {
   MessageBody,
   SubscribeMessage,
@@ -7,6 +7,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   ConnectedSocket,
+  WsException,
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
@@ -16,6 +17,7 @@ import { LobbySocketService } from './lobby-socket.service';
 import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
+import { AuthService } from 'src/auth/auth.service';
 
 @WebSocketGateway(3131, { namespace: '/lobby' })
 export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -23,7 +25,8 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject(forwardRef(() => ChatsGateway))
     private readonly chatsGateway: ChatsGateway,
     private readonly lobbySocketService: LobbySocketService,
-    private readonly usersService: UsersService,) {
+    private readonly usersService: UsersService,
+    private readonly authServeice: AuthService,) {
     this.clients = new Map<number, Socket>();
   }
   @WebSocketServer()
@@ -31,8 +34,30 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
-  public handleConnection(client: Socket): void {
-    console.log('lobby connected', client.id);
+  public handleConnection(client: Socket, data) {
+    try {
+      const payload = this.authServeice.verifyBearToken(client.handshake.headers.authorization);
+
+      client.data.userId = payload.sub;
+      this.clients.set(client.data.userId, client);
+      this.usersService.updatePlayerStatus(client.data.userId, 0);
+      this.sendUpdateToFriends(client.data.userId);
+      this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
+    }
+    catch (e) {
+      if (e.name === 'JsonWebTokenError') {
+        const msg = this.lobbySocketService.getNotice("Invaild Token", 201);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.name === 'TokenExpiredError') {
+        const msg = this.lobbySocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else {
+        const msg = this.lobbySocketService.getNotice("DB Error", 200);
+        client.emit("NOTICE", msg);
+      }
+    }
   }
 
   //소켓 연결 해제시 유저목록에서 제거
@@ -60,23 +85,6 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         return (this.chatsGateway.clients.get(target.id));
       default:
         return (null);
-    }
-  }
-
-  @SubscribeMessage('REGIST')
-  async registUserSocket(client: Socket, userId: number) {
-    try {
-      this.clients.set(userId, client);
-      client.data.userId = userId;
-  
-      // 내 status 변경 -> 친구 & 채팅 맴버에게 뿌려주기
-      this.usersService.updatePlayerStatus(userId, 0);
-      this.sendUpdateToFriends(userId);
-      this.chatsGateway.sendUpdateToChannelMember(userId);
-    }
-    catch(e) {
-      console.log("aaaaaaatesates");
-      console.log(e.stack);
     }
   }
 

@@ -7,14 +7,15 @@ import { UsersModule } from 'src/users/users.module';
 import { ChatsModule } from 'src/chats/chats.module';
 import { SocketsModule } from 'src/sockets/sockets.module';
 import { GamesSocketService } from '../sockets/game/games-socket.service';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
+    forwardRef(() => AuthModule),
     forwardRef(() => (UsersModule)),
     forwardRef(() => (ChatsModule)),
     forwardRef(() => (SocketsModule)),
-    TypeOrmModule.forFeature([
-    GameHistory])],
+    TypeOrmModule.forFeature([GameHistory])],
   controllers: [GamesController],
   providers: [GamesService, GamesSocketService],
   exports: [TypeOrmModule, GamesService]
