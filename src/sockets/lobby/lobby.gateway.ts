@@ -190,5 +190,10 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async sendUpdateToFriends(userId: number) {
     this.lobbySocketService.sendUpdateToFriends(this.clients, userId);
   }
-
+  
+  @SubscribeMessage('GET_FRIEND_REQUEST') 
+  async getFriendRequest(client: Socket) {
+    const friendRequest = await this.usersService.readRecvFriendRequest(client.data.userId);
+    client.emit('GET_FRIEND_REQUEST', friendRequest);
+  }
 }

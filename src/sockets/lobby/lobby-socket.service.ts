@@ -71,30 +71,14 @@ export class LobbySocketService {
       client.emit("NOTICE", msg);
       return;
     }
-    const otherRequest = await this.usersService.readRecvAndSendFriendRequest(userId, target.id);
-    if (otherRequest) {
-      const user = await this.usersService.readOnePurePlayer(userId);
-      await this.usersService.createFriendWithPlayer(user.id, target);
-      await this.usersService.createFriendWithPlayer(target.id, user);
-      this.usersService.deleteFriendRequest(otherRequest.id);
-      if (target.status === 0)
-        this.sendFriendList(targetClient, target.id);
-      if (user.status === 0)
-        this.sendFriendList(client, userId);
-      const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32);
-      client.emit("NOTICE", msg);
-      if (target.status === 0 || target.status === 1) {
-        const msg = this.getNotice(user.name + " 님과 친구가 되었습니다.", 32);
-        targetClient.emit("NOTICE", msg);
-      }
-    }
-    else {
-      const user = await this.usersService.readOnePurePlayer(userId);
-      const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
-      const msg = this.getNotice(target.name + " 님에게 친구 요청하였습니다.", 31);
-      client.emit("NOTICE", msg);
-      if (targetClient)
-        targetClient.emit("REQUEST_FRIEND", friendRequest);
+    const user = await this.usersService.readOnePurePlayer(userId);
+    const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
+    const msg = this.getNotice(target.name + " 님에게 친구 요청하였습니다.", 31);
+    client.emit("NOTICE", msg);
+    if (targetClient) {
+      const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
+      targetClient.emit("REQUEST_FRIEND", friendRequest);
+      targetClient.emit("GET_FRIEND_REQUEST", friendRequests);
     }
   }
 
@@ -103,13 +87,16 @@ export class LobbySocketService {
       const user = await this.usersService.readOnePurePlayer(friendRequest.recv.id);
       await this.usersService.createFriendWithPlayer(user.id, target);
       await this.usersService.createFriendWithPlayer(target.id, user);
-      this.usersService.deleteFriendRequest(friendRequest.id);
+      await this.usersService.deleteFriendRequest(friendRequest.id);
       if (target.status === 0)
         this.sendFriendList(targetClient, target.id);
       if (user.status === 0)
         this.sendFriendList(client, user.id);
       const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32);
       client.emit("NOTICE", msg);
+
+      const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
+      client.emit("GET_FRIEND_REQUEST", friendRequests);
       if (target.status === 0 || target.status === 1) {
         const msg = this.getNotice(user.name + " 님과 친구가 되었습니다.", 32);
         targetClient.emit("NOTICE", msg);
@@ -123,9 +110,11 @@ export class LobbySocketService {
 
   async refuseFriend(client: Socket, targetClient: Socket, friendRequest: Partial<FriendRequest>, target: Player) {
     try {
-      this.usersService.deleteFriendRequest(friendRequest.id);
+      await this.usersService.deleteFriendRequest(friendRequest.id);
       const msg = this.getNotice("요청을 거절 하였습니다.", 33);
       client.emit("NOTICE", msg);
+      const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
+      client.emit("GET_FRIEND_REQUEST", friendRequests);
       if (target.status === 0 || target.status === 1)
         targetClient.emit("NOTICE", this.getNotice(friendRequest.recv.name + " 님이 친구요청을 거절 하였습니다.", 34));
     }
