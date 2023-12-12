@@ -45,6 +45,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.usersService.updatePlayerStatus(client.data.userId, 0);
       this.lobbyGateway.sendUpdateToFriends(client.data.userId);
       this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
+
+      this.gamesSocketService.checkGameAlready(client);
     }
     catch (e) {
       if (e.name === 'JsonWebTokenError') {
@@ -91,7 +93,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
-    this.gamesSocketService.matchMaking(client);
+    this.gamesSocketService.matchMaking(client, 60);
   }
 
   @SubscribeMessage('READY')
@@ -119,8 +121,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gamesSocketService.pauseGame(client);
   }
 
-  @SubscribeMessage('JOIN')
+  @SubscribeMessage('JOIN_GAME')
   async join(client: Socket, data: any) {
+    console.log(data);
     const isLeft = data.gameRequest.send.id === client.data.userId ? true : false;
     this.gamesSocketService.enterGame(client, data.roomId, false, isLeft);
   }

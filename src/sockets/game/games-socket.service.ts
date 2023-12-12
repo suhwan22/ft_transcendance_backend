@@ -2,11 +2,11 @@ import { Injectable } from "@nestjs/common";
 import { Socket } from "socket.io";
 import { UsersService } from "src/users/users.service";
 import { GameRoom, PingPongPlayer } from "../../games/entities/game.entity";
-import { PlayerInfoDto } from "../../games/dtos/player-info.dto";
 import { GamesService } from "../../games/games.service";
 import { Player } from "src/users/entities/player.entity";
 import { GameEngine } from "../../games/entities/game-engine";
 import { GameQueue, Queue } from "../../games/entities/game-queue";
+
 
 @Injectable()
 export class GamesSocketService {
@@ -27,8 +27,14 @@ export class GamesSocketService {
       date: new Date(),
     });
   }
-  
-  async matchMaking(client: Socket) {
+
+  async matchMaking(client: Socket, penaltyTime: number) {
+    const time = await this.getDodgePenaltyTime(client.data.userId);
+    if (time > 0 && time < penaltyTime)
+      client.emit("PENALTY", { min: Math.floor(time / 60),  sec: time % 60 });
+    else if (time > penaltyTime) {
+      await this.gamesService.deleteGameDodge(client.data.userId);
+    }
     const rating = client.data.rating;
     const ratingGroup = Math.floor(rating / 100);
     const gameQueue = new GameQueue(client, rating, 0);
@@ -51,6 +57,16 @@ export class GamesSocketService {
     }
     const intervalId = setInterval(() => this.findMath(gameQueue, ratingGroup, intervalId), 1000);
     client.data.matchInterval = intervalId;
+  }
+
+  async getDodgePenaltyTime(userId: number) {
+    const gameDodge = await this.gamesService.readGameDodge(userId);
+    if (gameDodge === null) {
+      return (-1);
+    }
+    const date = gameDodge.date.getTime();
+    const now = new Date().getTime();
+    return ((now - date) / 1000);
   }
 
   async findMath(gameQueue: GameQueue, ratingGroup: number, intervalId: any) {
@@ -348,31 +364,33 @@ export class GamesSocketService {
     loss = loser.data.player.player;
     winScore = gameRoom.left === winner.data.player ? gameRoom.score.left : gameRoom.score.right;
     lossScore = gameRoom.left === loser.data.player ? gameRoom.score.left : gameRoom.score.right;
+    winnerIsLeft = gameRoom.left === winner.data.player ? true : false;
 
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
     await this.usersService.updateRating(winner, loser, gameRoom);
 
-    client.to(gameRoom.roomId).emit("END");
+    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
     client.leave(gameRoom.roomId);
     targetClient.leave(gameRoom.roomId);
   }
 
   async endGame(winner: Socket, loser: Socket, gameRoom: GameRoom): Promise<void> {
     let win: Player, loss: Player;
-    let winScore: number, lossScore: number;
+    let winScore: number, lossScore: number, winnerIsLeft: boolean;
 
     win = winner.data.player.player;
     loss = loser.data.player.player;
     winScore = gameRoom.left === winner.data.player ? gameRoom.score.left : gameRoom.score.right;
     lossScore = gameRoom.left === loser.data.player ? gameRoom.score.left : gameRoom.score.right;
+    winnerIsLeft = gameRoom.left === winner.data.player ? true : false;
 
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
 
     await this.usersService.updateRating(winner, loser, gameRoom);
 
-    winner.to(gameRoom.roomId).emit("END");
+    winner.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
     winner.leave(gameRoom.roomId);
     loser.leave(gameRoom.roomId);
   }
@@ -386,21 +404,31 @@ export class GamesSocketService {
       this.pauseGame(client);
   }
 
-  dodgeGame(client: Socket, game: GameEngine) {
+  async dodgeGame(client: Socket, game: GameEngine) {
     const targetClient = game.leftSocket === client ? game.rightSocket : game.leftSocket;
     targetClient.emit("DODGE", "DODGE");
     this.games.delete(client.data.roomId);
     client.data.roomId = null;
     targetClient.data.roomId = null;
+
+    try {
+      await this.gamesService.createGameDodge(client.data.userId);
+    }
+    catch(e) {
+      const msg = this.getNotice("DB Error", 200);
+      client.emit("NOTICE", msg);
+    }
   }
 
   checkGameAlready(client: Socket) {
     const userId = client.data.userId;
     let game: GameEngine;
     this.games.forEach((v, k, m) => {
-      if (userId === v.leftSocket.data.userId || userId === v.rightSocket.data.userId) {
-        game = v;
-        return;
+      if (v.leftSocket !== null && v.rightSocket !== null) {
+        if (userId === v.leftSocket.data.userId || userId === v.rightSocket.data.userId) {
+          game = v;
+          return ;
+        }
       }
     });
     if (game) {
