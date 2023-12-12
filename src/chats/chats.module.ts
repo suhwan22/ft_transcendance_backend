@@ -14,6 +14,7 @@ import { ChatsSocketService } from '../sockets/chat/chats-socket.service';
 import { ChannelPassword } from './entities/channel-password.entity';
 import { SocketsModule } from 'src/sockets/sockets.module';
 import { ChatBanRepositroy } from './repositories/chat-ban.repository';
+import { ChannelConfigRepositroy } from './repositories/channel-config.repository';
 
 @Module({
   imports: [
@@ -21,7 +22,6 @@ import { ChatBanRepositroy } from './repositories/chat-ban.repository';
     forwardRef(() => UsersModule),
     forwardRef(() => SocketsModule),
     TypeOrmModule.forFeature([
-      ChannelConfig,
       ChannelMember,
       ChatLog,
       ChatMute,
@@ -29,7 +29,7 @@ import { ChatBanRepositroy } from './repositories/chat-ban.repository';
     ])
   ],
   controllers: [ChatsController],
-  providers: [ChatsService, ChatsGateway, ChatsSocketService, ChatBanRepositroy],
+  providers: [ChatsService, ChatsGateway, ChatsSocketService, ChatBanRepositroy, ChannelConfigRepositroy],
   exports: [TypeOrmModule, ChatsService, ChatsGateway]
 })
 export class ChatsModule {}

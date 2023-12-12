@@ -15,20 +15,20 @@ import { ChannelConfigRequestDto } from './dtos/channel-config.request.dto';
 import { ChannelPassword } from './entities/channel-password.entity';
 import { compare, hash } from 'bcrypt';
 import { ChatBanRepositroy } from './repositories/chat-ban.repository';
+import { ChannelConfigRepositroy } from './repositories/channel-config.repository';
 
 @Injectable()
 export class ChatsService {
   constructor(
     @InjectRepository(ChannelMember)
     private channelMemberRepository: Repository<ChannelMember>,
-    @InjectRepository(ChannelConfig)
-    private channelConfigRepository: Repository<ChannelConfig>,
     @InjectRepository(ChatLog)
     private chatLogRepository: Repository<ChatLog>,
     @InjectRepository(ChatMute)
     private chatMuteRepository: Repository<ChatMute>,
     @InjectRepository(ChannelPassword)
     private channelPasswordRepository: Repository<ChannelPassword>,
+    private channelConfigRepository: ChannelConfigRepositroy,
     private chatBanRepository: ChatBanRepositroy,
 
     @Inject(forwardRef(() => UsersService))
@@ -44,22 +44,19 @@ export class ChatsService {
 
   /* [C] ChannelConfig 생성 */
   async createChannelConfig(config: Partial<ChannelConfigRequestDto>): Promise<ChannelConfig> {
-    const pass = config.password;
-    delete config.password;
-    const newchannelConfig = this.channelConfigRepository.create(config);
-    const channelConfig = await this.channelConfigRepository.save(newchannelConfig);
-    this.createChannelPassword(channelConfig.id, pass);
-    return (channelConfig);
+    const insertResult = await this.channelConfigRepository.createChannelConfig(config);
+    this.createChannelPassword(insertResult.raw.id, config.password);
+    return (this.readOnePureChannelConfig(insertResult.raw.id));
   }
 
   /* [R] 모든 ChannelConfig 조회 */
   async readAllChannelConfig(): Promise<ChannelConfig[]> {
-    return (this.channelConfigRepository.find());
+    return (this.channelConfigRepository.readAllChannelConfig());
   }
 
   /* [R] 특정 ChannelConfig 조회 */
   async readOneChannelConfig(id: number): Promise<ChannelConfig> {
-    const channelConfig = await this.channelConfigRepository.findOne({ where: { id } })
+    const channelConfig = await this.readOnePureChannelConfig(id);
     if (!channelConfig) {
       return null;
     }
@@ -71,102 +68,35 @@ export class ChatsService {
   }
 
   async readChannelConfigMyDm(userId: number) {
-    const MyDmQr = await this.dataSource
-      .getRepository(ChannelMember)
-      .createQueryBuilder('channel_member')
-      .subQuery()
-      .from(ChannelMember, 'channel_member')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_config.id AS id'])
-      .where(`channel_member.user_id = ${userId}`)
-      .andWhere('channel_config.dm = true')
-      .getQuery();
-
-    const configList = await this.dataSource
-      .getRepository(ChannelConfig)
-      .createQueryBuilder('channel_config')
-      .select(['channel_config.id',
-        'channel_config.title',
-        'channel_config.public',
-        'channel_config.limit',
-        'channel_config.dm',
-        'channel_config.date'])
-      .where(`id IN ${MyDmQr}`)
-      .getMany();
-    return (configList);
+    return (await this.channelConfigRepository.readChannelConfigMyDm(userId));
   }
 
   async readChannelConfigMyChannel(userId: number): Promise<ChannelConfig[]> {
-    const MyChannelQr = await this.dataSource
-      .getRepository(ChannelMember)
-      .createQueryBuilder('channel_member')
-      .subQuery()
-      .from(ChannelMember, 'channel_member')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_config.id AS id'])
-      .where(`channel_member.user_id = ${userId}`)
-      .andWhere('channel_config.dm = false')
-      .getQuery();
-
-    const configList = await this.dataSource
-      .getRepository(ChannelConfig)
-      .createQueryBuilder('channel_config')
-      .select(['channel_config.id',
-        'channel_config.title',
-        'channel_config.public',
-        'channel_config.limit',
-        'channel_config.dm',
-        'channel_config.date'])
-      .where(`id IN ${MyChannelQr}`)
-      .getMany();
-    return (configList);
+    return (await this.channelConfigRepository.readChannelConfigMyChannel(userId));
   }
 
   async readChannelConfigNotMember(userId: number): Promise<ChannelConfig[]> {
-    const MyDmQr = await this.dataSource
-      .getRepository(ChannelMember)
-      .createQueryBuilder('channel_member')
-      .subQuery()
-      .from(ChannelMember, 'channel_member')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_config.id'])
-      .where(`channel_member.user_id = ${userId}`)
-      .getQuery();
-    const configList = await this.dataSource
-      .getRepository(ChannelConfig)
-      .createQueryBuilder('channel_config')
-      .select(['channel_config.id',
-        'channel_config.title',
-        'channel_config.public',
-        'channel_config.limit',
-        'channel_config.dm',
-        'channel_config.date'])
-      .where(`id NOT IN ${MyDmQr}`)
-      .andWhere('channel_config.dm = false')
-      .getMany();
-    return (configList);
+    return (await this.channelConfigRepository.readChannelConfigNotMember(userId));
   }
 
   async readOnePureChannelConfig(id: number): Promise<ChannelConfig> {
-    return (await this.channelConfigRepository.findOne({ where: { id } }));
+    return (await this.channelConfigRepository.readOnePureChannelConfig(id));
   }
 
   /* [U] ChannelConfig info 수정 */
   async updateChannelConfigInfo(id: number, config: Partial<ChannelConfigRequestDto>): Promise<ChannelConfig> {
-    await this.channelConfigRepository.update(id, config);
-    return (this.channelConfigRepository.findOne({ where: { id } }));
+    return (this.channelConfigRepository.updateChannelConfigInfo(id, config));
   }
 
   async updateChannelConfigWithTitle(id: number, title: string): Promise<ChannelConfig> {
-    await this.channelConfigRepository.update(id, { title: title });
-    return (this.channelConfigRepository.findOne({ where: { id } }));
+    return (this.channelConfigRepository.updateChannelConfigWithTitle(id, title));
   }
 
   /* [D] ChannelConfig 제거 
           channel_member 관계는 없는 경우 */
   async deleteChannelConfig(id: number): Promise<void> {
     await this.channelPasswordRepository.delete(id);
-    await (this.channelConfigRepository.delete(id));
+    await (this.channelConfigRepository.deleteChannelConfig(id));
   }
 
   /** 
