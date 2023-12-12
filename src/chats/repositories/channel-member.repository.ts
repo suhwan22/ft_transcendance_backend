@@ -12,7 +12,7 @@ export class ChannelMemberRepository extends Repository<ChannelMember> {
     const insertResult = await this.createQueryBuilder('channel_member')
     .insert()
     .into(ChannelMember)
-    .values({ channel: () => `${channelId}`, user: () => `${userId}` })
+    .values({ channel: () => `${channelId}`, user: () => `${userId}`, op: false })
     .execute();
     return (insertResult);
   }

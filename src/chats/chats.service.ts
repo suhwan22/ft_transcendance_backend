@@ -127,7 +127,7 @@ export class ChatsService {
   /** [C] ChannelMember 생성 */
   async createChannelMember(request: Partial<ChannelMemberRequestDto>): Promise<ChannelMember> {
     const result = await this.channelMemberRepository.createChannelMember(request.channelId, request.userId);
-    return (this.channelMemberRepository.findOne(result.raw[0].id));
+    return (this.readChannelMember(request.channelId, request.userId));
   }
 
   /** [R] 모든 ChannelMember 조회 */
@@ -172,10 +172,7 @@ export class ChatsService {
 
   /** [U] ChannelMember{id} op 수정 */
   async updateChannelMemberOp(id: number, op: boolean): Promise<ChannelMember> {
-    let changeOp = true;
-    if (op)
-      changeOp = false;
-    return (await this.channelMemberRepository.updateChannelMemberOp(id, changeOp));
+    return (await this.channelMemberRepository.updateChannelMemberOp(id, op));
   }
 
   /** [U] 유저 이름으로 ChannelMember op 수정 */
@@ -206,7 +203,7 @@ export class ChatsService {
     if (password)
       hashPass = await hash(password, saltRound);
     const result = await this.channelPasswordRepository.createChannelPassword(channelId, hashPass);
-    return (this.channelPasswordRepository.findOne(result.raw[0].id));
+    return (this.channelPasswordRepository.findOne({ where: { channelId : channelId }}));
   }
 
   /** [R] 특정 ChannelPassword 조회 */

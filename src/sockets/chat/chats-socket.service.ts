@@ -50,7 +50,6 @@ export class ChatsSocketService {
     }
     log = await this.chatsService.createChatLogInfo(chatLogRequest);
     delete log.channel;
-    console.log(log);
     client.to(client.data.roomId).emit('MSG', log);  //전체에게 방송함
     return (log);
   }
@@ -100,7 +99,8 @@ export class ChatsSocketService {
       userId: userId,
       op: true
     }
-    await this.chatsService.createChannelMember(channelMemberRequest);
+    const channelMember = await this.chatsService.createChannelMember(channelMemberRequest);
+    await this.chatsService.updateChannelMemberOp(channelMember.id, true);
 
     await this.createChatRoom(client, channelId, userId);
 
