@@ -413,8 +413,11 @@ export class ChatsSocketService {
     const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
     const msg = this.getNotice(target.name + " 님에게 친구 요청하였습니다.", 31);
     client.emit("NOTICE", msg);
-    if (targetClient)
+    if (targetClient) {
+      const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
+      targetClient.emit("GET_FRIEND_REQUEST", friendRequests);
       targetClient.emit("REQUEST_FRIEND", friendRequest);
+    }
   }
 
   async acceptFriend(client: Socket, targetClient: Socket, friendRequest: Partial<FriendRequest>, target: Player) {
@@ -423,18 +426,17 @@ export class ChatsSocketService {
       await this.usersService.createFriendWithPlayer(user.id, target);
       await this.usersService.createFriendWithPlayer(target.id, user);
       await this.usersService.deleteFriendRequest(friendRequest.id);
-      const otherRequest = await this.usersService.readRecvAndSendFriendRequest(target.id, user.id);
-      if (otherRequest)
-        await this.usersService.deleteFriendRequest(otherRequest.id);
-
       if (target.status === 0)
         this.sendFriendList(targetClient, target.id);
       if (user.status === 0)
         this.sendFriendList(client, user.id);
       const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32);
       client.emit("NOTICE", msg);
+
+      const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
+      client.emit("GET_FRIEND_REQUEST", friendRequests);
       if (target.status === 0 || target.status === 1) {
-        const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32);
+        const msg = this.getNotice(user.name + " 님과 친구가 되었습니다.", 32);
         targetClient.emit("NOTICE", msg);
       }
     }
@@ -449,6 +451,8 @@ export class ChatsSocketService {
       await this.usersService.deleteFriendRequest(friendRequest.id);
       const msg = this.getNotice("요청을 거절 하였습니다.", 33);
       client.emit("NOTICE", msg);
+      const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
+      client.emit("GET_FRIEND_REQUEST", friendRequests);
       if (target.status === 0 || target.status === 1)
         targetClient.emit("NOTICE", this.getNotice(friendRequest.recv.name + " 님이 친구요청을 거절 하였습니다.", 34));
     }
