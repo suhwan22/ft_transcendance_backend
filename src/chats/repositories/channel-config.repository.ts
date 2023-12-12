@@ -1,6 +1,5 @@
 import { Injectable } from "@nestjs/common";
 import { DataSource, InsertResult, Repository } from "typeorm";
-import { Player } from "src/users/entities/player.entity";
 import { ChannelConfig } from "../entities/channel-config.entity";
 import { ChannelConfigRequestDto } from "../dtos/channel-config.request.dto";
 import { ChannelMember } from "../entities/channel-member.entity";

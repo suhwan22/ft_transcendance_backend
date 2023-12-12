@@ -16,12 +16,11 @@ import { ChannelPassword } from './entities/channel-password.entity';
 import { compare, hash } from 'bcrypt';
 import { ChatBanRepositroy } from './repositories/chat-ban.repository';
 import { ChannelConfigRepositroy } from './repositories/channel-config.repository';
+import { ChannelMemberRepositroy } from './repositories/channel-member.repository';
 
 @Injectable()
 export class ChatsService {
   constructor(
-    @InjectRepository(ChannelMember)
-    private channelMemberRepository: Repository<ChannelMember>,
     @InjectRepository(ChatLog)
     private chatLogRepository: Repository<ChatLog>,
     @InjectRepository(ChatMute)
@@ -29,6 +28,7 @@ export class ChatsService {
     @InjectRepository(ChannelPassword)
     private channelPasswordRepository: Repository<ChannelPassword>,
     private channelConfigRepository: ChannelConfigRepositroy,
+    private channelMemberRepository: ChannelMemberRepositroy,
     private chatBanRepository: ChatBanRepositroy,
 
     @Inject(forwardRef(() => UsersService))
@@ -106,199 +106,66 @@ export class ChatsService {
    */
 
   /* [C] ChannelMember 생성 */
-  async createChannelMember(channelMemberReqeust: Partial<ChannelMemberRequestDto>): Promise<ChannelMember> {
-    const user = await this.usersService.readOnePurePlayer(channelMemberReqeust.userId);
-    const channel = await this.readOneChannelConfig(channelMemberReqeust.channelId);
-    const channelMember = {
-      user: user,
-      channel: channel,
-      op: channelMemberReqeust.op,
-    }
-    const newChannelMember = this.channelMemberRepository.create(channelMember);
-    return (this.channelMemberRepository.save(newChannelMember));
+  async createChannelMember(request: Partial<ChannelMemberRequestDto>): Promise<ChannelMember> {
+    const result = await this.channelMemberRepository.createChannelMember(request.channelId, request.userId);
+    return (this.channelMemberRepository.findOne(result.raw.id));
   }
 
   /* [R] 모든 ChannelMember 조회 */
   async readAllChannelMember(): Promise<ChannelMember[]> {
-    const channelMembers = await this.dataSource
-      .getRepository(ChannelMember).createQueryBuilder('channel_member')
-      .leftJoinAndSelect('channel_member.user', 'player')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_member.id',
-        'channel_member.op',
-        'player.id',
-        'player.name',
-        'player.status',
-        'channel_member.date',
-        'channel_config.id',
-        'channel_config.title'])
-      .getMany();
-    return (channelMembers);
+    return (await this.channelMemberRepository.readAllChannelMember());
   }
 
   /* [R] 특정 Channel{id}에 속한 Member 조회 */
   async readOneChannelMember(channelId: number): Promise<ChannelMember[]> {
-    const channelMembers = await this.dataSource
-      .getRepository(ChannelMember).createQueryBuilder('channel_member')
-      .leftJoinAndSelect('channel_member.user', 'player')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_member.id',
-        'channel_member.op',
-        'player.id',
-        'player.name',
-        'player.avatar',
-        'player.status',
-        'channel_member.date',
-        'channel_config.id',
-        'channel_config.title'])
-      .where('channel_config.id = :id', { id: channelId })
-      .getMany();
-    return (channelMembers);
+    return (await this.channelMemberRepository.readOneChannelMember(channelId));
   }
 
   /* 특정 channel에 몇명 있는지 조사하기 위해 만든 pureChannelMember */
   async readOnePureChannelMember(channelId: number): Promise<ChannelMember[]> {
-    const channelMembers = await this.dataSource
-      .getRepository(ChannelMember).createQueryBuilder('channel_member')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_member.id', 'channel_config.title'])
-      .where('channel_config.id = :id', { id: channelId })
-      .getMany();
-    return (channelMembers);
+    return (await this.channelMemberRepository.readOnePureChannelMember(channelId));
   }
-
 
   /* [R] 특정 User{id}에 속한 Member 조회 */
   async readChannelMemberWithUserId(userId: number): Promise<ChannelMember[]> {
-    const channelMembers = await this.dataSource
-      .getRepository(ChannelMember).createQueryBuilder('channel_member')
-      .leftJoinAndSelect('channel_member.user', 'player')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_member.id',
-        'player.id',
-        'player.name',
-        'player.status',
-        'channel_member.op',
-        'channel_member.date',
-        'channel_config.id',
-        'channel_config.title'])
-      .where('player.id = :id', { id: userId })
-      .getMany();
-    return (channelMembers);
+    return (await this.channelMemberRepository.readChannelMemberWithUserId(userId));
   }
 
   async readChannelMember(channelId: number, userId: number): Promise<ChannelMember> {
-    const channelMember = await this.dataSource
-      .getRepository(ChannelMember).createQueryBuilder('channel_member')
-      .leftJoinAndSelect('channel_member.user', 'player')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_member.id',
-        'player.id',
-        'player.name',
-        'channel_member.op',
-        'channel_member.date',
-        'channel_config.id',
-        'channel_config.title'])
-      .where('player.id = :userId', { userId: userId })
-      .andWhere('channel_config.id = :channelId', { channelId: channelId })
-      .getOne();
-    return (channelMember);
+    return (await this.channelMemberRepository.readChannelMember(channelId, userId));
   }
 
   async readChannelMemberWithName(channelId: number, name: string): Promise<ChannelMember> {
-    const channelMember = await this.dataSource
-      .getRepository(ChannelMember).createQueryBuilder('channel_member')
-      .leftJoinAndSelect('channel_member.user', 'player')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_member.id',
-        'player.id',
-        'player.name',
-        'channel_member.op',
-        'channel_member.date',
-        'channel_config.id',
-        'channel_config.title'])
-      .where('player.name = :name', { name: name })
-      .andWhere('channel_config.id = :channelId', { channelId: channelId })
-      .getOne();
-    return (channelMember);
+    return (await this.channelMemberRepository.readChannelMemberWithName(channelId, name));
   }
 
   /* [U] ChannelMember{id} info 수정 */
   async updateChannelMemberInfo(id: number, list: Partial<ChannelMember>): Promise<ChannelMember> {
-    await this.channelMemberRepository.update(id, list);
-    return (this.channelMemberRepository.findOne({ where: { id } }));
+    return (await this.channelMemberRepository.updateChannelMemberInfo(id, list));
   }
 
   async updateChannelMemberOp(id: number, op: boolean): Promise<ChannelMember> {
     let changeOp = true;
     if (op)
       changeOp = false;
-    await this.channelMemberRepository.update(id, { op: changeOp });
-    return (this.channelMemberRepository.findOne({ where: { id } }));
+    return (await this.channelMemberRepository.updateChannelMemberOp(id, changeOp));
   }
 
   async updateChannelOpWithName(channelId: number, targetName: string, op: boolean) {
-    const memberQr = await this.dataSource
-      .getRepository(ChannelMember)
-      .createQueryBuilder('channel_member')
-      .subQuery()
-      .from(ChannelMember, 'channel_member')
-      .leftJoinAndSelect('channel_member.user', 'player')
-      .select(['channel_member.id'])
-      .where(`player.name = '${targetName}'`)
-      .andWhere(`channel_id = ${channelId}`)
-      .getQuery();
-    const updateResult = await this.dataSource
-      .getRepository(ChannelMember)
-      .createQueryBuilder('channel_member')
-      .update()
-      .set({ op: op })
-      .where(`id IN ${memberQr}`)
-      .execute();
-    return (updateResult);
+    return (await this.channelMemberRepository.updateChannelOpWithName(channelId, targetName, op));
   }
 
   /* [D] ChannelMember{id} 제거 */
   async deleteChannelMember(id: number): Promise<void> {
-    await (this.channelMemberRepository.delete(id));
+    await (this.channelMemberRepository.deleteChannelMember(id));
   }
 
   async deleteChannelMemberWithUserId(channelId: number, userId: number) {
-    const memberQr = await this.dataSource
-      .getRepository(ChannelMember)
-      .createQueryBuilder('channel_member')
-      .subQuery()
-      .from(ChannelMember, 'channel_member')
-      .select(['channel_member.id'])
-      .where(`user_id = ${userId}`)
-      .andWhere(`channel_id = ${channelId}`)
-      .getQuery();
-    const deleteResult = await this.dataSource
-      .getRepository(ChannelMember)
-      .createQueryBuilder('channel_member')
-      .delete()
-      .from(ChannelMember, 'channel_member')
-      .where(`id IN ${memberQr}`)
-      .execute();
-    return (deleteResult);
+    return (await this.channelMemberRepository.deleteChannelMemberWithUserId(channelId, userId));
   }
 
   async readMemberInChannel(channelId: number, userId: number): Promise<ChannelMember> {
-    const channelMembers = await this.dataSource
-      .getRepository(ChannelMember).createQueryBuilder('channel_member')
-      .leftJoinAndSelect('channel_member.user', 'player')
-      .leftJoinAndSelect('channel_member.channel', 'channel_config')
-      .select(['channel_member.id',
-        'player.id',
-        'player.name',
-        'channel_member.op',
-        'channel_member.date',
-        'channel_config.id',
-        'channel_config.title'])
-      .where('channel_config.id = :channelId', { channelId },)
-      .andWhere('player.id = :userId', { userId })
-      .getOne();
-    return (channelMembers);
+    return (await this.channelMemberRepository.readMemberInChannel(channelId, userId));
   }
 
   /** 
