@@ -2,11 +2,11 @@ import { Injectable } from "@nestjs/common";
 import { Socket } from "socket.io";
 import { UsersService } from "src/users/users.service";
 import { GameRoom, PingPongPlayer } from "../../games/entities/game.entity";
-import { PlayerInfoDto } from "../../games/dtos/player-info.dto";
 import { GamesService } from "../../games/games.service";
 import { Player } from "src/users/entities/player.entity";
 import { GameEngine } from "../../games/entities/game-engine";
 import { GameQueue, Queue } from "../../games/entities/game-queue";
+
 
 @Injectable()
 export class GamesSocketService {
@@ -28,13 +28,11 @@ export class GamesSocketService {
     });
   }
 
-  async matchMaking(client: Socket) {
-    if (await this.checkDodgePenalty(client.data.userId)) {
-      const msg = this.getNotice("패널티로 인하여 1분간 매치 이용이 불가합니다.", 40);
-      client.emit("NOTICE", msg);
-      return ;
-    }
-    else {
+  async matchMaking(client: Socket, penaltyTime: number) {
+    const time = await this.getDodgePenaltyTime(client.data.userId);
+    if (time > 0 && time < penaltyTime)
+      client.emit("PENALTY", { min: Math.floor(time / 60),  sec: time % 60 });
+    else if (time > penaltyTime) {
       await this.gamesService.deleteGameDodge(client.data.userId);
     }
     const rating = client.data.rating;
@@ -61,17 +59,14 @@ export class GamesSocketService {
     client.data.matchInterval = intervalId;
   }
 
-  async checkDodgePenalty(userId: number) {
+  async getDodgePenaltyTime(userId: number) {
     const gameDodge = await this.gamesService.readGameDodge(userId);
     if (gameDodge === null) {
-      return (false);
+      return (-1);
     }
     const date = gameDodge.date.getTime();
     const now = new Date().getTime();
-    if (((now - date) / 1000) > 60) {
-      return (false);
-    }
-    return (true);
+    return ((now - date) / 1000);
   }
 
   async findMath(gameQueue: GameQueue, ratingGroup: number, intervalId: any) {
@@ -369,31 +364,33 @@ export class GamesSocketService {
     loss = loser.data.player.player;
     winScore = gameRoom.left === winner.data.player ? gameRoom.score.left : gameRoom.score.right;
     lossScore = gameRoom.left === loser.data.player ? gameRoom.score.left : gameRoom.score.right;
+    winnerIsLeft = gameRoom.left === winner.data.player ? true : false;
 
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
     await this.usersService.updateRating(winner, loser, gameRoom);
 
-    client.to(gameRoom.roomId).emit("END");
+    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
     client.leave(gameRoom.roomId);
     targetClient.leave(gameRoom.roomId);
   }
 
   async endGame(winner: Socket, loser: Socket, gameRoom: GameRoom): Promise<void> {
     let win: Player, loss: Player;
-    let winScore: number, lossScore: number;
+    let winScore: number, lossScore: number, winnerIsLeft: boolean;
 
     win = winner.data.player.player;
     loss = loser.data.player.player;
     winScore = gameRoom.left === winner.data.player ? gameRoom.score.left : gameRoom.score.right;
     lossScore = gameRoom.left === loser.data.player ? gameRoom.score.left : gameRoom.score.right;
+    winnerIsLeft = gameRoom.left === winner.data.player ? true : false;
 
     await this.gamesService.createGameHistoryWitData(win.id, loss, true, winScore, lossScore, gameRoom.rank);
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
 
     await this.usersService.updateRating(winner, loser, gameRoom);
 
-    winner.to(gameRoom.roomId).emit("END");
+    winner.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
     winner.leave(gameRoom.roomId);
     loser.leave(gameRoom.roomId);
   }
@@ -427,9 +424,11 @@ export class GamesSocketService {
     const userId = client.data.userId;
     let game: GameEngine;
     this.games.forEach((v, k, m) => {
-      if (userId === v.leftSocket.data.userId || userId === v.rightSocket.data.userId) {
-        game = v;
-        return;
+      if (v.leftSocket !== null && v.rightSocket !== null) {
+        if (userId === v.leftSocket.data.userId || userId === v.rightSocket.data.userId) {
+          game = v;
+          return ;
+        }
       }
     });
     if (game) {

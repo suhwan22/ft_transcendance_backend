@@ -67,6 +67,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
     try {
+
+      console.log(userId);
       client.data.userId = userId;
       const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).rating;
       client.data.rating = score;
@@ -85,7 +87,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
-    this.gamesSocketService.matchMaking(client);
+    this.gamesSocketService.matchMaking(client, 60);
   }
 
   @SubscribeMessage('READY')
@@ -113,8 +115,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gamesSocketService.pauseGame(client);
   }
 
-  @SubscribeMessage('JOIN')
+  @SubscribeMessage('JOIN_GAME')
   async join(client: Socket, data: any) {
+    console.log(data);
     const isLeft = data.gameRequest.send.id === client.data.userId ? true : false;
     this.gamesSocketService.enterGame(client, data.roomId, false, isLeft);
   }
