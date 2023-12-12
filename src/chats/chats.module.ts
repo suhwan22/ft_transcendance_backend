@@ -2,11 +2,9 @@ import { Module, forwardRef } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ChatsController } from './chats.controller';
 import { ChatsService } from './chats.service';
-import { ChatLog } from './entities/chat-log.entity';
 import { GamesModule } from 'src/games/games.module';
 import { UsersModule } from 'src/users/users.module';
 import { ChatsSocketService } from '../sockets/chat/chats-socket.service';
-import { ChannelPassword } from './entities/channel-password.entity';
 import { SocketsModule } from 'src/sockets/sockets.module';
 import { ChatBanRepository } from './repositories/chat-ban.repository';
 import { ChannelConfigRepository,  } from './repositories/channel-config.repository';
@@ -32,6 +30,6 @@ import { ChannelPasswordRepository } from './repositories/channel-password.repos
     ChatBanRepository,
     ChatMuteRepository,
     ChatLogRepository],
-  exports: [TypeOrmModule, ChatsService]
+  exports: [ChatsService]
 })
 export class ChatsModule {}
