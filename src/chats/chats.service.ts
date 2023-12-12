@@ -59,8 +59,8 @@ export class ChatsService {
   /** [C] ChannelConfig 생성 */
   async createChannelConfig(config: Partial<ChannelConfigRequestDto>): Promise<ChannelConfig> {
     const insertResult = await this.channelConfigRepository.createChannelConfig(config);
-    this.createChannelPassword(insertResult.raw.id, config.password);
-    return (this.readOnePureChannelConfig(insertResult.raw.id));
+    this.createChannelPassword(insertResult.raw[0].id, config.password);
+    return (this.readOnePureChannelConfig(insertResult.raw[0].id));
   }
 
   /** [R] 모든 ChannelConfig 조회 */
@@ -127,7 +127,7 @@ export class ChatsService {
   /** [C] ChannelMember 생성 */
   async createChannelMember(request: Partial<ChannelMemberRequestDto>): Promise<ChannelMember> {
     const result = await this.channelMemberRepository.createChannelMember(request.channelId, request.userId);
-    return (this.channelMemberRepository.findOne(result.raw.id));
+    return (this.channelMemberRepository.findOne(result.raw[0].id));
   }
 
   /** [R] 모든 ChannelMember 조회 */
@@ -206,7 +206,7 @@ export class ChatsService {
     if (password)
       hashPass = await hash(password, saltRound);
     const result = await this.channelPasswordRepository.createChannelPassword(channelId, hashPass);
-    return (this.channelPasswordRepository.findOne(result.raw.id));
+    return (this.channelPasswordRepository.findOne(result.raw[0].id));
   }
 
   /** [R] 특정 ChannelPassword 조회 */
@@ -236,7 +236,7 @@ export class ChatsService {
   /** [C] ChatBan 생성 */
   async createBanInfo(chatBanRequest: Partial<ChatMuteBanRequestDto>): Promise<ChatBan> {
     const result = await this.chatBanRepository.createBanInfo(chatBanRequest.channelId, chatBanRequest.userId);
-    return (this.chatBanRepository.findOne({ where: { id: result.raw.id }}));
+    return (this.chatBanRepository.findOne({ where: { id: result.raw[0].id }}));
   }
 
   /** [C] 유저 이름으로 ChatBan 생성 */
@@ -283,7 +283,7 @@ export class ChatsService {
   /** [C] ChatMute 생성 */
   async createMuteInfo(chatMuteRequest: Partial<ChatMuteBanRequestDto>): Promise<ChatMute> {
     const result = await this.chatMuteRepository.createMuteInfo(chatMuteRequest.channelId, chatMuteRequest.userId);
-    return (this.chatMuteRepository.findOne({ where: { id: result.raw.id }}));
+    return (this.chatMuteRepository.findOne({ where: { id: result.raw[0].id }}));
   }
 
   /** [C] 유저 이름으로 ChatMute 생성 */
@@ -335,7 +335,7 @@ export class ChatsService {
   /** [C] ChatLog 생성 */
   async createChatLogInfo(chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
     const result = await this.chatLogRepository.createChatLogInfo(chatLogRequest);
-    return (this.chatLogRepository.findOne({ where: { id: result.raw.id }}));
+    return (await this.chatLogRepository.findOne({ where: { id: result.raw[0].id }}));
   }
 
   /** [R] 채널방에 모든 ChatLog 조회 */

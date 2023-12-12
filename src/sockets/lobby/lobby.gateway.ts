@@ -17,7 +17,7 @@ import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
 
-@WebSocketGateway(3131, { namespace: '/lobby' })
+@WebSocketGateway(3131, { namespace: '/lobby', cors: true })
 export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     @Inject(forwardRef(() => ChatsGateway))
@@ -66,6 +66,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('REGIST')
   async registUserSocket(client: Socket, userId: number) {
     try {
+      console.log(userId);
       this.clients.set(userId, client);
       client.data.userId = userId;
   

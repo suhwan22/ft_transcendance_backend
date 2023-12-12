@@ -32,6 +32,7 @@ export class ChatLogRepository extends Repository<ChatLog> {
       .getMany();
     return (chatLogs);
   }
+  
   async readChatLog(id: number): Promise<ChatLog> {
     const chatLog = await this.createQueryBuilder('chat_log')
       .leftJoinAndSelect('chat_log.user', 'player')

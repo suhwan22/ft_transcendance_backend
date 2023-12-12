@@ -15,7 +15,7 @@ import { UsersService } from 'src/users/users.service';
 import { GameRoom } from '../../games/entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
 
-@WebSocketGateway(3131, { namespace: '/games' })
+@WebSocketGateway(3131, { namespace: '/games', cors: true })
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     @Inject(forwardRef(() => ChatsGateway))

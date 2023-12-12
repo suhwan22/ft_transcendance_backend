@@ -19,7 +19,7 @@ import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
 
-@WebSocketGateway(3131, { cors: '*', namespace: '/chats' })
+@WebSocketGateway(3131, { namespace: '/chats' , cors: true })
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsSocketService: ChatsSocketService,
