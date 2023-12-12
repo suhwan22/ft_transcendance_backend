@@ -32,13 +32,13 @@ export class ChatLogRepository extends Repository<ChatLog> {
       .getMany();
     return (chatLogs);
   }
-  
+
   async readChatLog(id: number): Promise<ChatLog> {
     const chatLog = await this.createQueryBuilder('chat_log')
       .leftJoinAndSelect('chat_log.user', 'player')
       .leftJoinAndSelect('chat_log.channel', 'channel_config')
-      .select(['chat_log.id', 'chat_log.content', 'player.id', 'player.name', 'player.avatar', 'chat_log.date'])
-      .where('channel_config.id = :id', { id: id })
+      .select(['chat_log.id', 'chat_log.content', 'player.id', 'player.name', 'player.avatar', 'player.date', 'chat_log.date'])
+      .where('chat_log.id = :id', { id: id })
       .getOne();
     return (chatLog);
   }

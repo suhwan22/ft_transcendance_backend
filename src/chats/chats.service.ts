@@ -335,7 +335,9 @@ export class ChatsService {
   /** [C] ChatLog 생성 */
   async createChatLogInfo(chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
     const result = await this.chatLogRepository.createChatLogInfo(chatLogRequest);
-    return (await this.chatLogRepository.findOne({ where: { id: result.raw[0].id }}));
+    const aa = await this.readChatLog(result.raw[0].id);
+    console.log(aa);
+    return (aa);
   }
 
   /** [R] 채널방에 모든 ChatLog 조회 */
