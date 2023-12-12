@@ -1,14 +1,17 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, NotFoundException, Put } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, NotFoundException, Put } from '@nestjs/common';
 import { ApiBody, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+
 import { ChatsService } from './chats.service';
+
+import { ChannelConfigRequestDto } from './dtos/channel-config.request.dto';
+import { ChannelMemberRequestDto } from './dtos/channel-member.request.dto';
+import { ChatMuteBanRequestDto } from './dtos/chat-mute-ban.request.dto';
+import { ChatLogRequestDto } from './dtos/chat-log.request.dto';
+
+import { ChannelConfig } from './entities/channel-config.entity';
+import { ChannelMember } from './entities/channel-member.entity';
 import { ChatBan } from './entities/chat-ban.entity';
 import { ChatLog } from './entities/chat-log.entity';
-import { ChannelMember } from './entities/channel-member.entity';
-import { ChannelConfig } from './entities/channel-config.entity';
-import { ChatLogRequestDto } from './dtos/chat-log.request.dto';
-import { ChatMuteBanRequestDto } from './dtos/chat-mute-ban.request.dto';
-import { ChannelMemberRequestDto } from './dtos/channel-member.request.dto';
-import { ChannelConfigRequestDto } from './dtos/channel-config.request.dto';
 
 @ApiTags('Chats')
 @Controller('chats')
