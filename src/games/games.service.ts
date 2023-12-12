@@ -128,21 +128,4 @@ export class GamesService {
       .where(`user_id = ${userId}`)
       .execute();
   }
-
-  async getCurrentMyHistroy(userId: number): Promise<GameHistory> {
-    const gameHistroy = this.gameHistoryRepository.createQueryBuilder('game_history')
-      .leftJoinAndSelect('game_history.opponent', 'player')
-      .select(['game_history.id',
-        'game_history.result',
-        'game_history.userScore',
-        'game_history.opponentScore',
-        'player.id',
-        'player.name',
-        'game_history.date'])
-      .where(`game_history.user = ${userId}`)
-      .orderBy('game_history.date', 'DESC')
-      .limit(1)
-      .getOne();
-    return (gameHistroy);
-  }
 }
