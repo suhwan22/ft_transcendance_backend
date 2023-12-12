@@ -6,7 +6,6 @@ import { Repository, DataSource } from 'typeorm';
 import { ChatMute } from './entities/chat-mute.entity';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity'
-import { Player } from 'src/users/entities/player.entity';
 import { ChatLogRequestDto } from './dtos/chat-log.request.dto';
 import { UsersService } from 'src/users/users.service';
 import { ChatMuteBanRequestDto } from './dtos/chat-mute-ban.request.dto';
@@ -17,19 +16,19 @@ import { compare, hash } from 'bcrypt';
 import { ChatBanRepositroy } from './repositories/chat-ban.repository';
 import { ChannelConfigRepositroy } from './repositories/channel-config.repository';
 import { ChannelMemberRepositroy } from './repositories/channel-member.repository';
+import { ChatMuteRepositroy } from './repositories/chat-mute.repository';
 
 @Injectable()
 export class ChatsService {
   constructor(
     @InjectRepository(ChatLog)
     private chatLogRepository: Repository<ChatLog>,
-    @InjectRepository(ChatMute)
-    private chatMuteRepository: Repository<ChatMute>,
     @InjectRepository(ChannelPassword)
     private channelPasswordRepository: Repository<ChannelPassword>,
     private channelConfigRepository: ChannelConfigRepositroy,
     private channelMemberRepository: ChannelMemberRepositroy,
     private chatBanRepository: ChatBanRepositroy,
+    private chatMuteRepository: ChatMuteRepositroy,
 
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
@@ -281,105 +280,40 @@ export class ChatsService {
    */
 
   async readMuteList(channelId: number): Promise<ChatMute[]> {
-    const muteList = await this.dataSource
-      .getRepository(ChatMute).createQueryBuilder('mute_list')
-      .leftJoinAndSelect('mute_list.user', 'player')
-      .leftJoinAndSelect('mute_list.channel', 'channel_config')
-      .select(['mute_list.id', 'player.id', 'player.name', 'mute_list.date'])
-      .where('channel_config.id = :id', { id: channelId })
-      .getMany();
-    return (muteList);
+    return (await this.chatMuteRepository.readMuteList(channelId));
   }
 
   async readChatMute(channelId: number, userId: number) {
-    const chatMute = await this.dataSource
-      .getRepository(ChatMute).createQueryBuilder('mute_list')
-      .leftJoinAndSelect('mute_list.user', 'player')
-      .leftJoinAndSelect('mute_list.channel', 'channel_config')
-      .select(['mute_list.id', 'player.id', 'player.name', 'mute_list.date'])
-      .where('channel_config.id = :channelId', { channelId: channelId })
-      .andWhere('player.id = :userId', { userId: userId })
-      .getOne();
-    return (chatMute);
+    return (await this.chatMuteRepository.readChatMute(channelId, userId));
   }
 
   async readChatMuteWithName(channelId: number, name: string) {
-    const chatMute = await this.dataSource
-      .getRepository(ChatMute).createQueryBuilder('mute_list')
-      .leftJoinAndSelect('mute_list.user', 'player')
-      .leftJoinAndSelect('mute_list.channel', 'channel_config')
-      .select(['mute_list.id', 'player.id', 'player.name', 'mute_list.date'])
-      .where(`channel_id = ${channelId}`)
-      .andWhere('player.name = :name', { name: name })
-      .getOne();
-    return (chatMute);
+    return (await this.chatMuteRepository.readChatMuteWithName(channelId, name));
   }
 
   async createMuteInfo(chatMuteRequest: Partial<ChatMuteBanRequestDto>): Promise<ChatMute> {
-    const user = await this.usersService.readOnePlayer(chatMuteRequest.userId);
-    const channel = await this.readOneChannelConfig(chatMuteRequest.channelId);
-    const mute = {
-      user: user,
-      channel: channel,
-    }
-    const newMute = this.chatMuteRepository.create(mute);
-    return (this.chatMuteRepository.save(newMute));
+    const result = await this.chatMuteRepository.createMuteInfo(chatMuteRequest.channelId, chatMuteRequest.userId);
+    return (this.chatMuteRepository.findOne({ where: { id: result.raw.id }}));
   }
 
   async createChatMuteWithName(channelId: number, name: string) {
-    const playerQr = await this.dataSource
-      .getRepository(Player)
-      .createQueryBuilder('player')
-      .subQuery()
-      .from(Player, 'player')
-      .select('player.id')
-      .where(`name = '${name}'`)
-      .getQuery();
-
-    const insert = await this.dataSource
-      .getRepository(ChatMute)
-      .createQueryBuilder('mute_list')
-      .insert()
-      .values({ channel: () => `${channelId}`, user: () => `${playerQr}`, duplicate: 0 })
-      .execute();
+    await this.chatMuteRepository.createChatMuteWithName(channelId, name);
   }
 
   async updateMuteInfo(id: number, mute: Partial<ChatMute>): Promise<ChatMute> {
-    await this.chatMuteRepository.update(id, mute);
-    return (this.chatMuteRepository.findOne({ where: { id } }));
+    return (await this.chatMuteRepository.updateMuteInfo(id, mute));
   }
 
   async updateTimeChatMute(id: number, user: number) {
-    const updateResult = await this.chatMuteRepository.update(id, { user: () => `${user}` });
-    return (updateResult);
+    return (await this.chatMuteRepository.updateTimeChatMute(id, user));
   }
 
   async updateTimeChatMuteWithName(channelId: number, name: string) {
-    const playerQr = await this.dataSource
-      .getRepository(Player)
-      .createQueryBuilder('player')
-      .subQuery()
-      .from(Player, 'player')
-      .select('player.id')
-      .where(`name = '${name}'`)
-      .getQuery();
-    
-    const updateResult = await this.dataSource
-      .getRepository(ChatMute)
-      .createQueryBuilder('mute_list')
-      .update()
-      .set({ user: () => `${playerQr}`, duplicate: () => `duplicate + 1`})
-      .where(`user_id IN ${playerQr}`)
-      .andWhere(`channel_id = ${channelId}`)
-      .execute();
-    return (updateResult);
+    return (await this.chatMuteRepository.updateTimeChatMuteWithName(channelId, name));
   }
 
   async deleteMuteInfo(id: number): Promise<void> {
-    const deleteMute = await this.chatMuteRepository.findOne({ where: { id } });
-    if (!deleteMute)
-      return;
-    await this.chatMuteRepository.remove(deleteMute);
+    await this.chatMuteRepository.deleteMuteInfo(id);
   }
 
   // 특정 유저가 특정 채팅방에 들어와 있는지 검사
