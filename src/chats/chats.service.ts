@@ -17,18 +17,18 @@ import { ChatBanRepositroy } from './repositories/chat-ban.repository';
 import { ChannelConfigRepositroy } from './repositories/channel-config.repository';
 import { ChannelMemberRepositroy } from './repositories/channel-member.repository';
 import { ChatMuteRepositroy } from './repositories/chat-mute.repository';
+import { ChatLogRepositroy } from './repositories/chat-log.repository';
 
 @Injectable()
 export class ChatsService {
   constructor(
-    @InjectRepository(ChatLog)
-    private chatLogRepository: Repository<ChatLog>,
     @InjectRepository(ChannelPassword)
     private channelPasswordRepository: Repository<ChannelPassword>,
     private channelConfigRepository: ChannelConfigRepositroy,
     private channelMemberRepository: ChannelMemberRepositroy,
     private chatBanRepository: ChatBanRepositroy,
     private chatMuteRepository: ChatMuteRepositroy,
+    private chatLogRepository: ChatLogRepositroy,
 
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
@@ -174,65 +174,23 @@ export class ChatsService {
    */
 
   async readChatLogList(channelId: number): Promise<ChatLog[]> {
-    const chatLogs = await this.dataSource
-      .getRepository(ChatLog).createQueryBuilder('chat_log')
-      .leftJoinAndSelect('chat_log.user', 'player')
-      .leftJoinAndSelect('chat_log.channel', 'channel_config')
-      .select(['chat_log.id', 'chat_log.content', 'player.id', 'player.name', 'player.avatar', 'chat_log.date'])
-      .where('channel_config.id = :id', { id: channelId })
-      .getMany();
-    return (chatLogs);
+    return (await this.chatLogRepository.readChatLogList(channelId));
   }
 
   async readLatestChatLog(channelId: number): Promise<ChatLog[]> {
-    const chatLogs = await this.dataSource
-      .getRepository(ChatLog).createQueryBuilder('chat_log')
-      .leftJoinAndSelect('chat_log.user', 'player')
-      .leftJoinAndSelect('chat_log.channel', 'channel_config')
-      .select(['chat_log.id', 'chat_log.content', 'player.name', 'player.avatar', 'chat_log.date'])
-      .where('channel_config.id = :id', { id: channelId })
-      .orderBy('chat_log.date', 'DESC')
-      .limit(50)
-      .getMany();
-    return (chatLogs);
+    return (this.chatLogRepository.readLatestChatLog(channelId));
   }
   async readChatLog(id: number): Promise<ChatLog> {
-    const chatLog = await this.dataSource
-      .getRepository(ChatLog).createQueryBuilder('chat_log')
-      .leftJoinAndSelect('chat_log.user', 'player')
-      .leftJoinAndSelect('chat_log.channel', 'channel_config')
-      .select(['chat_log.id', 'chat_log.content', 'player.id', 'player.name', 'player.avatar', 'chat_log.date'])
-      .where('channel_config.id = :id', { id: id })
-      .getOne();
-    return (chatLog);
+    return (await this.chatLogRepository.readChatLog(id));
   }
 
   async createChatLogInfo(chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
-    const user = await this.usersService.readOnePurePlayer(chatLogRequest.userId);
-    const channel = await this.readOnePureChannelConfig(chatLogRequest.channelId);
-    const chatLog = {
-      user: user,
-      channel: channel,
-      content: chatLogRequest.content,
-    }
-    const newChatLog = this.chatLogRepository.create(chatLog);
-    return (this.chatLogRepository.save(newChatLog));
-  }
-
-  async updateCatLogInfo(id: number, chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
-    const user = await this.usersService.readOnePlayer(chatLogRequest.userId);
-    const channel = await this.readOneChannelConfig(chatLogRequest.channelId);
-    const chatLog = {
-      user: user,
-      channel: channel,
-      content: chatLogRequest.content,
-    }
-    await this.chatLogRepository.update(id, chatLog);
-    return (this.chatLogRepository.findOne({ where: { id } }));
+    const result = await this.chatLogRepository.createChatLogInfo(chatLogRequest);
+    return (this.chatLogRepository.findOne({ where: { id: result.raw.id }}));
   }
 
   async deleteCatLogInfo(id: number): Promise<void> {
-    await this.chatLogRepository.delete({ id });
+    await this.chatLogRepository.deleteCatLogInfo(id);
   }
 
   /** 

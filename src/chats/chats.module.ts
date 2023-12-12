@@ -12,6 +12,7 @@ import { ChatBanRepositroy } from './repositories/chat-ban.repository';
 import { ChannelConfigRepositroy } from './repositories/channel-config.repository';
 import { ChannelMemberRepositroy } from './repositories/channel-member.repository';
 import { ChatMuteRepositroy } from './repositories/chat-mute.repository';
+import { ChatLogRepositroy } from './repositories/chat-log.repository';
 
 @Module({
   imports: [
@@ -19,7 +20,6 @@ import { ChatMuteRepositroy } from './repositories/chat-mute.repository';
     forwardRef(() => UsersModule),
     forwardRef(() => SocketsModule),
     TypeOrmModule.forFeature([
-      ChatLog,
       ChannelPassword
     ])
   ],
@@ -30,7 +30,8 @@ import { ChatMuteRepositroy } from './repositories/chat-mute.repository';
     ChannelConfigRepositroy, 
     ChannelMemberRepositroy,
     ChatBanRepositroy,
-    ChatMuteRepositroy,],
+    ChatMuteRepositroy,
+    ChatLogRepositroy],
   exports: [TypeOrmModule, ChatsService]
 })
 export class ChatsModule {}

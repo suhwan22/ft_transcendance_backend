@@ -36,14 +36,6 @@ export class ChatsController {
     return (this.chatsService.createChatLogInfo(chatLog));
   }
 
-  @ApiBody({ type: ChatLogRequestDto })
-  @ApiOperation({ summary: '채팅내역 수정 API' })
-  @ApiCreatedResponse({ description: 'Created', type: ChatLog })
-  @Put('/logs/:id')
-  async updateChatLogInfo(@Param() id: number, @Body() chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
-    return (this.chatsService.updateCatLogInfo(id, chatLogRequest));
-  }
-
   @ApiOperation({ summary: '채팅내역 삭제 API' })
   @ApiOkResponse({ description: 'Ok' })
   @Delete('/logs/:id')
