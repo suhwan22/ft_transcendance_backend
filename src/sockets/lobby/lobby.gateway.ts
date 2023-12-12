@@ -75,7 +75,6 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatsGateway.sendUpdateToChannelMember(userId);
     }
     catch(e) {
-      console.log("aaaaaaatesates");
       console.log(e.stack);
     }
   }
