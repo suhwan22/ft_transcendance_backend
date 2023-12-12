@@ -20,6 +20,7 @@ import { ChannelPasswordRepository } from './repositories/channel-password.repos
     forwardRef(() => GamesModule),
     forwardRef(() => UsersModule),
     forwardRef(() => SocketsModule),
+    TypeOrmModule,
   ],
   controllers: [ChatsController],
   providers: [
