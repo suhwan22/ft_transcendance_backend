@@ -4,7 +4,7 @@ import { ChatBan } from "../entities/chat-ban.entity";
 import { Player } from "src/users/entities/player.entity";
 
 @Injectable()
-export class ChatBanRepositroy extends Repository<ChatBan> {
+export class ChatBanRepository extends Repository<ChatBan> {
   constructor(private dataSource: DataSource) {
     super(ChatBan, dataSource.createEntityManager());
   }

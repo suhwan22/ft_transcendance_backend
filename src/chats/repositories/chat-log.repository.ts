@@ -4,7 +4,7 @@ import { ChatLog } from "../entities/chat-log.entity";
 import { ChatLogRequestDto } from "../dtos/chat-log.request.dto";
 
 @Injectable()
-export class ChatLogRepositroy extends Repository<ChatLog> {
+export class ChatLogRepository extends Repository<ChatLog> {
   constructor(private dataSource: DataSource) {
     super(ChatLog, dataSource.createEntityManager());
   }

@@ -4,7 +4,7 @@ import { ChatMute } from "../entities/chat-mute.entity";
 import { Player } from "src/users/entities/player.entity";
 
 @Injectable()
-export class ChatMuteRepositroy extends Repository<ChatMute> {
+export class ChatMuteRepository extends Repository<ChatMute> {
   constructor(private dataSource: DataSource) {
     super(ChatMute, dataSource.createEntityManager());
   }

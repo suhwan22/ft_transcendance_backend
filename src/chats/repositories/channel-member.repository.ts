@@ -3,7 +3,7 @@ import { DataSource, InsertResult, Repository } from "typeorm";
 import { ChannelMember } from "../entities/channel-member.entity";
 
 @Injectable()
-export class ChannelMemberRepositroy extends Repository<ChannelMember> {
+export class ChannelMemberRepository extends Repository<ChannelMember> {
   constructor(private dataSource: DataSource) {
     super(ChannelMember, dataSource.createEntityManager());
   }

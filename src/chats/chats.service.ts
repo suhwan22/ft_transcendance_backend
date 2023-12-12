@@ -1,8 +1,6 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { ChatBan } from './entities/chat-ban.entity';
-import { InjectRepository } from '@nestjs/typeorm';
 import { ChatLog } from './entities/chat-log.entity';
-import { Repository, DataSource } from 'typeorm';
 import { ChatMute } from './entities/chat-mute.entity';
 import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity'
@@ -13,26 +11,22 @@ import { ChannelMemberRequestDto } from './dtos/channel-member.request.dto';
 import { ChannelConfigRequestDto } from './dtos/channel-config.request.dto';
 import { ChannelPassword } from './entities/channel-password.entity';
 import { compare, hash } from 'bcrypt';
-import { ChatBanRepositroy } from './repositories/chat-ban.repository';
-import { ChannelConfigRepositroy } from './repositories/channel-config.repository';
-import { ChannelMemberRepositroy } from './repositories/channel-member.repository';
-import { ChatMuteRepositroy } from './repositories/chat-mute.repository';
-import { ChatLogRepositroy } from './repositories/chat-log.repository';
+import { ChatBanRepository } from './repositories/chat-ban.repository';
+import { ChannelConfigRepository } from './repositories/channel-config.repository';
+import { ChannelMemberRepository } from './repositories/channel-member.repository';
+import { ChatMuteRepository } from './repositories/chat-mute.repository';
+import { ChatLogRepository } from './repositories/chat-log.repository';
+import { ChannelPasswordRepository } from './repositories/channel-password.repository';
 
 @Injectable()
 export class ChatsService {
   constructor(
-    @InjectRepository(ChannelPassword)
-    private channelPasswordRepository: Repository<ChannelPassword>,
-    private channelConfigRepository: ChannelConfigRepositroy,
-    private channelMemberRepository: ChannelMemberRepositroy,
-    private chatBanRepository: ChatBanRepositroy,
-    private chatMuteRepository: ChatMuteRepositroy,
-    private chatLogRepository: ChatLogRepositroy,
-
-    @Inject(forwardRef(() => UsersService))
-    private readonly usersService: UsersService,
-    private dataSource: DataSource
+    private channelConfigRepository: ChannelConfigRepository,
+    private channelMemberRepository: ChannelMemberRepository,
+    private channelPasswordRepository: ChannelPasswordRepository,
+    private chatBanRepository: ChatBanRepository,
+    private chatMuteRepository: ChatMuteRepository,
+    private chatLogRepository: ChatLogRepository,
   ) { }
 
   /** 
@@ -283,8 +277,7 @@ export class ChatsService {
   }
 
   async readChannelPassword(channelId: number): Promise<ChannelPassword> {
-    const userchannelPassword = await this.channelPasswordRepository.findOne({ where: { channelId } });
-    return (userchannelPassword);
+    return (await this.channelPasswordRepository.readChannelPassword(channelId));
   }
 
   async createChannelPassword(channelId: number, password: string): Promise<ChannelPassword> {
@@ -292,17 +285,19 @@ export class ChatsService {
     const saltRound = 10;
     if (password)
       hashPass = await hash(password, saltRound);
-    const channelPassword = { channelId: channelId, password: hashPass };
-    const newChannelPassword = this.channelPasswordRepository.create(channelPassword);
-    return (this.channelPasswordRepository.save(newChannelPassword));
+    const result = await this.channelPasswordRepository.createChannelPassword(channelId, hashPass);
+    return (this.channelPasswordRepository.findOne(result.raw.id));
   }
 
   async updateChannelPassword(channelId: number, password: string): Promise<ChannelPassword> {
     let hashPass = null;
     if (password)
       hashPass = await hash(password, 10);
-    this.channelPasswordRepository.update(channelId, { password: hashPass });
-    return (this.readChannelPassword(channelId));
+    return (await this.channelPasswordRepository.updateChannelPassword(channelId, hashPass));
+  }
+
+  async deleteChannelPassword(channelId: number): Promise<void> {
+    this.channelPasswordRepository.deleteChannelPassword(channelId);
   }
 
   async comparePassword(password: string, channelId: number) {
@@ -312,9 +307,5 @@ export class ChatsService {
     const inputPassword = password;
     const userPassword = await this.readChannelPassword(channelId);
     return (await compare(inputPassword, userPassword.password));
-  }
-
-  async deleteChannelPassword(channelId: number): Promise<void> {
-    this.channelPasswordRepository.delete(channelId);
   }
 }

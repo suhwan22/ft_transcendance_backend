@@ -5,7 +5,7 @@ import { ChannelConfigRequestDto } from "../dtos/channel-config.request.dto";
 import { ChannelMember } from "../entities/channel-member.entity";
 
 @Injectable()
-export class ChannelConfigRepositroy extends Repository<ChannelConfig> {
+export class ChannelConfigRepository extends Repository<ChannelConfig> {
   constructor(private dataSource: DataSource) {
     super(ChannelConfig, dataSource.createEntityManager());
   }

@@ -8,30 +8,29 @@ import { UsersModule } from 'src/users/users.module';
 import { ChatsSocketService } from '../sockets/chat/chats-socket.service';
 import { ChannelPassword } from './entities/channel-password.entity';
 import { SocketsModule } from 'src/sockets/sockets.module';
-import { ChatBanRepositroy } from './repositories/chat-ban.repository';
-import { ChannelConfigRepositroy } from './repositories/channel-config.repository';
-import { ChannelMemberRepositroy } from './repositories/channel-member.repository';
-import { ChatMuteRepositroy } from './repositories/chat-mute.repository';
-import { ChatLogRepositroy } from './repositories/chat-log.repository';
+import { ChatBanRepository } from './repositories/chat-ban.repository';
+import { ChannelConfigRepository,  } from './repositories/channel-config.repository';
+import { ChannelMemberRepository } from './repositories/channel-member.repository';
+import { ChatMuteRepository } from './repositories/chat-mute.repository';
+import { ChatLogRepository } from './repositories/chat-log.repository';
+import { ChannelPasswordRepository } from './repositories/channel-password.repository';
 
 @Module({
   imports: [
     forwardRef(() => GamesModule),
     forwardRef(() => UsersModule),
     forwardRef(() => SocketsModule),
-    TypeOrmModule.forFeature([
-      ChannelPassword
-    ])
   ],
   controllers: [ChatsController],
   providers: [
     ChatsService, 
     ChatsSocketService, 
-    ChannelConfigRepositroy, 
-    ChannelMemberRepositroy,
-    ChatBanRepositroy,
-    ChatMuteRepositroy,
-    ChatLogRepositroy],
+    ChannelConfigRepository, 
+    ChannelMemberRepository,
+    ChannelPasswordRepository,
+    ChatBanRepository,
+    ChatMuteRepository,
+    ChatLogRepository],
   exports: [TypeOrmModule, ChatsService]
 })
 export class ChatsModule {}
