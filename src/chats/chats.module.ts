@@ -13,6 +13,7 @@ import { ChatsGateway } from '../sockets/chat/chats.gateway';
 import { ChatsSocketService } from '../sockets/chat/chats-socket.service';
 import { ChannelPassword } from './entities/channel-password.entity';
 import { SocketsModule } from 'src/sockets/sockets.module';
+import { ChatBanRepositroy } from './repositories/chat-ban.repository';
 
 @Module({
   imports: [
@@ -22,14 +23,13 @@ import { SocketsModule } from 'src/sockets/sockets.module';
     TypeOrmModule.forFeature([
       ChannelConfig,
       ChannelMember,
-      ChatBan,
       ChatLog,
       ChatMute,
       ChannelPassword
     ])
   ],
   controllers: [ChatsController],
-  providers: [ChatsService, ChatsGateway, ChatsSocketService],
+  providers: [ChatsService, ChatsGateway, ChatsSocketService, ChatBanRepositroy],
   exports: [TypeOrmModule, ChatsService, ChatsGateway]
 })
 export class ChatsModule {}

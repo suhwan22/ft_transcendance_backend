@@ -14,6 +14,7 @@ import { ChannelMemberRequestDto } from './dtos/channel-member.request.dto';
 import { ChannelConfigRequestDto } from './dtos/channel-config.request.dto';
 import { ChannelPassword } from './entities/channel-password.entity';
 import { compare, hash } from 'bcrypt';
+import { ChatBanRepositroy } from './repositories/chat-ban.repository';
 
 @Injectable()
 export class ChatsService {
@@ -24,12 +25,11 @@ export class ChatsService {
     private channelConfigRepository: Repository<ChannelConfig>,
     @InjectRepository(ChatLog)
     private chatLogRepository: Repository<ChatLog>,
-    @InjectRepository(ChatBan)
-    private chatBanRepository: Repository<ChatBan>,
     @InjectRepository(ChatMute)
     private chatMuteRepository: Repository<ChatMute>,
     @InjectRepository(ChannelPassword)
     private channelPasswordRepository: Repository<ChannelPassword>,
+    private chatBanRepository: ChatBanRepositroy,
 
     @Inject(forwardRef(() => UsersService))
     private readonly usersService: UsersService,
@@ -445,99 +445,36 @@ export class ChatsService {
    * 
    */
   async readBanList(channelId: number): Promise<ChatBan[]> {
-    const banList = await this.dataSource
-      .getRepository(ChatBan).createQueryBuilder('ban_list')
-      .leftJoinAndSelect('ban_list.user', 'player')
-      .leftJoinAndSelect('ban_list.channel', 'channel_config')
-      .select(['ban_list.id', 'player.id', 'player.name'])
-      .where('channel_config.id = :id', { id: channelId })
-      .getMany();
-
-    return (banList);
+    return (await this.chatBanRepository.readBanList(channelId));
   }
 
   async readBanUser(channelId: number, userId: number): Promise<ChatBan> {
-    const banList = await this.dataSource
-      .getRepository(ChatBan).createQueryBuilder('ban_list')
-      .leftJoinAndSelect('ban_list.user', 'player')
-      .leftJoinAndSelect('ban_list.channel', 'channel_config')
-      .select(['ban_list.id', 'channel_config.id', 'player.id', 'player.name'])
-      .where('channel_config.id = :channelId', { channelId })
-      .andWhere('player.id = :userId', { userId })
-      .getOne();
-    return (banList);
+    return (await this.chatBanRepository.readBanUser(channelId, userId));
   }
 
   async readChatBan(channelId: number, userId: number): Promise<ChatBan> {
-    const chatBan = await this.dataSource
-      .getRepository(ChatBan).createQueryBuilder('ban_list')
-      .leftJoinAndSelect('ban_list.user', 'player')
-      .leftJoinAndSelect('ban_list.channel', 'channel_config')
-      .select(['ban_list.id', 'player.id', 'player.name'])
-      .where('channel_config.id = :channelId', { channelId: channelId })
-      .andWhere('player.id = :userId', { userId: userId })
-      .getOne();
-    return (chatBan);
+    return (await this.chatBanRepository.readChatBan(channelId, userId));
   }
 
   async createBanInfo(chatBanRequest: Partial<ChatMuteBanRequestDto>): Promise<ChatBan> {
-    const user = await this.usersService.readOnePlayer(chatBanRequest.userId);
-    const channel = await this.readOneChannelConfig(chatBanRequest.channelId);
-    const ban = {
-      user: user,
-      channel: channel,
-    }
-    const newBan = this.chatBanRepository.create(ban);
-    return (this.chatBanRepository.save(newBan));
+    const result = await this.chatBanRepository.createBanInfo(chatBanRequest.channelId, chatBanRequest.userId);
+    return (this.chatBanRepository.findOne({ where: { id: result.raw.id }}));
   }
 
   async createChatBanWithName(channelId: number, name: string) {
-    const playerQr = await this.dataSource
-      .getRepository(Player)
-      .createQueryBuilder('player')
-      .subQuery()
-      .from(Player, 'player')
-      .select('player.id')
-      .where(`name = '${name}'`)
-      .getQuery();
-
-    const insert = await this.dataSource
-      .getRepository(ChatBan)
-      .createQueryBuilder('ban_list')
-      .insert()
-      .values({ channel: () => `${channelId}`, user: () => `${playerQr}` })
-      .execute();
+    await this.chatBanRepository.createChatBanWithName(channelId, name);
   } 
 
   async updateBanInfo(id: number, ban: Partial<ChatBan>): Promise<ChatBan> {
-    await this.chatBanRepository.update(id, ban);
-    return (this.chatBanRepository.findOne({ where: { id } }));
+    return (await this.chatBanRepository.updateBanInfo(id, ban));
   }
 
   async deleteBanInfo(id: number): Promise<void> {
-    const deleteBan = await this.chatBanRepository.findOne({ where: { id } });
-    if (!deleteBan)
-      return;
-    await this.chatBanRepository.remove(deleteBan);
+    await this.chatBanRepository.deleteBanInfo(id);
   }
 
   async deleteChatBanWithName(name: string) {
-    const playerQr = await this.dataSource
-      .getRepository(Player)
-      .createQueryBuilder('player')
-      .subQuery()
-      .from(Player, 'player')
-      .select('player.id')
-      .where(`name = '${name}'`)
-      .getQuery();
-    
-    const deleteResult = await this.dataSource
-      .getRepository(ChatBan)
-      .createQueryBuilder('ban_list')
-      .delete()
-      .where(`user_id IN ${playerQr}`)
-      .execute();
-    return (deleteResult);
+    return (await this.chatBanRepository.deleteChatBanWithName(name));
   }
 
   /**
