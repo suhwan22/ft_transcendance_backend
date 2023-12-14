@@ -131,6 +131,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gamesSocketService.pauseGame(client);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('JOIN_GAME')
   async join(client: Socket, data: any) {
     const isLeft = data.gameRequest.send.id === client.data.userId ? true : false;

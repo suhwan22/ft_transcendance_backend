@@ -38,7 +38,6 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
-  @UseGuards(JwtWsGuard)
   public handleConnection(client: Socket, data) {
     try {
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
@@ -94,6 +93,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('INVITE')
   async invateGame(client: Socket, data) {
     let msg;
@@ -117,6 +117,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit("NOTICE", msg);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('ACCEPT_GAME')
   async acceptGame(client: Socket, data: Partial<GameRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -133,6 +134,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.acceptGame(client, targetClient, data);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REFUSE_GAME')
   async refuseGame(client: Socket, data: Partial<GameRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -140,6 +142,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.refuseGame(client, targetClient, data, target);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('INFO_FRIENDS')
   async sendFriendList(client: Socket, data) {
     try {
@@ -150,6 +153,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REQUEST_FRIEND')
   async requestFriend(client: Socket, data) {
     let msg;
@@ -170,6 +174,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('ACCEPT_FRIEND')
   async acceptFriend(client: Socket, data: Partial<FriendRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -177,6 +182,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.acceptFriend(client, targetClient, data, target);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REFUSE_FRIEND')
   async refuseFriend(client: Socket, data: Partial<FriendRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -184,6 +190,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.refuseFriend(client, targetClient, data, target);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('UPDATE')
   async updateProfile(client: Socket, data) {
     try {
@@ -206,6 +213,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.sendUpdateToFriends(this.clients, userId);
   }
   
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('GET_FRIEND_REQUEST') 
   async getFriendRequest(client: Socket) {
     const friendRequest = await this.usersService.readRecvFriendRequest(client.data.userId);
