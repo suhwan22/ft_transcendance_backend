@@ -54,7 +54,15 @@ export class AuthController {
   @Get('refresh')
   async refresh(@Req() request, @Res({ passthrough: true }) response: Response) {
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
+    const token = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
+    const tokenOption = {
+      domain: token.domain,
+      path: token.path,
+      httpOnly: token.httpOnly,
+      maxAge: token.maxAge
+    };
     response.cookie('Authentication', accessToken, accessOption);
+    response.cookie('TwoFactorAuth', token.accessToken, tokenOption);
     return ('token refresh success');
   }
 
