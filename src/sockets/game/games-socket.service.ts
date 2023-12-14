@@ -111,8 +111,6 @@ export class GamesSocketService {
     this.queue.get(ratingGroup).remove((v) => v.client.data.userId === client.data.userId);
     clearInterval(client.data.matchInterval);
     client.data.matchInterval = null;
-    console.log("cancel");
-    console.log(client.data);
     client.emit('CANCEL', 'CANCEL');
   }
 

@@ -7,6 +7,7 @@ import { lastValueFrom } from 'rxjs';
 import { Player } from 'src/users/entities/player.entity';
 import { UsersService } from 'src/users/users.service';
 import { toFileStream } from "qrcode";
+import { WsException } from '@nestjs/websockets';
 
 @Injectable()
 export class AuthService {
@@ -16,7 +17,7 @@ export class AuthService {
     private httpService: HttpService
   ) { }
 
-  async getCookieWithAccessToken(username:string, id: number) {
+  async getCookieWithAccessToken(username: string, id: number) {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
@@ -31,7 +32,7 @@ export class AuthService {
     };
   }
 
-  async getCookieWithRefreshToken(username:string, id: number) {
+  async getCookieWithRefreshToken(username: string, id: number) {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'refreshSecret',
@@ -114,7 +115,7 @@ export class AuthService {
   async generateTwoFactorAuthenticationSecret(payload) {
     const secret = authenticator.generateSecret();
     const optAuthUrl = authenticator.keyuri(payload.userName, "otpauth://", secret);
-    
+
     await this.usersService.updateTwoFactorAuthSecret(secret, payload.userId);
 
     return ({ secret, optAuthUrl });
@@ -127,23 +128,18 @@ export class AuthService {
   async isVaildTwoFactorAuthCode(code: string, payload) {
     const userAuth = await this.usersService.readUserAuth(payload.userId);
     const secret = userAuth.twoFactorAuthSecret;
-    return (authenticator.verify({ token: code, secret: secret}));
+    return (authenticator.verify({ token: code, secret: secret }));
   }
 
   verifyBearTokenWithCookies(cookies: string, key: string) {
-    try {
-      let token: string = null; 
-      cookies.split('; ').forEach((v) => {
-        const cookie = v.split('=');
-        if (cookie[0] === key) {
-          token = cookie[1];
-          return ;
-        }
-      })
-      return (this.jwtService.verify(token, { secret: "accessSecret" }));
-    }
-    catch (e) {
-      console.log("e");
-    }
+    let token: string = null;
+    cookies.split('; ').forEach((v) => {
+      const cookie = v.split('=');
+      if (cookie[0] === key) {
+        token = cookie[1];
+        return;
+      }
+    })
+    return (this.jwtService.verify(token, { secret: "accessSecret" }));
   }
 }

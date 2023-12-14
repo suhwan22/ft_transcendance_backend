@@ -20,7 +20,7 @@ import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';
 
 @WebSocketGateway(3131, {
-  cors: { credentials: true, origin: 'http://localhost:5173' }, 
+  cors: { credentials: true, origin: 'http://localhost:5173' },
   namespace: '/games'
 })
 @UseFilters(SocketExceptionFilter)
@@ -42,8 +42,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //소켓 연결시 유저목록에 추가
   async handleConnection(client: Socket, data) {
-      const payload = this.authServeice.verifyBearTokenWithCookies("client.request.headers.cookie", "TwoFactorAuth");
-
+    try {
+      const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
+  
       client.leave(client.id);
       client.data.userId = payload.sub;
       client.data.rating = (await this.usersService.readOneUserGameRecord(client.data.userId)).rating;
@@ -51,9 +52,24 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.usersService.updatePlayerStatus(client.data.userId, 0);
       this.lobbyGateway.sendUpdateToFriends(client.data.userId);
       this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
-
+  
       this.gamesSocketService.checkGameAlready(client);
       console.log('games connected', client.id);
+    }
+    catch(e) {
+      if (e.name === 'JsonWebTokenError') {
+        const msg = this.gamesSocketService.getNotice("Invaild Token", 201);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.name === 'TokenExpiredError') {
+        const msg = this.gamesSocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else {
+        const msg = this.gamesSocketService.getNotice("DB Error", 200);
+        client.emit("NOTICE", msg);
+      }
+    }
   }
 
   //소켓 연결 해제시 유저목록에서 제거
@@ -86,6 +102,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(JwtWsGuard)
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
+    console.log("a");
     this.gamesSocketService.matchMaking(client, 60);
   }
 

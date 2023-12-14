@@ -5,19 +5,26 @@ import { BaseWsExceptionFilter, WsException } from "@nestjs/websockets";
 export class SocketExceptionFilter extends BaseWsExceptionFilter {
   catch(exception: WsException | HttpException, host: ArgumentsHost): void {
     const client = host.switchToWs().getClient();
-    console.log(exception.name);
-    console.log("=====================");
-    // if (e.name === 'JsonWebTokenError') {
-    //   const msg = this.gamesSocketService.getNotice("Invaild Token", 201);
-    //   client.emit("NOTICE", msg);
-    // }
-    // else if (e.name === 'TokenExpiredError') {
-    //   const msg = this.gamesSocketService.getNotice("Token expired", 202);
-    //   client.emit("NOTICE", msg);
-    // }
-    // else {
-    //   const msg = this.gamesSocketService.getNotice("DB Error", 200);
-    //   client.emit("NOTICE", msg);
-    // }
+    console.log(exception);
+    if (exception.name === 'JsonWebTokenError') {
+      const msg = this.getNotice("Invaild Token", 201);
+      client.emit("NOTICE", msg);
+    }
+    else if (exception.name === 'TokenExpiredError') {
+      const msg = this.getNotice("Token expired", 202);
+      client.emit("NOTICE", msg);
+    }
+    else {
+      const msg = this.getNotice("DB Error", 200);
+      client.emit("NOTICE", msg);
+    }
+  }
+
+  getNotice(message: string, code: number) {
+    return ({
+      code: code,
+      content: message,
+      date: new Date(),
+    });
   }
 }
