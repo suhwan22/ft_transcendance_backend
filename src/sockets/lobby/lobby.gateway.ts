@@ -196,4 +196,10 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const friendRequest = await this.usersService.readRecvFriendRequest(client.data.userId);
     client.emit('GET_FRIEND_REQUEST', friendRequest);
   }
+
+  @SubscribeMessage('RECALL_FRIEND_REQUEST')
+  async recallFriendRequest(client: Socket, data: FriendRequest) {
+    console.log(data);
+    client.emit('REQUEST_FRIEND', data);
+  }
 }
