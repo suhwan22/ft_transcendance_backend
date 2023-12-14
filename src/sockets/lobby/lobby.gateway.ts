@@ -18,8 +18,12 @@ import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
 import { AuthService } from 'src/auth/auth.service';
+import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 
-@WebSocketGateway(3131, { namespace: '/lobby' })
+@WebSocketGateway(3131, {
+  cors: { credentials: true, origin: 'http://localhost:5173' }, 
+  namespace: '/lobby'
+})
 export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     @Inject(forwardRef(() => ChatsGateway))
@@ -34,17 +38,19 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
+  @UseGuards(JwtWsGuard)
   public handleConnection(client: Socket, data) {
     try {
-      const payload = this.authServeice.verifyBearToken(client.handshake.headers.authorization);
-
+      const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
       client.data.userId = payload.sub;
       this.clients.set(client.data.userId, client);
       this.usersService.updatePlayerStatus(client.data.userId, 0);
       this.sendUpdateToFriends(client.data.userId);
       this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
+      console.log('lobby connected', client.id);
     }
     catch (e) {
+      console.log('connection error');
       if (e.name === 'JsonWebTokenError') {
         const msg = this.lobbySocketService.getNotice("Invaild Token", 201);
         client.emit("NOTICE", msg);

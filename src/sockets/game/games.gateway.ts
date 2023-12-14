@@ -1,4 +1,4 @@
-import { forwardRef, Inject } from '@nestjs/common';
+import { forwardRef, Inject, UseFilters, UseGuards } from '@nestjs/common';
 import {
   MessageBody,
   SubscribeMessage,
@@ -7,6 +7,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   ConnectedSocket,
+  WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
@@ -15,8 +16,14 @@ import { UsersService } from 'src/users/users.service';
 import { GameRoom } from '../../games/entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
 import { AuthService } from 'src/auth/auth.service';
+import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
+import { SocketExceptionFilter } from '../sockets.exception.filter';
 
-@WebSocketGateway(3131, { namespace: '/games' })
+@WebSocketGateway(3131, {
+  cors: { credentials: true, origin: 'http://localhost:5173' }, 
+  namespace: '/games'
+})
+@UseFilters(SocketExceptionFilter)
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     @Inject(forwardRef(() => ChatsGateway))
@@ -35,8 +42,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   //소켓 연결시 유저목록에 추가
   async handleConnection(client: Socket, data) {
-    try {
-      const payload = this.authServeice.verifyBearToken(client.handshake.headers.authorization);
+      const payload = this.authServeice.verifyBearTokenWithCookies("client.request.headers.cookie", "TwoFactorAuth");
 
       client.leave(client.id);
       client.data.userId = payload.sub;
@@ -47,21 +53,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
 
       this.gamesSocketService.checkGameAlready(client);
-    }
-    catch (e) {
-      if (e.name === 'JsonWebTokenError') {
-        const msg = this.gamesSocketService.getNotice("Invaild Token", 201);
-        client.emit("NOTICE", msg);
-      }
-      else if (e.name === 'TokenExpiredError') {
-        const msg = this.gamesSocketService.getNotice("Token expired", 202);
-        client.emit("NOTICE", msg);
-      }
-      else {
-        const msg = this.gamesSocketService.getNotice("DB Error", 200);
-        client.emit("NOTICE", msg);
-      }
-    }
+      console.log('games connected', client.id);
   }
 
   //소켓 연결 해제시 유저목록에서 제거
@@ -91,6 +83,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
     this.gamesSocketService.matchMaking(client, 60);
@@ -123,7 +116,6 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('JOIN_GAME')
   async join(client: Socket, data: any) {
-    console.log(data);
     const isLeft = data.gameRequest.send.id === client.data.userId ? true : false;
     this.gamesSocketService.enterGame(client, data.roomId, false, isLeft);
   }

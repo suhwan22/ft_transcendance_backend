@@ -130,8 +130,20 @@ export class AuthService {
     return (authenticator.verify({ token: code, secret: secret}));
   }
 
-  verifyBearToken(bearerToken: string) {
-    const token = bearerToken.split(' ')[1];
-    return (this.jwtService.verify(token, { secret: "accessSecret" }));
+  verifyBearTokenWithCookies(cookies: string, key: string) {
+    try {
+      let token: string = null; 
+      cookies.split('; ').forEach((v) => {
+        const cookie = v.split('=');
+        if (cookie[0] === key) {
+          token = cookie[1];
+          return ;
+        }
+      })
+      return (this.jwtService.verify(token, { secret: "accessSecret" }));
+    }
+    catch (e) {
+      console.log("e");
+    }
   }
 }

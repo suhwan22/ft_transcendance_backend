@@ -20,7 +20,10 @@ import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
 import { AuthService } from 'src/auth/auth.service';
 
-@WebSocketGateway(3131, { cors: '*', namespace: '/chats' })
+@WebSocketGateway(3131, {
+  cors: { credentials: true, origin: 'http://localhost:5173' }, 
+  namespace: '/chats'
+})
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsSocketService: ChatsSocketService,
@@ -40,7 +43,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket, data) {
     try {
-      const payload = this.authServeice.verifyBearToken(client.handshake.headers.authorization);
+      const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
 
       client.leave(client.id);
       client.data.roomId = `room:lobby`;
@@ -50,8 +53,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.usersService.updatePlayerStatus(client.data.userId, 0);
       this.lobbyGateway.sendUpdateToFriends(client.data.userId);
       this.sendUpdateToChannelMember(client.data.userId);
+      console.log('chats connected', client.id);
     }
     catch (e) {
+      console.log('connection error');
       if (e.name === 'JsonWebTokenError') {
         const msg = this.chatsSocketService.getNotice("Invaild Token", 201);
         client.emit("NOTICE", msg);
