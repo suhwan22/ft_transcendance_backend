@@ -53,6 +53,7 @@ export class AuthController {
   @Get('refresh/2fa')
   async refreshTFA(@Req() request, @Res({ passthrough: true }) response: Response) {
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
+    this.authService.updateTokenToSocket(accessToken, 'TwoFactorAuth', request.user);
     response.cookie('TwoFactorAuth', accessToken, accessOption);
     return ('2fa token refresh success');
   }
@@ -63,6 +64,7 @@ export class AuthController {
   @Get('refresh/login')
   async refreshLogin(@Req() request, @Res({ passthrough: true }) response: Response) {
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
+    this.authService.updateTokenToSocket(accessToken, 'Authentication', request.user);
     response.cookie('Authentication', accessToken, accessOption);
     return ('login token refresh success');
   }

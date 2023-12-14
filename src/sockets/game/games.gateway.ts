@@ -31,6 +31,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject(forwardRef(() => LobbyGateway))
     private readonly lobbyGateway: LobbyGateway,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => AuthService))
     private readonly authServeice: AuthService,
     private readonly gamesSocketService: GamesSocketService,) {
     this.clients = new Map<number, Socket>();

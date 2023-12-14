@@ -13,23 +13,27 @@ import { ChatsSocketService } from './chats-socket.service';
 import { ChatsService } from '../../chats/chats.service';
 import { UsersService } from 'src/users/users.service';
 import { GamesGateway } from 'src/sockets/game/games.gateway';
-import { forwardRef, Inject, UseGuards } from '@nestjs/common';
+import { forwardRef, Inject, UseFilters, UseGuards } from '@nestjs/common';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
+import { SocketExceptionFilter } from '../sockets.exception.filter';
 
 @WebSocketGateway(3131, {
   cors: { credentials: true, origin: 'http://localhost:5173' }, 
   namespace: '/chats'
 })
+@UseFilters(SocketExceptionFilter)
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsSocketService: ChatsSocketService,
     private readonly chatsService: ChatsService,
     private readonly usersService: UsersService,
+
+    @Inject(forwardRef(() => AuthService))
     private readonly authServeice: AuthService,
     @Inject(forwardRef(() => GamesGateway))
     private readonly gamesGateway: GamesGateway,

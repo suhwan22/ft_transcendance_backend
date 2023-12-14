@@ -1,4 +1,4 @@
-import { forwardRef, Inject, Req, UseGuards } from '@nestjs/common';
+import { forwardRef, Inject, Req, UseFilters, UseGuards } from '@nestjs/common';
 import {
   MessageBody,
   SubscribeMessage,
@@ -19,17 +19,20 @@ import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
+import { SocketExceptionFilter } from '../sockets.exception.filter';
 
 @WebSocketGateway(3131, {
   cors: { credentials: true, origin: 'http://localhost:5173' }, 
   namespace: '/lobby'
 })
+@UseFilters(SocketExceptionFilter)
 export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     @Inject(forwardRef(() => ChatsGateway))
     private readonly chatsGateway: ChatsGateway,
     private readonly lobbySocketService: LobbySocketService,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => AuthService))
     private readonly authServeice: AuthService,) {
     this.clients = new Map<number, Socket>();
   }

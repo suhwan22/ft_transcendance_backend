@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { authenticator } from 'otplib';
@@ -7,14 +7,24 @@ import { lastValueFrom } from 'rxjs';
 import { Player } from 'src/users/entities/player.entity';
 import { UsersService } from 'src/users/users.service';
 import { toFileStream } from "qrcode";
-import { WsException } from '@nestjs/websockets';
+import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
+import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
+import { GamesGateway } from 'src/sockets/game/games.gateway';
+import { Socket } from 'socket.io';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
     private usersService: UsersService,
-    private httpService: HttpService
+    private httpService: HttpService,
+
+    @Inject(forwardRef(() => LobbyGateway))
+    private lobbyGateway: LobbyGateway,
+    @Inject(forwardRef(() => ChatsGateway))
+    private chatsGateway: ChatsGateway,
+    @Inject(forwardRef(() => GamesGateway))
+    private gamesGateway: GamesGateway,
   ) { }
 
   async getCookieWithAccessToken(username: string, id: number) {
@@ -142,8 +152,36 @@ export class AuthService {
         token = cookie[1];
         return;
       }
-
     })
     return (this.jwtService.verify(token, { secret: "accessSecret" }));
+  }
+
+  updateTokenToSocket(token: string, key: string, user: Player) {
+    let client: Socket = null;
+    let updateCookie = "";
+    if (user.status === 0)
+      client = this.lobbyGateway.clients.get(user.id);
+    else if (user.status === 1) 
+      client = this.chatsGateway.clients.get(user.id);
+    else if (user.status === 2) 
+      client = this.gamesGateway.clients.get(user.id);
+    else
+      return ;
+    const cookies = client.request.headers.cookie;
+    const arr = cookies.split('; ');
+    for (let i = 0; i < arr.length; i++) {
+      const cookie = arr[i].split('=');
+      if (cookie[0] === key) {
+        updateCookie += key + "=";
+        updateCookie += token;
+      }
+      else {
+        updateCookie += arr[i];
+      }
+      if (i !== arr.length - 1)
+        updateCookie += "; ";
+    }
+    client.request.headers.cookie = updateCookie;
+    client.handshake.headers.cookie = updateCookie;
   }
 }
