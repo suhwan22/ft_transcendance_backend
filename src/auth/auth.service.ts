@@ -21,14 +21,14 @@ export class AuthService {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
-      expiresIn: '60s'
+      expiresIn: '20s'
     });
     return {
       accessToken: token,
       domain: 'localhost',
       path: '/',
       httpOnly: true,
-      maxAge: 60 * 1000
+      maxAge: 20 * 1000
     };
   }
 
