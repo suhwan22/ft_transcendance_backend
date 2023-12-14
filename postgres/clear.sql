@@ -11,4 +11,5 @@ drop table channel_password;
 drop table channel_config;
 drop table friend_request;
 drop table auth_list;
+drop table game_dodge;
 drop table player;

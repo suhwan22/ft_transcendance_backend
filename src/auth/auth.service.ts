@@ -129,9 +129,9 @@ export class AuthService {
     const userAuth = await this.usersService.readUserAuth(payload.userId);
     const secret = userAuth.twoFactorAuthSecret;
     const opts = { token: code, secret: secret };
-    if (!secret)
+    if (secret === null)
       opts.secret = "";
-    return (authenticator.verify({ token: code, secret: secret }));
+    return (authenticator.verify(opts));
   }
 
   verifyBearTokenWithCookies(cookies: string, key: string) {
@@ -142,6 +142,7 @@ export class AuthService {
         token = cookie[1];
         return;
       }
+
     })
     return (this.jwtService.verify(token, { secret: "accessSecret" }));
   }

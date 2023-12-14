@@ -6,6 +6,7 @@ import { UsersService } from 'src/users/users.service';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CodeRequestDto } from './dtos/codeRequestDto';
+import { JwtService } from '@nestjs/jwt';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -20,9 +21,7 @@ export class AuthController {
   @ApiOkResponse({ description: 'Ok'})
   @Post('/login')
   async login(@Body('code') code: string, @Res({ passthrough: true }) response: Response) {
-    console.log(code);
     const token = await this.authService.getAccessTokenWithOauth(code);
-    console.log(token);
     const oauthUser = await this.authService.getUserWithOauth(token);
     const user = await this.authService.signUpUser(oauthUser);
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id);
@@ -53,7 +52,7 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Get('refresh/2fa')
   async refreshTFA(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
+    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
     response.cookie('TwoFactorAuth', accessToken, accessOption);
     return ('2fa token refresh success');
   }
@@ -63,7 +62,7 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Get('refresh/login')
   async refreshLogin(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
+    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
     response.cookie('Authentication', accessToken, accessOption);
     return ('login token refresh success');
   }
