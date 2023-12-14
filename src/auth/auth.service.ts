@@ -128,6 +128,9 @@ export class AuthService {
   async isVaildTwoFactorAuthCode(code: string, payload) {
     const userAuth = await this.usersService.readUserAuth(payload.userId);
     const secret = userAuth.twoFactorAuthSecret;
+    const opts = { token: code, secret: secret };
+    if (!secret)
+      opts.secret = "";
     return (authenticator.verify({ token: code, secret: secret }));
   }
 
