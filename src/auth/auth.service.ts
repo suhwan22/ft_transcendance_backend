@@ -29,16 +29,18 @@ export class AuthService {
 
   async getCookieWithAccessToken(username: string, id: number) {
     const payload = { username: username, sub: id };
+    console.log("토큰 발급");
+    console.log(payload);
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
-      expiresIn: '20s'
+      expiresIn: '3600s'
     });
     return {
       accessToken: token,
       domain: 'localhost',
       path: '/',
       httpOnly: true,
-      maxAge: 20 * 1000
+      maxAge: 3600 * 1000
     };
   }
 
