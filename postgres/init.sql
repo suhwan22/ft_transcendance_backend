@@ -12,6 +12,7 @@ delete from channel_password;
 delete from channel_config;
 delete from friend_request;
 delete from auth_list;
+delete from game_dodge;
 delete from player;
 
 -- init player data

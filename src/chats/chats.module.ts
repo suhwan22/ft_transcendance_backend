@@ -9,13 +9,13 @@ import { ChannelMember } from './entities/channel-member.entity';
 import { ChannelConfig } from './entities/channel-config.entity';
 import { GamesModule } from 'src/games/games.module';
 import { UsersModule } from 'src/users/users.module';
-import { ChatsGateway } from '../sockets/chat/chats.gateway';
-import { ChatsSocketService } from '../sockets/chat/chats-socket.service';
 import { ChannelPassword } from './entities/channel-password.entity';
 import { SocketsModule } from 'src/sockets/sockets.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
+    forwardRef(() => AuthModule),
     forwardRef(() => GamesModule),
     forwardRef(() => UsersModule),
     forwardRef(() => SocketsModule),
@@ -29,7 +29,7 @@ import { SocketsModule } from 'src/sockets/sockets.module';
     ])
   ],
   controllers: [ChatsController],
-  providers: [ChatsService, ChatsGateway, ChatsSocketService],
-  exports: [TypeOrmModule, ChatsService, ChatsGateway]
+  providers: [ChatsService],
+  exports: [TypeOrmModule, ChatsService]
 })
 export class ChatsModule {}

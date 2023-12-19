@@ -6,6 +6,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   ConnectedSocket,
+  WsException,
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
@@ -13,18 +14,28 @@ import { ChatsSocketService } from './chats-socket.service';
 import { ChatsService } from '../../chats/chats.service';
 import { UsersService } from 'src/users/users.service';
 import { GamesGateway } from 'src/sockets/game/games.gateway';
-import { forwardRef, Inject } from '@nestjs/common';
+import { forwardRef, Inject, UseFilters, UseGuards } from '@nestjs/common';
 import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
+import { AuthService } from 'src/auth/auth.service';
+import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
+import { SocketExceptionFilter } from '../sockets.exception.filter';
 
-@WebSocketGateway(3131, { cors: '*', namespace: '/chats' })
+@WebSocketGateway(3131, {
+  cors: { credentials: true, origin: process.env.CALLBACK_URL }, 
+  namespace: '/chats'
+})
+@UseFilters(SocketExceptionFilter)
 export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     private readonly chatsSocketService: ChatsSocketService,
     private readonly chatsService: ChatsService,
     private readonly usersService: UsersService,
+
+    @Inject(forwardRef(() => AuthService))
+    private readonly authServeice: AuthService,
     @Inject(forwardRef(() => GamesGateway))
     private readonly gamesGateway: GamesGateway,
     @Inject(forwardRef(() => LobbyGateway))
@@ -36,11 +47,41 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
-  public handleConnection(client: Socket): void {
-    client.leave(client.id);
-    client.data.roomId = `room:lobby`;
-    client.join('room:lobby');
-    console.log('chat connected', client.id);
+  public handleConnection(client: Socket, data) {
+    try {
+      const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
+
+      client.leave(client.id);
+      client.data.roomId = `room:lobby`;
+      client.join('room:lobby');
+      client.data.userId = payload.sub;
+      if (this.clients.get(client.data.userId))
+        throw new WsException("DuplicatedAccessError");
+      this.clients.set(client.data.userId, client);
+      this.usersService.updatePlayerStatus(client.data.userId, 0);
+      this.lobbyGateway.sendUpdateToFriends(client.data.userId);
+      this.sendUpdateToChannelMember(client.data.userId);
+      console.log('chats connected', client.id);
+    }
+    catch (e) {
+      console.log('connection error');
+      if (e.name === 'JsonWebTokenError') {
+        const msg = this.chatsSocketService.getNotice("Invaild Token", 201);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.name === 'TokenExpiredError') {
+        const msg = this.chatsSocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.error === 'DuplicatedAccessError') {
+        const msg = this.chatsSocketService.getNotice("Duplicated Access", 203);
+        client.emit("NOTICE", msg);
+      }
+      else {
+        const msg = this.chatsSocketService.getNotice("DB Error", 200);
+        client.emit("NOTICE", msg);
+      }
+    }
   }
 
   //소켓 연결 해제시 유저목록에서 제거
@@ -79,6 +120,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //   password: string,
   //   limit: number
   // }
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('HOST')
   async hostChatRoom(client: Socket, message) {
     try {
@@ -113,6 +155,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //   channelId: number,
   //   password: string
   // }
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('JOIN')
   async enterChatRoom(client: Socket, message) {
     const roomId = message.channelId;
@@ -170,6 +213,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatsSocketService.enterChatRoom(client, roomId, message.userId);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('EXIT')
   async goToLobby(client: Socket, message) {
     const channelMembers = await this.chatsService.readOneChannelMember(message.channelId);
@@ -183,6 +227,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //   userId: number,
   //   channelId: number,
   // }
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('QUIT')
   async quitChatRoom(client: Socket, message) {
     const channelMembers = await this.chatsService.readOneChannelMember(message.channelId);
@@ -207,20 +252,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
   }
 
-  @SubscribeMessage('REGIST')
-  async registUserSocket(client: Socket, userId: number) {
-    try {
-      this.clients.set(userId, client);
-      client.data.userId = userId;
-      this.usersService.updatePlayerStatus(userId, 1);
-      this.sendUpdateToChannelMember(userId);
-      this.lobbyGateway.sendUpdateToFriends(userId);
-    }
-    catch (e) {
-      console.log(e.stack);
-    }
-  }
-
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('INFO_CH_LIST')
   async sendChannelList(client: Socket, userId: number) {
     try {
@@ -231,6 +263,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('INFO_CH_MEMBER')
   async sendChannelMember(client: Socket, channelId: number) {
     try {
@@ -241,11 +274,13 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('MSG')
   async sendMessage(client: Socket, message) {
     await this.chatsSocketService.sendMessage(client, message);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('KICK')
   async kickClient(@ConnectedSocket() client: Socket, @MessageBody() data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
@@ -264,6 +299,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit('NOTICE', log);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('BAN')
   async banClient(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
@@ -286,6 +322,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit("NOTICE", log);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('UNBAN')
   async unbanClient(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
@@ -297,18 +334,21 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit("NOTICE", log);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('BLOCK')
   async blockClient(client: Socket, message) {
     const log = await this.chatsSocketService.commandBlock(client, message.channelId, message.userId, message.target);
     client.emit("NOTICE", log);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('UNBLOCK')
   async unblockClient(client: Socket, data) {
     const log = await this.chatsSocketService.commandUnblock(client, data.channelId, data.userId, data.target);
     client.emit("NOTICE", log);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('MUTE')
   async muteClient(client: Socket, data) {
     const roomId = data.channelId.toString();
@@ -330,6 +370,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('PASS')
   async updatePasswordWithChannel(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
@@ -341,6 +382,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit("NOTICE", emit);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('OP')
   async setOpClient(client: Socket, data) {
     const roomId = data.channelId.toString();
@@ -358,6 +400,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.leave(client.id);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('INVITE')
   async invateGame(client: Socket, data) {
     let msg;
@@ -381,7 +424,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit("NOTICE", msg);
   }
 
-
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('ACCEPT_GAME')
   async acceptGame(client: Socket, data: Partial<GameRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -398,6 +441,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatsSocketService.acceptGame(client, targetClient, data);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REFUSE_GAME')
   async refuseGame(client: Socket, data: Partial<GameRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -409,6 +453,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatsSocketService.sendUpdateToChannelMember(this.server, userId);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REQUEST_FRIEND')
   async requestFriend(client: Socket, data) {
     let msg;
@@ -429,6 +474,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('ACCEPT_FRIEND')
   async acceptFriend(client: Socket, data: Partial<FriendRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -436,6 +482,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatsSocketService.acceptFriend(client, targetClient, data, target);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REFUSE_FRIEND')
   async refuseFriend(client: Socket, data: Partial<FriendRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -443,6 +490,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.chatsSocketService.refuseFriend(client, targetClient, data, target);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('GET_FRIEND_REQUEST') 
   async getFriendRequest(client: Socket) {
     const friendRequest = await this.usersService.readRecvFriendRequest(client.data.userId);

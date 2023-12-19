@@ -1,4 +1,4 @@
-import { forwardRef, Inject } from '@nestjs/common';
+import { forwardRef, Inject, UseFilters, UseGuards } from '@nestjs/common';
 import {
   MessageBody,
   SubscribeMessage,
@@ -7,6 +7,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   ConnectedSocket,
+  WsException,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
@@ -14,8 +15,15 @@ import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { UsersService } from 'src/users/users.service';
 import { GameRoom } from '../../games/entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
+import { AuthService } from 'src/auth/auth.service';
+import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
+import { SocketExceptionFilter } from '../sockets.exception.filter';
 
-@WebSocketGateway(3131, { namespace: '/games' })
+@WebSocketGateway(3131, {
+  cors: { credentials: true, origin: process.env.CALLBACK_URL },
+  namespace: '/games'
+})
+@UseFilters(SocketExceptionFilter)
 export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     @Inject(forwardRef(() => ChatsGateway))
@@ -23,6 +31,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @Inject(forwardRef(() => LobbyGateway))
     private readonly lobbyGateway: LobbyGateway,
     private readonly usersService: UsersService,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authServeice: AuthService,
     private readonly gamesSocketService: GamesSocketService,) {
     this.clients = new Map<number, Socket>();
   }
@@ -32,9 +42,41 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
-  public handleConnection(client: Socket, ...args: any[]): void {
-    client.leave(client.id);
-    console.log('game connected', client.id);
+  async handleConnection(client: Socket, data) {
+    try {
+      const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
+  
+      client.leave(client.id);
+      client.data.userId = payload.sub;
+      if (this.clients.get(client.data.userId))
+        throw new WsException("DuplicatedAccessError");
+      client.data.rating = (await this.usersService.readOneUserGameRecord(client.data.userId)).rating;
+      this.clients.set(client.data.userId, client);
+      this.usersService.updatePlayerStatus(client.data.userId, 0);
+      this.lobbyGateway.sendUpdateToFriends(client.data.userId);
+      this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
+  
+      this.gamesSocketService.checkGameAlready(client);
+      console.log('games connected', client.id);
+    }
+    catch(e) {
+      if (e.name === 'JsonWebTokenError') {
+        const msg = this.gamesSocketService.getNotice("Invaild Token", 201);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.name === 'TokenExpiredError') {
+        const msg = this.gamesSocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.error === 'DuplicatedAccessError') {
+        const msg = this.gamesSocketService.getNotice("Duplicated Access", 203);
+        client.emit("NOTICE", msg);
+      }
+      else {
+        const msg = this.gamesSocketService.getNotice("DB Error", 200);
+        client.emit("NOTICE", msg);
+      }
+    }
   }
 
   //소켓 연결 해제시 유저목록에서 제거
@@ -64,29 +106,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('REGIST')
-  async registUserSocket(client: Socket, userId: number) {
-    try {
-
-      console.log(userId);
-      client.data.userId = userId;
-      const score = (await this.usersService.readOneUserGameRecord(client.data.userId)).rating;
-      client.data.rating = score;
-      this.clients.set(userId, client);
-      this.usersService.updatePlayerStatus(userId, 2);
-      this.chatsGateway.sendUpdateToChannelMember(userId);
-      this.lobbyGateway.sendUpdateToFriends(userId);
-
-      this.gamesSocketService.checkGameAlready(client);
-
-    }
-    catch (e) {
-      console.log(e.stack);
-    }
-  }
-
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
+    console.log("a");
     this.gamesSocketService.matchMaking(client, 60);
   }
 
@@ -115,9 +138,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.gamesSocketService.pauseGame(client);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('JOIN_GAME')
   async join(client: Socket, data: any) {
-    console.log(data);
     const isLeft = data.gameRequest.send.id === client.data.userId ? true : false;
     this.gamesSocketService.enterGame(client, data.roomId, false, isLeft);
   }
