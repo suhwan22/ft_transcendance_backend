@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Inject, Injectable, UnauthorizedException, forwardRef } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, UnauthorizedException, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { authenticator } from 'otplib';
@@ -118,7 +118,6 @@ export class AuthService {
       };
       user = await this.usersService.createPlayer(newPlayer);
       await this.usersService.createUserAuth(user.id);
-      await this.usersService.createUserSocket(user.id);
       await this.usersService.createUserGameRecord({ user: user.id, win: 0, loss: 0, rating: 1500 });
     }
     return (user);
@@ -144,6 +143,10 @@ export class AuthService {
     if (secret === null)
       opts.secret = "";
     return (authenticator.verify(opts));
+  }
+
+  verifyBearToken(token: string) {
+    return (this.jwtService.verify(token, { secret: "accessSecret" }));
   }
 
   verifyBearTokenWithCookies(cookies: string, key: string) {

@@ -41,17 +41,19 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
-  public handleConnection(client: Socket, data) {
+  public handleConnection(client: Socket) {
     try {
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
       client.data.userId = payload.sub;
+      if (this.clients.get(client.data.userId))
+        throw new WsException("DuplicatedAccessError");
       this.clients.set(client.data.userId, client);
       this.usersService.updatePlayerStatus(client.data.userId, 0);
       this.sendUpdateToFriends(client.data.userId);
       this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
       console.log('lobby connected', client.id);
     }
-    catch (e) {
+    catch (e: any) {
       console.log('connection error');
       if (e.name === 'JsonWebTokenError') {
         const msg = this.lobbySocketService.getNotice("Invaild Token", 201);
@@ -59,6 +61,10 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       else if (e.name === 'TokenExpiredError') {
         const msg = this.lobbySocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.error === 'DuplicatedAccessError') {
+        const msg = this.lobbySocketService.getNotice("Duplicated Access", 203);
         client.emit("NOTICE", msg);
       }
       else {

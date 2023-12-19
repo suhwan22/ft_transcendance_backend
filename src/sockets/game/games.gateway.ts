@@ -48,6 +48,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   
       client.leave(client.id);
       client.data.userId = payload.sub;
+      if (this.clients.get(client.data.userId))
+        throw new WsException("DuplicatedAccessError");
       client.data.rating = (await this.usersService.readOneUserGameRecord(client.data.userId)).rating;
       this.clients.set(client.data.userId, client);
       this.usersService.updatePlayerStatus(client.data.userId, 0);
@@ -64,6 +66,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       else if (e.name === 'TokenExpiredError') {
         const msg = this.gamesSocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.error === 'DuplicatedAccessError') {
+        const msg = this.gamesSocketService.getNotice("Duplicated Access", 203);
         client.emit("NOTICE", msg);
       }
       else {

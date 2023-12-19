@@ -6,6 +6,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   ConnectedSocket,
+  WsException,
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
@@ -54,6 +55,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       client.data.roomId = `room:lobby`;
       client.join('room:lobby');
       client.data.userId = payload.sub;
+      if (this.clients.get(client.data.userId))
+        throw new WsException("DuplicatedAccessError");
       this.clients.set(client.data.userId, client);
       this.usersService.updatePlayerStatus(client.data.userId, 0);
       this.lobbyGateway.sendUpdateToFriends(client.data.userId);
@@ -68,6 +71,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
       else if (e.name === 'TokenExpiredError') {
         const msg = this.chatsSocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.error === 'DuplicatedAccessError') {
+        const msg = this.chatsSocketService.getNotice("Duplicated Access", 203);
         client.emit("NOTICE", msg);
       }
       else {

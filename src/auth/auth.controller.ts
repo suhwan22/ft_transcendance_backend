@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards, Get, Res, Req, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, UseGuards, Get, Res, Req, Body, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Request, Response } from 'express';
@@ -20,17 +20,31 @@ export class AuthController {
   @ApiBody({ type: CodeRequestDto })
   @ApiOkResponse({ description: 'Ok'})
   @Post('/login')
-  async login(@Body('code') code: string, @Res({ passthrough: true }) response: Response) {
-    const token = await this.authService.getAccessTokenWithOauth(code);
-    const oauthUser = await this.authService.getUserWithOauth(token);
-    const user = await this.authService.signUpUser(oauthUser);
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id);
-    const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user.name, user.id);
-    
-    await this.usersService.updateRefreshToken(refreshToken, user.id);
-
-    response.cookie('Authentication', accessToken, accessOption);
-    response.cookie('Refresh', refreshToken, refreshOption);
+  async login(@Req() request: Request, @Body('code') code: string, @Res({ passthrough: true }) response: Response) {
+    if (!request.cookies.Authentication) {
+      const token = await this.authService.getAccessTokenWithOauth(code);
+      const oauthUser = await this.authService.getUserWithOauth(token);
+      const user = await this.authService.signUpUser(oauthUser);
+      if (user.status !== 3) {
+        throw new ForbiddenException('Duplicated Access');
+      }
+      const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id);
+      const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user.name, user.id);
+      
+      await this.usersService.updateRefreshToken(refreshToken, user.id);
+  
+      response.cookie('Authentication', accessToken, accessOption);
+      response.cookie('Refresh', refreshToken, refreshOption);
+    }
+    else {
+      const token = request.cookies.Authentication;
+      try {
+        this.authService.verifyBearToken(token);
+      }
+      catch(e) {
+        throw new UnauthorizedException('Invaild AccessToken');
+      }
+    }
     return ('login success');
   }
 
@@ -80,9 +94,12 @@ export class AuthController {
     const check = await this.authService.isVaildTwoFactorAuthCode(code, request.user);
     if (!check)
       throw new UnauthorizedException('Invaild Authentication-Code');
+    const user = await this.usersService.readOnePlayer(request.user.userId);
+    if (user.status !== 3) {
+      throw new ForbiddenException('Duplicated Access');
+    }
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
     response.cookie('TwoFactorAuth', accessToken, accessOption);
-    const user = this.usersService.readOnePlayer(request.user.userId);
     return (user);
   }
   
