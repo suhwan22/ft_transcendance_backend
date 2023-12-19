@@ -20,7 +20,7 @@ import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';
 
 @WebSocketGateway(3131, {
-  cors: { credentials: true, origin: 'http://localhost:5173' },
+  cors: { credentials: true, origin: process.env.CALLBACK_URL },
   namespace: '/games'
 })
 @UseFilters(SocketExceptionFilter)
