@@ -115,7 +115,6 @@ export class AuthController {
 
   @ApiOperation({ summary: '로그인 / 2차 인증 확인 API' })
   @ApiOkResponse({ description: 'Ok' })
-  @UseGuards(JwtAuthGuard)
   @UseGuards(JwtTwoFactorAuthGuard)
   @Post('check/login')
   async checkLoginAndTfa() {
