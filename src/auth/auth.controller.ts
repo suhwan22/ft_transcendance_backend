@@ -6,7 +6,7 @@ import { UsersService } from 'src/users/users.service';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CodeRequestDto } from './dtos/codeRequestDto';
-import { JwtService } from '@nestjs/jwt';
+import { JwtTwoFactorAuthGuard } from './guards/jwt-2fa.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -66,6 +66,7 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Get('refresh/2fa')
   async refreshTFA(@Req() request, @Res({ passthrough: true }) response: Response) {
+    console.log("aa");
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
     this.authService.updateTokenToSocket(accessToken, 'TwoFactorAuth', request.user);
     response.cookie('TwoFactorAuth', accessToken, accessOption);
@@ -110,5 +111,15 @@ export class AuthController {
   async getQrImageWithTwoFactorAuth(@Req() request: Request, @Res() response: Response) {
     const { optAuthUrl } = await this.authService.generateTwoFactorAuthenticationSecret(request.user);
     return (await this.authService.pipeQrCodeStream(response, optAuthUrl));
+  }
+
+  @ApiOperation({ summary: '로그인 / 2차 인증 확인 API' })
+  @ApiOkResponse({ description: 'Ok' })
+  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtTwoFactorAuthGuard)
+  @Post('check/login')
+  async checkLoginAndTfa() {
+    console.log("aa");
+    return ("login already");
   }
 }

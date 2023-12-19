@@ -29,18 +29,16 @@ export class AuthService {
 
   async getCookieWithAccessToken(username: string, id: number) {
     const payload = { username: username, sub: id };
-    console.log("토큰 발급");
-    console.log(payload);
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
-      expiresIn: '3600s'
+      expiresIn: '5s'
     });
     return {
       accessToken: token,
-      domain: 'localhost',
+      domain: process.env.ORIGIN_DOMAIN,
       path: '/',
       httpOnly: true,
-      maxAge: 3600 * 1000
+      maxAge: 5 * 1000
     };
   }
 
@@ -52,7 +50,7 @@ export class AuthService {
     });
     return ({
       refreshToken: token,
-      domain: 'localhost',
+      domain: process.env.ORIGIN_DOMAIN,
       path: '/',
       httpOnly: true,
       maxAge: 604800 * 1000
@@ -62,13 +60,13 @@ export class AuthService {
   async removeCookieWithTokens() {
     return {
       accessOption: {
-        domain: 'localhost',
+        domain: process.env.ORIGIN_DOMAIN,
         path: '/',
         httpOnly: true,
         maxAge: 0,
       },
       refreshOption: {
-        domain: 'localhost',
+        domain: process.env.ORIGIN_DOMAIN,
         path: '/',
         httpOnly: true,
         maxAge: 0,
