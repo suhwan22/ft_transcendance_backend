@@ -73,6 +73,10 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const msg = this.gamesSocketService.getNotice("Duplicated Access", 203);
         client.emit("NOTICE", msg);
       }
+      else if (e.error === 'TokenExpiredError') {
+        const msg = this.gamesSocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
       else {
         const msg = this.gamesSocketService.getNotice("DB Error", 200);
         client.emit("NOTICE", msg);

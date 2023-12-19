@@ -119,7 +119,6 @@ export class AuthController {
   @UseGuards(JwtTwoFactorAuthGuard)
   @Post('check/login')
   async checkLoginAndTfa() {
-    console.log("aa");
     return ("login already");
   }
 }

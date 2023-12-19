@@ -68,6 +68,10 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const msg = this.lobbySocketService.getNotice("Duplicated Access", 203);
         client.emit("NOTICE", msg);
       }
+      else if (e.error === 'TokenExpiredError') {
+        const msg = this.lobbySocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
       else {
         const msg = this.lobbySocketService.getNotice("DB Error", 200);
         client.emit("NOTICE", msg);

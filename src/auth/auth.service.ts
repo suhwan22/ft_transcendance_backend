@@ -11,6 +11,7 @@ import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
 import { GamesGateway } from 'src/sockets/game/games.gateway';
 import { Socket } from 'socket.io';
+import { WsException } from '@nestjs/websockets';
 
 @Injectable()
 export class AuthService {
@@ -31,14 +32,14 @@ export class AuthService {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
-      expiresIn: '5s'
+      expiresIn: '10s'
     });
     return {
       accessToken: token,
       domain: process.env.ORIGIN_DOMAIN,
       path: '/',
       httpOnly: true,
-      maxAge: 5 * 1000
+      maxAge: 10 * 1000
     };
   }
 
@@ -156,6 +157,8 @@ export class AuthService {
         return;
       }
     })
+    if (token === null)
+      throw new WsException('TokenExpiredError');
     return (this.jwtService.verify(token, { secret: "accessSecret" }));
   }
 

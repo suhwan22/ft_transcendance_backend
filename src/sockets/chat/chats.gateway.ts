@@ -78,6 +78,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         const msg = this.chatsSocketService.getNotice("Duplicated Access", 203);
         client.emit("NOTICE", msg);
       }
+      else if (e.error === 'TokenExpiredError') {
+        const msg = this.chatsSocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
       else {
         const msg = this.chatsSocketService.getNotice("DB Error", 200);
         client.emit("NOTICE", msg);

@@ -18,6 +18,10 @@ export class SocketExceptionFilter extends BaseWsExceptionFilter {
       const msg = this.getNotice("Duplicated Access", 203);
       client.emit("NOTICE", msg);
     }
+    else if (exception.error === 'TokenExpiredError') {
+      const msg = this.getNotice("Token expired", 202);
+      client.emit("NOTICE", msg);
+    }
     else {
       const msg = this.getNotice("DB Error", 200);
       client.emit("NOTICE", msg);
