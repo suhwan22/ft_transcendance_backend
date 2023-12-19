@@ -19,12 +19,12 @@ import { UserSocket } from './entities/user-socket.entity';
 import { FriendRequestDto } from './dtos/friend-request.request.dto';
 import { Socket } from 'socket.io';
 import { GameRoom } from 'src/games/entities/game.entity';
+import { PlayerRepository } from './repositories/player.repository';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(Player)
-    private playerRepository: Repository<Player>,
+    private playerRepository: PlayerRepository,
     @InjectRepository(UserGameRecord)
     private recordRepository: Repository<UserGameRecord>,
     @InjectRepository(UserBlock)
@@ -53,20 +53,16 @@ export class UsersService {
 
   /* [C] Player 생성 */
   async createPlayer(player: Partial<PlayerRequestDto>): Promise<Player> {
-    const newplayer = this.playerRepository.create(player);
-    return (this.playerRepository.save(newplayer));
+    const newplayer = this.playerRepository.createPlayer(player);
+    return (newplayer);
   }
 
   /* [R] 특정 Player 조회 */
   async readOnePlayer(id: number): Promise<Player> {
-    const player = await this.playerRepository.findOne({ where: { id } });
+    const player = await this.playerRepository.readOnePlayer(id);
+    console.log(player);
     if (!player)
       return (null);
-    player.friendList = await this.readFriendList(id);
-    player.blockList = await this.readBlockList(id);
-    player.gameRecord = await this.readOneUserGameRecord(id);
-    player.gameHistory = await this.gamesService.readOneGameHistory(id);
-    player.channelList = await this.readChannelList(id);
     if (player.gameRecord !== null) {
       delete player.gameRecord.user;
       player.gameRecord.rank = await this.gamesService.getMyRank(id);
@@ -76,39 +72,34 @@ export class UsersService {
 
   /* gamesService 용 readOnePlayer */
   async readOnePurePlayer(id: number): Promise<Player> {
-    const player = await this.playerRepository.findOne({ where: { id } });
+    const player = await this.playerRepository.readOnePurePlayer(id);
     return (player);
   }
 
   async   readOnePurePlayerWithName(name: string): Promise<Player> {
-    const player = await this.playerRepository.findOne({ where: { name } });
+    const player = await this.playerRepository.readOnePurePlayerWithName(name);
     return (player);
   }
 
   /* [U] Player info 수정 */
-  async updatePlayerInfo(id: number, player: Partial<Player>): Promise<Player> {
-    await this.playerRepository.update(id, player);
-    return (this.playerRepository.findOne({ where: { id } }));
-  }
+  // async updatePlayerInfo(id: number, player: Partial<Player>): Promise<Player> {
+  //   const updatePlayer = await this.playerRepository.updatePlayerInfo(id, player);
+  //   return (updatePlayer);
+  // }
 
   async updatePlayer(userId: number, name: string, avatar: string) {
-    const update = await this.dataSource
-      .getRepository(Player).createQueryBuilder('player')
-      .update()
-      .set({ name: name, avatar: avatar })
-      .where(`id = ${userId}`)
-      .execute()
+    const update = await this.playerRepository.updatePlayer(userId, name, avatar);
     return (update);
   }
 
   async updatePlayerStatus(id: number, status: number): Promise<Player> {
-    await this.playerRepository.update(id, { status: status });
-    return (this.playerRepository.findOne({ where: { id } }));
+    const update = await this.playerRepository.updatePlayerStatus(id, status);
+    return (update);
   }
 
   /* [D] Player 제거 */
   async deletePlayer(id: number): Promise<void> {
-    await (this.playerRepository.delete(id));
+    await (this.playerRepository.deletePlayer(id));
   }
 
   /**

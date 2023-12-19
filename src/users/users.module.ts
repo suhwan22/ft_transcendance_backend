@@ -11,6 +11,7 @@ import { GamesModule } from 'src/games/games.module';
 import { FriendRequest } from './entities/friend-request.entity';
 import { UserAuth } from './entities/user-auth.entity';
 import { UserSocket } from './entities/user-socket.entity';
+import { PlayerRepository } from './repositories/player.repository';
 
 @Module({
   imports: [
@@ -26,7 +27,10 @@ import { UserSocket } from './entities/user-socket.entity';
       UserSocket
       ])],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [
+    UsersService,
+    PlayerRepository
+  ],
   exports: [TypeOrmModule, UsersService]
 })
 export class UsersModule {}
