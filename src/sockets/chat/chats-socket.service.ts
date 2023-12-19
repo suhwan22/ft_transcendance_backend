@@ -99,7 +99,8 @@ export class ChatsSocketService {
       userId: userId,
       op: true
     }
-    await this.chatsService.createChannelMember(channelMemberRequest);
+    const channelMember = await this.chatsService.createChannelMember(channelMemberRequest);
+    await this.chatsService.updateChannelMemberOp(channelMember.id, true);
 
     await this.createChatRoom(client, channelId, userId);
 

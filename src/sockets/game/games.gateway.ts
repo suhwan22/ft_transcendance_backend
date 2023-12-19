@@ -15,6 +15,7 @@ import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
 import { UsersService } from 'src/users/users.service';
 import { GameRoom } from '../../games/entities/game.entity';
 import { GamesSocketService } from './games-socket.service';
+
 import { AuthService } from 'src/auth/auth.service';
 import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';

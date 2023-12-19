@@ -1,17 +1,25 @@
 import { Module, forwardRef } from '@nestjs/common';
+
+import { UsersModule } from 'src/users/users.module';
+import { GamesModule } from 'src/games/games.module';
+import { SocketsModule } from 'src/sockets/sockets.module';
 import { TypeOrmModule } from '@nestjs/typeorm';
+
 import { ChatsController } from './chats.controller';
 import { ChatsService } from './chats.service';
-import { ChatBan } from './entities/chat-ban.entity';
-import { ChatMute } from './entities/chat-mute.entity';
-import { ChatLog } from './entities/chat-log.entity';
-import { ChannelMember } from './entities/channel-member.entity';
-import { ChannelConfig } from './entities/channel-config.entity';
+
+import { ChannelConfigRepository,  } from './repositories/channel-config.repository';
+import { ChannelMemberRepository } from './repositories/channel-member.repository';
+import { ChannelPasswordRepository } from './repositories/channel-password.repository';
+import { ChatBanRepository } from './repositories/chat-ban.repository';
+import { ChatMuteRepository } from './repositories/chat-mute.repository';
+import { ChatLogRepository } from './repositories/chat-log.repository';
+
 import { GamesModule } from 'src/games/games.module';
 import { UsersModule } from 'src/users/users.module';
-import { ChannelPassword } from './entities/channel-password.entity';
 import { SocketsModule } from 'src/sockets/sockets.module';
 import { AuthModule } from 'src/auth/auth.module';
+
 
 @Module({
   imports: [
@@ -19,17 +27,17 @@ import { AuthModule } from 'src/auth/auth.module';
     forwardRef(() => GamesModule),
     forwardRef(() => UsersModule),
     forwardRef(() => SocketsModule),
-    TypeOrmModule.forFeature([
-      ChannelConfig,
-      ChannelMember,
-      ChatBan,
-      ChatLog,
-      ChatMute,
-      ChannelPassword
-    ])
+    TypeOrmModule,
   ],
   controllers: [ChatsController],
-  providers: [ChatsService],
-  exports: [TypeOrmModule, ChatsService]
+  providers: [
+    ChatsService, 
+    ChannelConfigRepository, 
+    ChannelMemberRepository,
+    ChannelPasswordRepository,
+    ChatBanRepository,
+    ChatMuteRepository,
+    ChatLogRepository],
+  exports: [ChatsService]
 })
 export class ChatsModule {}

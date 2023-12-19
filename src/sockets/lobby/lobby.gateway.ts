@@ -17,6 +17,7 @@ import { LobbySocketService } from './lobby-socket.service';
 import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
+
 import { AuthService } from 'src/auth/auth.service';
 import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';
