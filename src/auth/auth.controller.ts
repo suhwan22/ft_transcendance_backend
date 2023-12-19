@@ -1,12 +1,12 @@
-import { Controller, Post, UseGuards, Get, Res, Req, Body, UnauthorizedException } from '@nestjs/common';
+import { Controller, Post, UseGuards, Get, Res, Req, Body, UnauthorizedException, ForbiddenException } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Request, Response } from 'express';
 import { UsersService } from 'src/users/users.service';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
-import { JwtTwoFactorAuthGuard } from './guards/jwt-2fa.guard';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CodeRequestDto } from './dtos/codeRequestDto';
+import { JwtTwoFactorAuthGuard } from './guards/jwt-2fa.guard';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -20,19 +20,31 @@ export class AuthController {
   @ApiBody({ type: CodeRequestDto })
   @ApiOkResponse({ description: 'Ok'})
   @Post('/login')
-  async login(@Body('code') code: string, @Res({ passthrough: true }) response: Response) {
-    console.log("hell");
-    const token = await this.authService.getAccessTokenWithOauth(code);
-    const oauthUser = await this.authService.getUserWithOauth(token);
-    const user = await this.authService.signUpUser(oauthUser);
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id);
-    const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user.name, user.id);
-    
-    await this.usersService.updateRefreshToken(refreshToken, user.id);
-
-    response.cookie('Authentication', accessToken, accessOption);
-    response.cookie('Refresh', refreshToken, refreshOption);
-    response.cookie('user.id', user.id);
+  async login(@Req() request: Request, @Body('code') code: string, @Res({ passthrough: true }) response: Response) {
+    if (!request.cookies.Authentication) {
+      const token = await this.authService.getAccessTokenWithOauth(code);
+      const oauthUser = await this.authService.getUserWithOauth(token);
+      const user = await this.authService.signUpUser(oauthUser);
+      if (user.status !== 3) {
+        throw new ForbiddenException('Duplicated Access');
+      }
+      const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id);
+      const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user.name, user.id);
+      
+      await this.usersService.updateRefreshToken(refreshToken, user.id);
+  
+      response.cookie('Authentication', accessToken, accessOption);
+      response.cookie('Refresh', refreshToken, refreshOption);
+    }
+    else {
+      const token = request.cookies.Authentication;
+      try {
+        this.authService.verifyBearToken(token);
+      }
+      catch(e) {
+        throw new UnauthorizedException('Invaild AccessToken');
+      }
+    }
     return ('login success');
   }
 
@@ -41,23 +53,35 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('/logout')
   async logout(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessOption, refreshOption, userIdOption } = await this.authService.removeCookieWithTokens();
+    const { accessOption, refreshOption } = await this.authService.removeCookieWithTokens();
     await this.usersService.updateRefreshToken(null, request.user.userId);
     response.cookie('Authentication', '', accessOption);
     response.cookie('Refresh', '', refreshOption);
     response.cookie('TwoFactorAuth', '', accessOption);
-    response.cookie('user.id', '', userIdOption);
     return ('logout success');
   }
 
   @ApiOperation({ summary: '토큰 재발급 API' })
   @ApiOkResponse({ description: 'Ok' })
   @UseGuards(JwtRefreshGuard)
-  @Get('refresh')
-  async refresh(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
+  @Get('refresh/2fa')
+  async refreshTFA(@Req() request, @Res({ passthrough: true }) response: Response) {
+    console.log("aa");
+    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
+    this.authService.updateTokenToSocket(accessToken, 'TwoFactorAuth', request.user);
+    response.cookie('TwoFactorAuth', accessToken, accessOption);
+    return ('2fa token refresh success');
+  }
+
+  @ApiOperation({ summary: '토큰 재발급 API' })
+  @ApiOkResponse({ description: 'Ok' })
+  @UseGuards(JwtRefreshGuard)
+  @Get('refresh/login')
+  async refreshLogin(@Req() request, @Res({ passthrough: true }) response: Response) {
+    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
+    this.authService.updateTokenToSocket(accessToken, 'Authentication', request.user);
     response.cookie('Authentication', accessToken, accessOption);
-    return ('token refresh success');
+    return ('login token refresh success');
   }
 
   @ApiOperation({ summary: '2FA 구글 인증 OTP API' })
@@ -71,9 +95,12 @@ export class AuthController {
     const check = await this.authService.isVaildTwoFactorAuthCode(code, request.user);
     if (!check)
       throw new UnauthorizedException('Invaild Authentication-Code');
+    const user = await this.usersService.readOnePlayer(request.user.userId);
+    if (user.status !== 3) {
+      throw new ForbiddenException('Duplicated Access');
+    }
     const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
     response.cookie('TwoFactorAuth', accessToken, accessOption);
-    const user = this.usersService.readOnePlayer(request.user.userId);
     return (user);
   }
   
@@ -86,9 +113,13 @@ export class AuthController {
     return (await this.authService.pipeQrCodeStream(response, optAuthUrl));
   }
 
+  @ApiOperation({ summary: '로그인 / 2차 인증 확인 API' })
+  @ApiOkResponse({ description: 'Ok' })
+  @UseGuards(JwtAuthGuard)
   @UseGuards(JwtTwoFactorAuthGuard)
-  @Get('/test')
-  test() {
-    return 'test success';
+  @Post('check/login')
+  async checkLoginAndTfa() {
+    console.log("aa");
+    return ("login already");
   }
 }

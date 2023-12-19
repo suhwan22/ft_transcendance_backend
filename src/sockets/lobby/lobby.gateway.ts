@@ -1,4 +1,4 @@
-import { forwardRef, Inject } from '@nestjs/common';
+import { forwardRef, Inject, Req, UseFilters, UseGuards } from '@nestjs/common';
 import {
   MessageBody,
   SubscribeMessage,
@@ -7,6 +7,7 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
   ConnectedSocket,
+  WsException,
 } from '@nestjs/websockets';
 
 import { Server, Socket } from 'socket.io';
@@ -17,13 +18,23 @@ import { Player } from 'src/users/entities/player.entity';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { GameRequest } from 'src/games/entities/game-request';
 
-@WebSocketGateway(3131, { namespace: '/lobby', cors: true })
+import { AuthService } from 'src/auth/auth.service';
+import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
+import { SocketExceptionFilter } from '../sockets.exception.filter';
+
+@WebSocketGateway(3131, {
+  cors: { credentials: true, origin: process.env.CALLBACK_URL }, 
+  namespace: '/lobby'
+})
+@UseFilters(SocketExceptionFilter)
 export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(
     @Inject(forwardRef(() => ChatsGateway))
     private readonly chatsGateway: ChatsGateway,
     private readonly lobbySocketService: LobbySocketService,
-    private readonly usersService: UsersService,) {
+    private readonly usersService: UsersService,
+    @Inject(forwardRef(() => AuthService))
+    private readonly authServeice: AuthService,) {
     this.clients = new Map<number, Socket>();
   }
   @WebSocketServer()
@@ -31,8 +42,37 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   clients: Map<number, Socket>;
 
   //소켓 연결시 유저목록에 추가
-  public handleConnection(client: Socket): void {
-    console.log('lobby connected', client.id);
+  public handleConnection(client: Socket) {
+    try {
+      const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
+      client.data.userId = payload.sub;
+      if (this.clients.get(client.data.userId))
+        throw new WsException("DuplicatedAccessError");
+      this.clients.set(client.data.userId, client);
+      this.usersService.updatePlayerStatus(client.data.userId, 0);
+      this.sendUpdateToFriends(client.data.userId);
+      this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
+      console.log('lobby connected', client.id);
+    }
+    catch (e: any) {
+      console.log('connection error');
+      if (e.name === 'JsonWebTokenError') {
+        const msg = this.lobbySocketService.getNotice("Invaild Token", 201);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.name === 'TokenExpiredError') {
+        const msg = this.lobbySocketService.getNotice("Token expired", 202);
+        client.emit("NOTICE", msg);
+      }
+      else if (e.error === 'DuplicatedAccessError') {
+        const msg = this.lobbySocketService.getNotice("Duplicated Access", 203);
+        client.emit("NOTICE", msg);
+      }
+      else {
+        const msg = this.lobbySocketService.getNotice("DB Error", 200);
+        client.emit("NOTICE", msg);
+      }
+    }
   }
 
   //소켓 연결 해제시 유저목록에서 제거
@@ -63,23 +103,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
-  @SubscribeMessage('REGIST')
-  async registUserSocket(client: Socket, userId: number) {
-    try {
-      console.log(userId);
-      this.clients.set(userId, client);
-      client.data.userId = userId;
-  
-      // 내 status 변경 -> 친구 & 채팅 맴버에게 뿌려주기
-      this.usersService.updatePlayerStatus(userId, 0);
-      this.sendUpdateToFriends(userId);
-      this.chatsGateway.sendUpdateToChannelMember(userId);
-    }
-    catch(e) {
-      console.log(e.stack);
-    }
-  }
-
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('INVITE')
   async invateGame(client: Socket, data) {
     let msg;
@@ -103,6 +127,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     client.emit("NOTICE", msg);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('ACCEPT_GAME')
   async acceptGame(client: Socket, data: Partial<GameRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -119,6 +144,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.acceptGame(client, targetClient, data);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REFUSE_GAME')
   async refuseGame(client: Socket, data: Partial<GameRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -126,6 +152,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.refuseGame(client, targetClient, data, target);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('INFO_FRIENDS')
   async sendFriendList(client: Socket, data) {
     try {
@@ -136,6 +163,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REQUEST_FRIEND')
   async requestFriend(client: Socket, data) {
     let msg;
@@ -156,6 +184,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('ACCEPT_FRIEND')
   async acceptFriend(client: Socket, data: Partial<FriendRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -163,6 +192,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.acceptFriend(client, targetClient, data, target);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('REFUSE_FRIEND')
   async refuseFriend(client: Socket, data: Partial<FriendRequest>) {
     const target = await this.usersService.readOnePurePlayer(data.send.id);
@@ -170,6 +200,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.lobbySocketService.refuseFriend(client, targetClient, data, target);
   }
 
+  @UseGuards(JwtWsGuard)
   @SubscribeMessage('UPDATE')
   async updateProfile(client: Socket, data) {
     try {
@@ -191,5 +222,17 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async sendUpdateToFriends(userId: number) {
     this.lobbySocketService.sendUpdateToFriends(this.clients, userId);
   }
+  
+  @UseGuards(JwtWsGuard)
+  @SubscribeMessage('GET_FRIEND_REQUEST') 
+  async getFriendRequest(client: Socket) {
+    const friendRequest = await this.usersService.readRecvFriendRequest(client.data.userId);
+    client.emit('GET_FRIEND_REQUEST', friendRequest);
+  }
 
+  @SubscribeMessage('RECALL_FRIEND_REQUEST')
+  async recallFriendRequest(client: Socket, data: FriendRequest) {
+    console.log(data);
+    client.emit('REQUEST_FRIEND', data);
+  }
 }

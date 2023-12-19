@@ -7,10 +7,11 @@ import { UsersModule } from 'src/users/users.module';
 import { ChatsModule } from 'src/chats/chats.module';
 import { SocketsModule } from 'src/sockets/sockets.module';
 import { GamesSocketService } from '../sockets/game/games-socket.service';
+import { AuthModule } from 'src/auth/auth.module';
 import { GameDodge } from './entities/game-dodge.entity';
-
 @Module({
   imports: [
+    forwardRef(() => AuthModule),
     forwardRef(() => (UsersModule)),
     forwardRef(() => (ChatsModule)),
     forwardRef(() => (SocketsModule)),

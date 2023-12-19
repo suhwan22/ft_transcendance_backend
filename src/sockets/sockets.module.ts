@@ -8,9 +8,11 @@ import { GamesSocketService } from './game/games-socket.service';
 import { ChatsGateway } from './chat/chats.gateway';
 import { ChatsSocketService } from './chat/chats-socket.service';
 import { GamesModule } from 'src/games/games.module';
+import { AuthModule } from 'src/auth/auth.module';
 
 @Module({
   imports: [
+    forwardRef(() => AuthModule),
     forwardRef(() => ChatsModule),
     forwardRef(() => UsersModule),
     forwardRef(() => GamesModule)],

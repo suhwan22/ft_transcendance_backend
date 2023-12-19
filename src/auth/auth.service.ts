@@ -1,5 +1,5 @@
 import { HttpService } from '@nestjs/axios';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ForbiddenException, Inject, Injectable, UnauthorizedException, forwardRef } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Response } from 'express';
 import { authenticator } from 'otplib';
@@ -7,31 +7,42 @@ import { lastValueFrom } from 'rxjs';
 import { Player } from 'src/users/entities/player.entity';
 import { UsersService } from 'src/users/users.service';
 import { toFileStream } from "qrcode";
+import { LobbyGateway } from 'src/sockets/lobby/lobby.gateway';
+import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
+import { GamesGateway } from 'src/sockets/game/games.gateway';
+import { Socket } from 'socket.io';
 
 @Injectable()
 export class AuthService {
   constructor(
     private jwtService: JwtService,
     private usersService: UsersService,
-    private httpService: HttpService
+    private httpService: HttpService,
+
+    @Inject(forwardRef(() => LobbyGateway))
+    private lobbyGateway: LobbyGateway,
+    @Inject(forwardRef(() => ChatsGateway))
+    private chatsGateway: ChatsGateway,
+    @Inject(forwardRef(() => GamesGateway))
+    private gamesGateway: GamesGateway,
   ) { }
 
-  async getCookieWithAccessToken(username:string, id: number) {
+  async getCookieWithAccessToken(username: string, id: number) {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
-      expiresIn: '900s'
+      expiresIn: '5s'
     });
     return {
       accessToken: token,
-      domain: 'localhost',
+      domain: process.env.ORIGIN_DOMAIN,
       path: '/',
       httpOnly: true,
-      maxAge: 15 * 60 * 1000
+      maxAge: 5 * 1000
     };
   }
 
-  async getCookieWithRefreshToken(username:string, id: number) {
+  async getCookieWithRefreshToken(username: string, id: number) {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'refreshSecret',
@@ -39,7 +50,7 @@ export class AuthService {
     });
     return ({
       refreshToken: token,
-      domain: 'localhost',
+      domain: process.env.ORIGIN_DOMAIN,
       path: '/',
       httpOnly: true,
       maxAge: 604800 * 1000
@@ -49,21 +60,17 @@ export class AuthService {
   async removeCookieWithTokens() {
     return {
       accessOption: {
-        domain: 'localhost',
+        domain: process.env.ORIGIN_DOMAIN,
         path: '/',
         httpOnly: true,
         maxAge: 0,
       },
       refreshOption: {
-        domain: 'localhost',
+        domain: process.env.ORIGIN_DOMAIN,
         path: '/',
         httpOnly: true,
         maxAge: 0,
       },
-      userIdOption: {
-        httpOnly: true,
-        maxAge: 0,
-      }
     };
   }
 
@@ -109,7 +116,6 @@ export class AuthService {
       };
       user = await this.usersService.createPlayer(newPlayer);
       await this.usersService.createUserAuth(user.id);
-      await this.usersService.createUserSocket(user.id);
       await this.usersService.createUserGameRecord({ user: user.id, win: 0, loss: 0, rating: 1500 });
     }
     return (user);
@@ -118,7 +124,7 @@ export class AuthService {
   async generateTwoFactorAuthenticationSecret(payload) {
     const secret = authenticator.generateSecret();
     const optAuthUrl = authenticator.keyuri(payload.userName, "otpauth://", secret);
-    
+
     await this.usersService.updateTwoFactorAuthSecret(secret, payload.userId);
 
     return ({ secret, optAuthUrl });
@@ -131,6 +137,54 @@ export class AuthService {
   async isVaildTwoFactorAuthCode(code: string, payload) {
     const userAuth = await this.usersService.readUserAuth(payload.userId);
     const secret = userAuth.twoFactorAuthSecret;
-    return (authenticator.verify({ token: code, secret: secret}));
+    const opts = { token: code, secret: secret };
+    if (secret === null)
+      opts.secret = "";
+    return (authenticator.verify(opts));
+  }
+
+  verifyBearToken(token: string) {
+    return (this.jwtService.verify(token, { secret: "accessSecret" }));
+  }
+
+  verifyBearTokenWithCookies(cookies: string, key: string) {
+    let token: string = null;
+    cookies.split('; ').forEach((v) => {
+      const cookie = v.split('=');
+      if (cookie[0] === key) {
+        token = cookie[1];
+        return;
+      }
+    })
+    return (this.jwtService.verify(token, { secret: "accessSecret" }));
+  }
+
+  updateTokenToSocket(token: string, key: string, user: Player) {
+    let client: Socket = null;
+    let updateCookie = "";
+    if (user.status === 0)
+      client = this.lobbyGateway.clients.get(user.id);
+    else if (user.status === 1) 
+      client = this.chatsGateway.clients.get(user.id);
+    else if (user.status === 2) 
+      client = this.gamesGateway.clients.get(user.id);
+    else
+      return ;
+    const cookies = client.request.headers.cookie;
+    const arr = cookies.split('; ');
+    for (let i = 0; i < arr.length; i++) {
+      const cookie = arr[i].split('=');
+      if (cookie[0] === key) {
+        updateCookie += key + "=";
+        updateCookie += token;
+      }
+      else {
+        updateCookie += arr[i];
+      }
+      if (i !== arr.length - 1)
+        updateCookie += "; ";
+    }
+    client.request.headers.cookie = updateCookie;
+    client.handshake.headers.cookie = updateCookie;
   }
 }

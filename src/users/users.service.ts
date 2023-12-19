@@ -60,6 +60,8 @@ export class UsersService {
   /* [R] 특정 Player 조회 */
   async readOnePlayer(id: number): Promise<Player> {
     const player = await this.playerRepository.findOne({ where: { id } });
+    if (!player)
+      return (null);
     player.friendList = await this.readFriendList(id);
     player.blockList = await this.readBlockList(id);
     player.gameRecord = await this.readOneUserGameRecord(id);
@@ -122,7 +124,7 @@ export class UsersService {
       user: user,
       win: record.win,
       loss: record.loss,
-      score: record.rating
+      rating: record.rating
     }
     const newRecord = this.recordRepository.create(temp);
     return (this.recordRepository.save(newRecord));

@@ -15,8 +15,15 @@ import { ChatBanRepository } from './repositories/chat-ban.repository';
 import { ChatMuteRepository } from './repositories/chat-mute.repository';
 import { ChatLogRepository } from './repositories/chat-log.repository';
 
+import { GamesModule } from 'src/games/games.module';
+import { UsersModule } from 'src/users/users.module';
+import { SocketsModule } from 'src/sockets/sockets.module';
+import { AuthModule } from 'src/auth/auth.module';
+
+
 @Module({
   imports: [
+    forwardRef(() => AuthModule),
     forwardRef(() => GamesModule),
     forwardRef(() => UsersModule),
     forwardRef(() => SocketsModule),
