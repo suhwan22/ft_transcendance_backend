@@ -13,13 +13,13 @@ import { UserAuth } from './entities/user-auth.entity';
 import { UserSocket } from './entities/user-socket.entity';
 import { PlayerRepository } from './repositories/player.repository';
 import { UserFriendRepository } from './repositories/user-friend.repository';
+import { UserBlockRepository } from './repositories/user-block.repository';
 
 @Module({
   imports: [
     forwardRef(() => ChatsModule),
     forwardRef(() => GamesModule),
     TypeOrmModule.forFeature([ 
-      UserBlock,
       UserGameRecord,
       FriendRequest,
       UserAuth,
@@ -29,7 +29,8 @@ import { UserFriendRepository } from './repositories/user-friend.repository';
   providers: [
     UsersService,
     PlayerRepository,
-    UserFriendRepository
+    UserFriendRepository,
+    UserBlockRepository
   ],
   exports: [TypeOrmModule, UsersService]
 })

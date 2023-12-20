@@ -36,11 +36,6 @@ export class PlayerRepository extends Repository<Player> {
   //   return (player);
   // }
 
-  // async   readOnePurePlayerWithName(name: string): Promise<Player> {
-  //   const player = await this.findOne({ where: { name } });
-  //   return (player);
-  // }
-
   // /* [U] Player info 수정 */
   // async updatePlayerInfo(id: number, player: Partial<Player>): Promise<Player> {
   //   await this.update(id, player);

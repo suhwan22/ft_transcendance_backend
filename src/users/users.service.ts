@@ -1,6 +1,6 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository, UpdateResult } from 'typeorm';
+import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserBlock } from './entities/user-block.entity';
@@ -21,16 +21,17 @@ import { Socket } from 'socket.io';
 import { GameRoom } from 'src/games/entities/game.entity';
 import { PlayerRepository } from './repositories/player.repository';
 import { UserFriendRepository } from './repositories/user-friend.repository';
+import { UserBlockRepository } from './repositories/user-block.repository';
 
 @Injectable()
 export class UsersService {
   constructor(
     private playerRepository: PlayerRepository,
     private userFriendRepository: UserFriendRepository,
+    private userBlockRepository: UserBlockRepository,
+
     @InjectRepository(UserGameRecord)
     private recordRepository: Repository<UserGameRecord>,
-    @InjectRepository(UserBlock)
-    private userBlockRepository: Repository<UserBlock>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
     @InjectRepository(UserAuth)
@@ -64,7 +65,7 @@ export class UsersService {
       return (null);
     player.friendList = await this.readFriendList(id);
     player.blockList = await this.readBlockList(id);
-    player.gameRecord = await this.readOneUserGameRecord(id);
+    player.gameRecord = null;
     player.gameHistory = await this.gamesService.readOneGameHistory(id);
     player.channelList = await this.readChannelList(id);
     // if (player.gameRecord !== null) {
@@ -237,6 +238,8 @@ export class UsersService {
   // 유저 친구 생성 메서드
   async createFriendInfo(friendRequestDto: Partial<UserFriendRequestDto>): Promise<UserFriend> {
     const insertResult = await this.userFriendRepository.createFriend(friendRequestDto);
+    if (!insertResult)
+      return null;
     return (this.userFriendRepository.readFriendWithFriendId(friendRequestDto.user, insertResult.raw[0].id));
   }
 
@@ -278,97 +281,52 @@ export class UsersService {
 
   /**
    * 
-   * BLOCK_LIST Table CURD
+   * BLOCK_LIST Table CRUD
    * 
    */
 
-  // 유저 블락리스트 조회 메서드
-  async readBlockList(user: number): Promise<UserBlock[]> {
-    const blockList = await this.dataSource
-      .getRepository(UserBlock).createQueryBuilder('block_list')
-      .leftJoinAndSelect('block_list.target', 'target')
-      .select(['block_list.id', 'target.id', 'target.name'])
-      .where('block_list.user = :id', { id: user })
-      .getMany();
-    return (blockList)
-  }
-
-  async readUserBlockWithTargetId(user: number, target: number): Promise<UserBlock> {
-    const userBlock = await this.dataSource
-      .getRepository(UserBlock).createQueryBuilder('block_list')
-      .leftJoinAndSelect('block_list.target', 'target')
-      .select(['block_list.id', 'target.id', 'target.name'])
-      .where('block_list.user = :id', { id: user })
-      .andWhere('target.id = : target', { target: target })
-      .getOne();
-    return (userBlock)
-  }
-
   // 유저 블락 생성 메서드
   async createBlockInfo(blockRequest: Partial<UserBlockRequestDto>): Promise<UserBlock> {
-    const target = await this.readOnePurePlayer(blockRequest.target);
-    const block = {
-      user: blockRequest.user,
-      target: target
-    }
-    const newBlock = this.userBlockRepository.create(block);
-    return (this.userBlockRepository.save(newBlock));
+    const insertResult = await this.userBlockRepository.createBlockInfo(blockRequest);
+    if (!insertResult)
+      return null;
+    return (this.userBlockRepository.readUserBlockWithTargetId(blockRequest.user, insertResult.raw[0].id));
   }
 
   // 유저 블락 생성 메서드
   async createBlockInfoWithTarget(user: number, targetName: string) {
-    const playerQr = await this.dataSource
-      .getRepository(Player)
-      .createQueryBuilder('player')
-      .subQuery()
-      .from(Player, 'player')
-      .select('player.id')
-      .where(`name = '${targetName}'`)
-      .getQuery();
-    const userBlock = await this.dataSource
-      .getRepository(UserBlock).createQueryBuilder('block_list')
-      .insert()
-      .values({ user: user, target: () => `${playerQr}` })
-      .execute();
+    await this.userBlockRepository.createBlockInfoWithTarget(user, targetName);
+  }
+
+  // 유저 블락리스트 조회 메서드
+  async readBlockList(user: number): Promise<UserBlock[]> {
+    const blockList = await this.userBlockRepository.readBlockList(user);
+    return (blockList)
+  }
+
+  async readUserBlockWithTargetId(user: number, target: number): Promise<UserBlock> {
+    const userBlock = await this.userBlockRepository.readUserBlockWithTargetId(user, target);
+    return (userBlock)
   }
 
   // 유저 블락 수정 메서드
   async updateBlockInfo(id: number, block: Partial<UserBlock>): Promise<UserBlock> {
-    await this.userBlockRepository.update(id, block);
-    return (this.userBlockRepository.findOne({ where: { id } }));
+    const updateBlock = await this.userBlockRepository.updateBlockInfo(id, block);
+    return (updateBlock);
   }
 
   // 유저 블락 제거 메서드
   async deleteBlockInfo(id: number): Promise<void> {
-    await (this.friendRequestRepository.delete(id));
+    await (this.userBlockRepository.deleteBlockInfo(id));
   }
 
   // 유저 블락 전체제거 메서드
   async deleteBlockList(user: number): Promise<void> {
-    const deleteResult = await this.dataSource
-      .getRepository(UserBlock)
-      .createQueryBuilder('block_list')
-      .delete()
-      .where(`user = ${user}`)
-      .execute();
+    await this.userBlockRepository.deleteBlockList(user);
   }
 
-  async deleteUserBlockWithName(name: string) {
-    const playerQr = await this.dataSource
-      .getRepository(Player)
-      .createQueryBuilder('player')
-      .subQuery()
-      .from(Player, 'player')
-      .select('player.id')
-      .where(`name = '${name}'`)
-      .getQuery();
-
-    const deleteResult = await this.dataSource
-      .getRepository(UserBlock)
-      .createQueryBuilder('block_list')
-      .delete()
-      .where(`target_id = ${playerQr}`)
-      .execute();
+  async deleteUserBlockWithName(name: string): Promise<DeleteResult> {
+    const deleteResult = await this.userBlockRepository.deleteUserBlockWithName(name);
     return (deleteResult);
   }
 
