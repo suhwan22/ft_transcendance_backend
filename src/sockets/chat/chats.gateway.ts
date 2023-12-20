@@ -53,13 +53,13 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       
       const status = STATUS.CHAT;
+      client.data.status = status;
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
 
       client.leave(client.id);
       client.data.roomId = `room:lobby`;
       client.join('room:lobby');
       client.data.userId = payload.sub;
-      client.data.status = status;
       if (this.clients.get(client.data.userId))
         throw new WsException("DuplicatedAccessError");
       this.clients.set(client.data.userId, client);
@@ -100,7 +100,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!key)
         return;
       this.clients.delete(key);
-      this.usersService.updatePlayerStatus(key, STATUS.OFFLINE);
+      this.usersService.updatePlayerStatus(key, STATUS.OFFLINE as number);
       this.sendUpdateToChannelMember(key);
       this.lobbyGateway.sendUpdateToFriends(key);
       console.log('chat disonnected', client.id);

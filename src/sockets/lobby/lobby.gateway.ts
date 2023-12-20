@@ -46,9 +46,9 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   public handleConnection(client: Socket) {
     try {
       const status = parseInt(client.handshake.query.status as string);
+      client.data.status = status;
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
       client.data.userId = payload.sub;
-      client.data.status = status;
       if (this.clients.get(client.data.userId))
         throw new WsException("DuplicatedAccessError");
       this.clients.set(client.data.userId, client);
@@ -91,7 +91,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!key)
         return;
       this.clients.delete(key);
-      this.usersService.updatePlayerStatus(key, STATUS.OFFLINE);
+      this.usersService.updatePlayerStatus(key, STATUS.OFFLINE as number);
       this.chatsGateway.sendUpdateToChannelMember(key);
       this.sendUpdateToFriends(key);
       console.log('lobby disonnected', client.id);

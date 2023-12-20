@@ -47,13 +47,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async handleConnection(client: Socket, data) {
     try {
       const status = STATUS.GAME as number;
-      console.log(typeof(status));
-      console.log("STATUS = ", typeof(STATUS.GAME));
+      client.data.status = status;
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
   
       client.leave(client.id);
       client.data.userId = payload.sub;
-      client.data.status = status;
       if (this.clients.get(client.data.userId))
         throw new WsException("DuplicatedAccessError");
       client.data.rating = (await this.usersService.readOneUserGameRecord(client.data.userId)).rating;
@@ -106,7 +104,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.gamesSocketService.cancelGame(client);
         }
         this.clients.delete(key);
-        this.usersService.updatePlayerStatus(key, STATUS.OFFLINE);
+        this.usersService.updatePlayerStatus(key, STATUS.OFFLINE as number);
         this.chatsGateway.sendUpdateToChannelMember(key);
         this.lobbyGateway.sendUpdateToFriends(key);
       }
