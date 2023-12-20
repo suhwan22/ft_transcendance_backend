@@ -45,15 +45,17 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결시 유저목록에 추가
   async handleConnection(client: Socket, data) {
     try {
+      const status = parseInt(client.handshake.query.status as string);
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
   
       client.leave(client.id);
       client.data.userId = payload.sub;
+      client.data.status = status;
       if (this.clients.get(client.data.userId))
         throw new WsException("DuplicatedAccessError");
       client.data.rating = (await this.usersService.readOneUserGameRecord(client.data.userId)).rating;
       this.clients.set(client.data.userId, client);
-      this.usersService.updatePlayerStatus(client.data.userId, 0);
+      this.usersService.updatePlayerStatus(client.data.userId, status);
       this.lobbyGateway.sendUpdateToFriends(client.data.userId);
       this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
   
@@ -62,23 +64,23 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
     catch(e) {
       if (e.name === 'JsonWebTokenError') {
-        const msg = this.gamesSocketService.getNotice("Invaild Token", 201);
+        const msg = this.gamesSocketService.getNotice("Invaild Token", 201, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.name === 'TokenExpiredError') {
-        const msg = this.gamesSocketService.getNotice("Token expired", 202);
+        const msg = this.gamesSocketService.getNotice("Token expired", 202, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.error === 'DuplicatedAccessError') {
-        const msg = this.gamesSocketService.getNotice("Duplicated Access", 203);
+        const msg = this.gamesSocketService.getNotice("Duplicated Access", 203, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.error === 'TokenExpiredError') {
-        const msg = this.gamesSocketService.getNotice("Token expired", 202);
+        const msg = this.gamesSocketService.getNotice("Token expired", 202, client.data.status);
         client.emit("NOTICE", msg);
       }
       else {
-        const msg = this.gamesSocketService.getNotice("DB Error", 200);
+        const msg = this.gamesSocketService.getNotice("DB Error", 200, client.data.status);
         client.emit("NOTICE", msg);
       }
     }

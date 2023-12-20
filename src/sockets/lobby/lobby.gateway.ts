@@ -21,6 +21,7 @@ import { GameRequest } from 'src/games/entities/game-request';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';
+import { STATUS } from '../sockets.type';
 
 @WebSocketGateway(3131, {
   cors: { credentials: true, origin: process.env.CALLBACK_URL }, 
@@ -44,12 +45,14 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket) {
     try {
+      const status = parseInt(client.handshake.query.status as string);
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
       client.data.userId = payload.sub;
+      client.data.status = status;
       if (this.clients.get(client.data.userId))
         throw new WsException("DuplicatedAccessError");
       this.clients.set(client.data.userId, client);
-      this.usersService.updatePlayerStatus(client.data.userId, 0);
+      this.usersService.updatePlayerStatus(client.data.userId, status);
       this.sendUpdateToFriends(client.data.userId);
       this.chatsGateway.sendUpdateToChannelMember(client.data.userId);
       console.log('lobby connected', client.id);
@@ -57,23 +60,23 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     catch (e: any) {
       console.log('connection error');
       if (e.name === 'JsonWebTokenError') {
-        const msg = this.lobbySocketService.getNotice("Invaild Token", 201);
+        const msg = this.lobbySocketService.getNotice("Invaild Token", 201, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.name === 'TokenExpiredError') {
-        const msg = this.lobbySocketService.getNotice("Token expired", 202);
+        const msg = this.lobbySocketService.getNotice("Token expired", 202, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.error === 'DuplicatedAccessError') {
-        const msg = this.lobbySocketService.getNotice("Duplicated Access", 203);
+        const msg = this.lobbySocketService.getNotice("Duplicated Access", 203, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.error === 'TokenExpiredError') {
-        const msg = this.lobbySocketService.getNotice("Token expired", 202);
+        const msg = this.lobbySocketService.getNotice("Token expired", 202, client.data.status);
         client.emit("NOTICE", msg);
       }
       else {
-        const msg = this.lobbySocketService.getNotice("DB Error", 200);
+        const msg = this.lobbySocketService.getNotice("DB Error", 200, client.data.status);
         client.emit("NOTICE", msg);
       }
     }
@@ -86,7 +89,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!key)
         return;
       this.clients.delete(key);
-      this.usersService.updatePlayerStatus(key, 3);
+      this.usersService.updatePlayerStatus(key, STATUS.OFFLINE);
       this.chatsGateway.sendUpdateToChannelMember(key);
       this.sendUpdateToFriends(key);
       console.log('lobby disonnected', client.id);
@@ -98,12 +101,14 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   getClientWithStatus(target: Player): Socket {
     switch (target.status) {
-      case 0:
+      case STATUS.LOBBY:
+      case STATUS.MY_PROFILE:
+      case STATUS.FRIEND_PROFILE:
+      case STATUS.RANK:
+      case STATUS.GAME_HISTORY:
         return (this.clients.get(target.id));
-      case 1:
-        return (this.chatsGateway.clients.get(target.id));
       default:
-        return (null);
+        return (this.chatsGateway.clients.get(target.id));
     }
   }
 
@@ -113,21 +118,21 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let msg;
     const target = await this.usersService.readOnePurePlayerWithName(data.target);
     if (!target) {
-      msg = this.lobbySocketService.getNotice("존재하지 않는 유저입니다.", 11);
+      msg = this.lobbySocketService.getNotice("존재하지 않는 유저입니다.", 11, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }
     const targetClient = this.getClientWithStatus(target);
     if (!targetClient) {
-      if (target.status === 2)
-        msg = this.lobbySocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23);
+      if (target.status === STATUS.GAME)
+        msg = this.lobbySocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23, client.data.status);
       else
-        msg = this.lobbySocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24);
+        msg = this.lobbySocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }
     this.lobbySocketService.inviteGame(targetClient, data.userId, target);
-    msg = this.lobbySocketService.getNotice("게임초대 메시지를 전송하였습니다.", 25);
+    msg = this.lobbySocketService.getNotice("게임초대 메시지를 전송하였습니다.", 25, client.data.status);
     client.emit("NOTICE", msg);
   }
 
@@ -138,10 +143,10 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let msg;
     const targetClient = this.getClientWithStatus(target);
     if (!targetClient) {
-      if (target.status === 2)
-        msg = this.lobbySocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23);
+      if (target.status === STATUS.GAME)
+        msg = this.lobbySocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23, client.data.status);
       else
-        msg = this.lobbySocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24);
+        msg = this.lobbySocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }
@@ -174,7 +179,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const target = await this.usersService.readOnePurePlayerWithName(data.target);
       if (!target) {
-        msg = this.lobbySocketService.getNotice("존재하지 않는 유저입니다.", 11);
+        msg = this.lobbySocketService.getNotice("존재하지 않는 유저입니다.", 11, client.data.status);
         client.emit("NOTICE", msg);
         return;
       }
@@ -182,7 +187,7 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.lobbySocketService.requestFriend(client, targetClient, data.userId, target);
     }
     catch (e) {
-      msg = this.lobbySocketService.getNotice("DB error", 200);
+      msg = this.lobbySocketService.getNotice("DB error", 200, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }
