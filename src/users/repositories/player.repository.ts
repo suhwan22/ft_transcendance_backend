@@ -1,5 +1,5 @@
 import { Injectable } from "@nestjs/common";
-import { DataSource, InsertResult, Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import { PlayerRequestDto } from "../dtos/player.request.dto"
 import { Player } from "../entities/player.entity"
 
@@ -20,32 +20,26 @@ export class PlayerRepository extends Repository<Player> {
 
   /* [R] 특정 Player 조회 */
   async readOnePlayer(id: number): Promise<Player> {
-    const player = await this.findOne({
-      // relations: {
-      //   friendList: true,
-      //   blockList: true,
-      //   channelList: true,
-      //   gameRecord: true,
-      //   gameHistory: true
-      // },
-      relations: {
-        friendList: true
-      },
-      where: { id }
-    });
-    return (player);
-  }
-
-  /* join안하는 read */
-  async readOnePurePlayer(id: number): Promise<Player> {
     const player = await this.findOne({ where: { id } });
     return (player);
   }
 
-  async   readOnePurePlayerWithName(name: string): Promise<Player> {
+  /* [R] 특정 name 으로 Player 조회 */
+  async   readOnePlayerWithName(name: string): Promise<Player> {
     const player = await this.findOne({ where: { name } });
     return (player);
   }
+
+  // /* join안하는 read */
+  // async readOnePurePlayer(id: number): Promise<Player> {
+  //   const player = await this.findOne({ where: { id } });
+  //   return (player);
+  // }
+
+  // async   readOnePurePlayerWithName(name: string): Promise<Player> {
+  //   const player = await this.findOne({ where: { name } });
+  //   return (player);
+  // }
 
   // /* [U] Player info 수정 */
   // async updatePlayerInfo(id: number, player: Partial<Player>): Promise<Player> {
@@ -53,6 +47,7 @@ export class PlayerRepository extends Repository<Player> {
   //   return (this.findOne({ where: { id } }));
   // }
 
+  /* [U] Player name, avatar 수정 */
   async updatePlayer(userId: number, name: string, avatar: string) {
     const update = await this.createQueryBuilder('player')
       .update()
@@ -62,6 +57,7 @@ export class PlayerRepository extends Repository<Player> {
     return (update);
   }
 
+  /* [U] Player status 수정 */
   async updatePlayerStatus(id: number, status: number): Promise<Player> {
     await this.update(id, { status: status });
     return (this.findOne({ where: { id } }));

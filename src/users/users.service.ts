@@ -20,17 +20,17 @@ import { FriendRequestDto } from './dtos/friend-request.request.dto';
 import { Socket } from 'socket.io';
 import { GameRoom } from 'src/games/entities/game.entity';
 import { PlayerRepository } from './repositories/player.repository';
+import { UserFriendRepository } from './repositories/user-friend.repository';
 
 @Injectable()
 export class UsersService {
   constructor(
     private playerRepository: PlayerRepository,
+    private userFriendRepository: UserFriendRepository,
     @InjectRepository(UserGameRecord)
     private recordRepository: Repository<UserGameRecord>,
     @InjectRepository(UserBlock)
     private userBlockRepository: Repository<UserBlock>,
-    @InjectRepository(UserFriend)
-    private userFriendRepository: Repository<UserFriend>,
     @InjectRepository(FriendRequest)
     private friendRequestRepository: Repository<FriendRequest>,
     @InjectRepository(UserAuth)
@@ -60,24 +60,28 @@ export class UsersService {
   /* [R] 특정 Player 조회 */
   async readOnePlayer(id: number): Promise<Player> {
     const player = await this.playerRepository.readOnePlayer(id);
-    console.log(player);
     if (!player)
       return (null);
-    if (player.gameRecord !== null) {
-      delete player.gameRecord.user;
-      player.gameRecord.rank = await this.gamesService.getMyRank(id);
-    }
+    player.friendList = await this.readFriendList(id);
+    player.blockList = await this.readBlockList(id);
+    player.gameRecord = await this.readOneUserGameRecord(id);
+    player.gameHistory = await this.gamesService.readOneGameHistory(id);
+    player.channelList = await this.readChannelList(id);
+    // if (player.gameRecord !== null) {
+    //   delete player.gameRecord.user;
+    //   player.gameRecord.rank = await this.gamesService.getMyRank(id);
+    // }
     return (player);
   }
 
   /* gamesService 용 readOnePlayer */
   async readOnePurePlayer(id: number): Promise<Player> {
-    const player = await this.playerRepository.readOnePurePlayer(id);
+    const player = await this.playerRepository.readOnePlayer(id);
     return (player);
   }
 
   async   readOnePurePlayerWithName(name: string): Promise<Player> {
-    const player = await this.playerRepository.readOnePurePlayerWithName(name);
+    const player = await this.playerRepository.readOnePlayerWithName(name);
     return (player);
   }
 
@@ -230,37 +234,10 @@ export class UsersService {
    * 
    */
 
-  // 유저 친구리스트 조회 메서드
-  async readFriendList(user: number): Promise<UserFriend[]> {
-    const friendList = await this.dataSource
-      .getRepository(UserFriend).createQueryBuilder('friend_list')
-      .leftJoinAndSelect('friend_list.friend', 'friend')
-      .select(['friend_list.id', 'friend.id', 'friend.name', 'friend.avatar', 'friend.status'])
-      .where('friend_list.user = :id', { id: user })
-      .getMany();
-    return (friendList)
-  }
-
-  async readFriendWithFriendId(user: number, friend: number): Promise<UserFriend> {
-    const userFriend = await this.dataSource
-      .getRepository(UserFriend).createQueryBuilder('friend_list')
-      .leftJoinAndSelect('friend_list.friend', 'friend')
-      .select(['friend_list.id', 'friend.id', 'friend.name', 'friend.avatar', 'friend.status'])
-      .where('friend_list.user = :user', { user: user })
-      .andWhere('friend_list.friend = :friend', { friend: friend })
-      .getOne();
-    return (userFriend);
-  }
-
   // 유저 친구 생성 메서드
   async createFriendInfo(friendRequestDto: Partial<UserFriendRequestDto>): Promise<UserFriend> {
-    const friend = await this.readOnePlayer(friendRequestDto.friend);
-    const temp = {
-      user: friendRequestDto.user,
-      friend: friend
-    }
-    const newFriend = this.userFriendRepository.create(temp);
-    return (this.userFriendRepository.save(newFriend));
+    const insertResult = await this.userFriendRepository.createFriend(friendRequestDto);
+    return (this.userFriendRepository.readFriendWithFriendId(friendRequestDto.user, insertResult.raw[0].id));
   }
 
   async createFriendWithPlayer(userId: number, friend: Player): Promise<UserFriend> {
@@ -272,28 +249,31 @@ export class UsersService {
     return (this.userFriendRepository.save(newFriend));
   }
 
+  // 유저 친구리스트 조회 메서드
+  async readFriendList(user: number): Promise<UserFriend[]> {
+    const friendList = await this.userFriendRepository.readFriendList(user);
+    return (friendList)
+  }
+
+  async readFriendWithFriendId(user: number, friend: number): Promise<UserFriend> {
+    const userFriend = await this.userFriendRepository.readFriendWithFriendId(user, friend);
+    return (userFriend);
+  }
+
   // 유저 친구 수정 메서드
   async updateFriendInfo(id: number, friend: Partial<UserFriend>): Promise<UserFriend> {
-    await this.userFriendRepository.update(id, friend);
-    return (this.userFriendRepository.findOne({ where: { id } }));
+    const updateFriend = await this.userFriendRepository.updateFriendInfo(id, friend);
+    return (updateFriend);
   }
 
   // 유저 친구 제거 메서드
   async deleteFriendInfo(user: number, friend: number): Promise<void> {
-    const deleteResult = await this.dataSource
-      .getRepository(UserFriend).createQueryBuilder('friend_list')
-      .delete()
-      .where(`user_id = ${user} and friend_id = ${friend}`)
-      .execute();
+    await this.userFriendRepository.deleteFriendInfo(user, friend);
   }
 
   // 유저 전체 친구 삭제 메서드
   async deleteFriendList(user: number): Promise<void> {
-    const deleteResult = await this.dataSource
-      .getRepository(UserFriend).createQueryBuilder('friend_list')
-      .delete()
-      .where(`user_id = ${user}`)
-      .execute();
+    await this.userFriendRepository.deleteFriendList(user);
   }
 
   /**

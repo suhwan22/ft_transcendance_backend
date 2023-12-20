@@ -41,10 +41,6 @@ export class Player {
   @OneToOne((type) => UserGameRecord)
   gameRecord: UserGameRecord;
 
-  @ApiProperty({ type: UserSocket})
-  @OneToOne((type) => UserSocket)
-  userSocket: UserSocket;
-
   @ApiProperty({ type: GameHistory, isArray: true })
   @OneToMany((type) => GameHistory, (history) => history.opponent)
   gameHistory: GameHistory[];
