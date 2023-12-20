@@ -12,6 +12,7 @@ import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
 import { GamesGateway } from 'src/sockets/game/games.gateway';
 import { Socket } from 'socket.io';
 import { WsException } from '@nestjs/websockets';
+import { STATUS } from 'src/sockets/sockets.type';
 
 @Injectable()
 export class AuthService {
@@ -113,7 +114,7 @@ export class AuthService {
         id: data.id,
         name: data.login,
         avatar: data.image.link,
-        status: 3
+        status: STATUS.OFFLINE
       };
       user = await this.usersService.createPlayer(newPlayer);
       await this.usersService.createUserAuth(user.id);
