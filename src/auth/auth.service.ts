@@ -33,14 +33,14 @@ export class AuthService {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
-      expiresIn: '10s'
+      expiresIn: '3600s'
     });
     return {
       accessToken: token,
       domain: process.env.ORIGIN_DOMAIN,
       path: '/',
       httpOnly: true,
-      maxAge: 10 * 1000
+      maxAge: 3600 * 1000
     };
   }
 
