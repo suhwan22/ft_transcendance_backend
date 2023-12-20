@@ -46,7 +46,9 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결시 유저목록에 추가
   async handleConnection(client: Socket, data) {
     try {
-      const status = STATUS.GAME;
+      const status = STATUS.GAME as number;
+      console.log(typeof(status));
+      console.log("STATUS = ", typeof(STATUS.GAME));
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
   
       client.leave(client.id);
