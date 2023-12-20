@@ -29,13 +29,9 @@ export class AuthController {
       if (user.status !== STATUS.OFFLINE) {
         throw new ForbiddenException('Duplicated Access');
       }
-      const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id);
-      const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user.name, user.id);
-      
-      await this.usersService.updateRefreshToken(refreshToken, user.id);
+      const accessToken = await this.authService.getCookieWithJwtToken(user.name, user.id, -1, process.env.ACCESS_TOKEN_SECRET);
   
-      response.cookie('Authentication', accessToken, accessOption);
-      response.cookie('Refresh', refreshToken, refreshOption);
+      response.cookie('Authentication', accessToken.token, accessToken.option);
     }
     else {
       const token = request.cookies.Authentication;
@@ -51,14 +47,14 @@ export class AuthController {
 
   @ApiOperation({ summary: '로그아웃 API' })
   @ApiOkResponse({ description: 'Ok' })
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtTwoFactorAuthGuard)
   @Post('/logout')
   async logout(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessOption, refreshOption } = await this.authService.removeCookieWithTokens();
+    const { removeAccessOption, removeRefreshOption } = await this.authService.removeCookieWithTokens();
     await this.usersService.updateRefreshToken(null, request.user.userId);
-    response.cookie('Authentication', '', accessOption);
-    response.cookie('Refresh', '', refreshOption);
-    response.cookie('TwoFactorAuth', '', accessOption);
+    response.cookie('Authentication', '', removeAccessOption);
+    response.cookie('TwoFactorAuth', '', removeAccessOption);
+    response.cookie('Refresh', '', removeRefreshOption);
     return ('logout success');
   }
 
@@ -67,22 +63,10 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Get('refresh/2fa')
   async refreshTFA(@Req() request, @Res({ passthrough: true }) response: Response) {
-    console.log("aa");
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
-    this.authService.updateTokenToSocket(accessToken, 'TwoFactorAuth', request.user);
-    response.cookie('TwoFactorAuth', accessToken, accessOption);
+    const accessToken = await this.authService.getCookieWithJwtToken(request.user.name, request.user.id, 3600, process.env.ACCESS_TOKEN_SECRET);
+    this.authService.updateTokenToSocket(accessToken.token, 'TwoFactorAuth', request.user);
+    response.cookie('TwoFactorAuth', accessToken.token, accessToken.option);
     return ('2fa token refresh success');
-  }
-
-  @ApiOperation({ summary: '토큰 재발급 API' })
-  @ApiOkResponse({ description: 'Ok' })
-  @UseGuards(JwtRefreshGuard)
-  @Get('refresh/login')
-  async refreshLogin(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
-    this.authService.updateTokenToSocket(accessToken, 'Authentication', request.user);
-    response.cookie('Authentication', accessToken, accessOption);
-    return ('login token refresh success');
   }
 
   @ApiOperation({ summary: '2FA 구글 인증 OTP API' })
@@ -100,8 +84,16 @@ export class AuthController {
     if (user.status !== STATUS.OFFLINE) {
       throw new ForbiddenException('Duplicated Access');
     }
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
-    response.cookie('TwoFactorAuth', accessToken, accessOption);
+    const accessToken = await this.authService.getCookieWithJwtToken(user.name, user.id, 3600, process.env.ACCESS_TOKEN_SECRET);
+    const refreshToken = await this.authService.getCookieWithJwtToken(user.name, user.id, 604800,  process.env.REFRESH_TOKEN_SECRET);
+    const { removeAccessOption } = await this.authService.removeCookieWithTokens();
+    
+
+    await this.usersService.updateRefreshToken(refreshToken.token, user.id);
+
+    response.cookie('TwoFactorAuth', accessToken.token, accessToken.option);
+    response.cookie('Refresh', refreshToken.token, refreshToken.option);
+    response.cookie('Authentication', '', removeAccessOption);
     return (user);
   }
   
