@@ -46,7 +46,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결시 유저목록에 추가
   async handleConnection(client: Socket, data) {
     try {
-      const status = parseInt(client.handshake.query.status as string);
+      const status = STATUS.GAME;
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
   
       client.leave(client.id);
@@ -117,8 +117,8 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(JwtWsGuard)
   @SubscribeMessage('MATCH')
   async matchMaking(client: Socket, userId: number) {
-    console.log("a");
-    this.gamesSocketService.matchMaking(client, 60);
+    if (!client.data.matchInterval)
+      this.gamesSocketService.matchMaking(client, 60);
   }
 
   @SubscribeMessage('READY')

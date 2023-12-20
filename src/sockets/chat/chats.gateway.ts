@@ -52,7 +52,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   public handleConnection(client: Socket, data) {
     try {
       
-      const status = parseInt(client.handshake.query.status as string);
+      const status = STATUS.CHAT;
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
 
       client.leave(client.id);
