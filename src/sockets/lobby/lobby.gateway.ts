@@ -105,7 +105,6 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       case STATUS.MY_PROFILE:
       case STATUS.FRIEND_PROFILE:
       case STATUS.RANK:
-      case STATUS.GAME_HISTORY:
         return (this.clients.get(target.id));
       default:
         return (this.chatsGateway.clients.get(target.id));

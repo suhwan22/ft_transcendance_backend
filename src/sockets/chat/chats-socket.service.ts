@@ -430,9 +430,9 @@ export class ChatsSocketService {
       await this.usersService.createFriendWithPlayer(user.id, target);
       await this.usersService.createFriendWithPlayer(target.id, user);
       await this.usersService.deleteFriendRequest(friendRequest.id);
-      if (target.status >= STATUS.LOBBY && target.status <= STATUS.GAME_HISTORY)
+      if (target.status >= STATUS.LOBBY && target.status <= STATUS.RANK)
         this.sendFriendList(targetClient, target.id);
-      if (user.status >= STATUS.LOBBY && user.status <= STATUS.GAME_HISTORY)
+      if (user.status >= STATUS.LOBBY && user.status <= STATUS.RANK)
         this.sendFriendList(client, user.id);
       const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32, client.data.status);
       client.emit("NOTICE", msg);

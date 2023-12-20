@@ -3,8 +3,7 @@ export const STATUS = {
     MY_PROFILE: 1,
     FRIEND_PROFILE: 2,
     RANK: 3,
-    GAME_HISTORY: 4,
-    CHAT: 5,
-    GAME: 6,
-    OFFLINE: 7,
+    CHAT: 4,
+    GAME: 5,
+    OFFLINE: 6,
   } as const;

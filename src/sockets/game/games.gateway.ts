@@ -19,6 +19,7 @@ import { GamesSocketService } from './games-socket.service';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';
+import { STATUS } from '../sockets.type';
 
 @WebSocketGateway(3131, {
   cors: { credentials: true, origin: process.env.CALLBACK_URL },
@@ -103,7 +104,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
           this.gamesSocketService.cancelGame(client);
         }
         this.clients.delete(key);
-        this.usersService.updatePlayerStatus(key, 3);
+        this.usersService.updatePlayerStatus(key, STATUS.OFFLINE);
         this.chatsGateway.sendUpdateToChannelMember(key);
         this.lobbyGateway.sendUpdateToFriends(key);
       }
