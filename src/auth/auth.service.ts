@@ -166,11 +166,11 @@ export class AuthService {
   updateTokenToSocket(token: string, key: string, user: Player) {
     let client: Socket = null;
     let updateCookie = "";
-    if (user.status === 0)
+    if (user.status >= STATUS.LOBBY && user.status <= STATUS.RANK)
       client = this.lobbyGateway.clients.get(user.id);
-    else if (user.status === 1) 
+    else if (user.status === STATUS.CHAT) 
       client = this.chatsGateway.clients.get(user.id);
-    else if (user.status === 2) 
+    else if (user.status === STATUS.GAME) 
       client = this.gamesGateway.clients.get(user.id);
     else
       return ;
