@@ -28,45 +28,39 @@ export class AuthService {
     private gamesGateway: GamesGateway,
   ) { }
 
-  async getCookieWithAccessToken(username: string, id: number, sec: number) {
-    const payload = { username: username, sub: id };
-    const token = this.jwtService.sign(payload, {
-      secret: 'accessSecret',
-      expiresIn: `${sec}s`,
-    });
-    return {
-      accessToken: token,
-      domain: process.env.ORIGIN_DOMAIN,
-      path: '/',
-      httpOnly: true,
-      maxAge: sec * 1000
-    };
+  async makeJwtToken(payload: any, secret: string, sec: number) {
+    console.log(secret);
+    if (sec > 0)
+      return (this.jwtService.sign(payload, { secret: secret, expiresIn: `${sec}s` }));
+    else
+      return (this.jwtService.sign(payload, { secret: secret}));
   }
 
-  async getCookieWithRefreshToken(username: string, id: number) {
+  async getCookieWithJwtToken(username: string, id: number, sec: number, secret: string) {
     const payload = { username: username, sub: id };
-    const token = this.jwtService.sign(payload, {
-      secret: 'refreshSecret',
-      expiresIn: '604800s'
-    });
-    return ({
-      refreshToken: token,
-      domain: process.env.ORIGIN_DOMAIN,
-      path: '/',
-      httpOnly: true,
-      maxAge: 604800 * 1000
-    });
+    const token = await this.makeJwtToken(payload, secret, sec);
+    if (sec > 0)
+      return ({ token: token, option: { 
+        domain: process.env.ORIGIN_DOMAIN,
+        path: '/',
+        httpOnly: true,
+        maxAge: sec * 1000 }});
+    else
+      return ({ token: token, option: { 
+        domain: process.env.ORIGIN_DOMAIN,
+        path: '/',
+        httpOnly: true}});
   }
 
   async removeCookieWithTokens() {
     return {
-      accessOption: {
+      removeAccessOption: {
         domain: process.env.ORIGIN_DOMAIN,
         path: '/',
         httpOnly: true,
         maxAge: 0,
       },
-      refreshOption: {
+      removeRefreshOption: {
         domain: process.env.ORIGIN_DOMAIN,
         path: '/',
         httpOnly: true,

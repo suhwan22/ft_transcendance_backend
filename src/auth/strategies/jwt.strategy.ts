@@ -11,12 +11,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: 'accessSecret',
+      secretOrKey: `${process.env.ACCESS_TOKEN_SECRET}`,
     });
   }
 
   async validate(payload: any) {
-    console.log("login");
     return { userId: payload.sub, userName: payload.username };
   }
 }
