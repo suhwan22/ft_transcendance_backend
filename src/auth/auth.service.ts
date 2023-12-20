@@ -12,6 +12,7 @@ import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
 import { GamesGateway } from 'src/sockets/game/games.gateway';
 import { Socket } from 'socket.io';
 import { WsException } from '@nestjs/websockets';
+import { STATUS } from 'src/sockets/sockets.type';
 
 @Injectable()
 export class AuthService {
@@ -107,7 +108,7 @@ export class AuthService {
         id: data.id,
         name: data.login,
         avatar: data.image.link,
-        status: 3
+        status: STATUS.OFFLINE
       };
       user = await this.usersService.createPlayer(newPlayer);
       await this.usersService.createUserAuth(user.id);
@@ -159,11 +160,11 @@ export class AuthService {
   updateTokenToSocket(token: string, key: string, user: Player) {
     let client: Socket = null;
     let updateCookie = "";
-    if (user.status === 0)
+    if (user.status >= STATUS.LOBBY && user.status <= STATUS.RANK)
       client = this.lobbyGateway.clients.get(user.id);
-    else if (user.status === 1) 
+    else if (user.status === STATUS.CHAT) 
       client = this.chatsGateway.clients.get(user.id);
-    else if (user.status === 2) 
+    else if (user.status === STATUS.GAME) 
       client = this.gamesGateway.clients.get(user.id);
     else
       return ;

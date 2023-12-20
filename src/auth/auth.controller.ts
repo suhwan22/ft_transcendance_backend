@@ -7,6 +7,7 @@ import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { ApiBody, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CodeRequestDto } from './dtos/codeRequestDto';
 import { JwtTwoFactorAuthGuard } from './guards/jwt-2fa.guard';
+import { STATUS } from 'src/sockets/sockets.type';
 
 @ApiTags('Auth')
 @Controller('auth')
@@ -25,7 +26,7 @@ export class AuthController {
       const token = await this.authService.getAccessTokenWithOauth(code);
       const oauthUser = await this.authService.getUserWithOauth(token);
       const user = await this.authService.signUpUser(oauthUser);
-      if (user.status !== 3) {
+      if (user.status !== STATUS.OFFLINE) {
         throw new ForbiddenException('Duplicated Access');
       }
       const accessToken = await this.authService.getCookieWithJwtToken(user.name, user.id, -1, process.env.ACCESS_TOKEN_SECRET);
@@ -80,7 +81,7 @@ export class AuthController {
     if (!check)
       throw new UnauthorizedException('Invaild Authentication-Code');
     const user = await this.usersService.readOnePlayer(request.user.userId);
-    if (user.status !== 3) {
+    if (user.status !== STATUS.OFFLINE) {
       throw new ForbiddenException('Duplicated Access');
     }
     const accessToken = await this.authService.getCookieWithJwtToken(user.name, user.id, 3600, process.env.ACCESS_TOKEN_SECRET);

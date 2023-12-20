@@ -20,10 +20,11 @@ export class GamesSocketService {
   games: Map<string, GameEngine>;
   queue: Map<number, Queue<GameQueue>>;
 
-  getNotice(message: string, code: number) {
+  getNotice(message: string, code: number, status: number) {
     return ({
       code: code,
       content: message,
+      status: status,
       date: new Date(),
     });
   }
@@ -413,7 +414,7 @@ export class GamesSocketService {
       await this.gamesService.createGameDodge(client.data.userId);
     }
     catch(e) {
-      const msg = this.getNotice("DB Error", 200);
+      const msg = this.getNotice("DB Error", 200, client.data.status);
       client.emit("NOTICE", msg);
     }
   }
