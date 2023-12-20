@@ -28,18 +28,18 @@ export class AuthService {
     private gamesGateway: GamesGateway,
   ) { }
 
-  async getCookieWithAccessToken(username: string, id: number) {
+  async getCookieWithAccessToken(username: string, id: number, sec: number) {
     const payload = { username: username, sub: id };
     const token = this.jwtService.sign(payload, {
       secret: 'accessSecret',
-      expiresIn: '10s'
+      expiresIn: `${sec}s`,
     });
     return {
       accessToken: token,
       domain: process.env.ORIGIN_DOMAIN,
       path: '/',
       httpOnly: true,
-      maxAge: 10 * 1000
+      maxAge: sec * 1000
     };
   }
 

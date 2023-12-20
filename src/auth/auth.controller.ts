@@ -28,13 +28,9 @@ export class AuthController {
       if (user.status !== 3) {
         throw new ForbiddenException('Duplicated Access');
       }
-      const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id);
-      const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user.name, user.id);
-      
-      await this.usersService.updateRefreshToken(refreshToken, user.id);
+      const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(user.name, user.id, 3600);
   
       response.cookie('Authentication', accessToken, accessOption);
-      response.cookie('Refresh', refreshToken, refreshOption);
     }
     else {
       const token = request.cookies.Authentication;
@@ -67,7 +63,7 @@ export class AuthController {
   @Get('refresh/2fa')
   async refreshTFA(@Req() request, @Res({ passthrough: true }) response: Response) {
     console.log("aa");
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
+    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id, 3600);
     this.authService.updateTokenToSocket(accessToken, 'TwoFactorAuth', request.user);
     response.cookie('TwoFactorAuth', accessToken, accessOption);
     return ('2fa token refresh success');
@@ -78,7 +74,7 @@ export class AuthController {
   @UseGuards(JwtRefreshGuard)
   @Get('refresh/login')
   async refreshLogin(@Req() request, @Res({ passthrough: true }) response: Response) {
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id);
+    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.name, request.user.id, 3600);
     this.authService.updateTokenToSocket(accessToken, 'Authentication', request.user);
     response.cookie('Authentication', accessToken, accessOption);
     return ('login token refresh success');
@@ -99,8 +95,13 @@ export class AuthController {
     if (user.status !== 3) {
       throw new ForbiddenException('Duplicated Access');
     }
-    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId);
+    const { accessToken, ...accessOption } = await this.authService.getCookieWithAccessToken(request.user.userName, request.user.userId, 3600);
+    const { refreshToken, ...refreshOption } = await this.authService.getCookieWithRefreshToken(user.name, user.id);
+    
+    await this.usersService.updateRefreshToken(refreshToken, user.id);
+
     response.cookie('TwoFactorAuth', accessToken, accessOption);
+    response.cookie('Refresh', refreshToken, refreshOption);
     return (user);
   }
   
