@@ -60,10 +60,10 @@ export class Ball {
   left: number;
   right: number;
 
-  updateOption(size: number, speed: number) {
+  updateOption(size: number, speed: number, width: number, height: number) {
     this.radius = 10 * size / 5;
     this.speed = 1 * speed;
-    this.update();
+    this.initBall(width, height, speed);
   }
 
   update() {
@@ -131,7 +131,7 @@ export class GameEngine {
   updateOption() {
     this.leftPanel.updateOption(this.room.option.barSize);
     this.rightPanel.updateOption(this.room.option.barSize);
-    this.ball.updateOption(this.room.option.ballSize, this.room.option.speed);
+    this.ball.updateOption(this.room.option.ballSize, this.room.option.speed, this.width, this.height);
   }
 
   updateBall() {
