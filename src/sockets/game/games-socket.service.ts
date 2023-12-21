@@ -363,7 +363,7 @@ export class GamesSocketService {
       clearInterval(client.data.pauseInterval);
       client.data.pauseInterval = null;
       client.to(game.room.roomId).emit("RESUME", "RESUME");
-      client.to(game.room.roomId).emit("ANNOUNCE", '');
+      setTimeout(() => client.to(game.room.roomId).emit("ANNOUNCE", ''), 2000);
     }
   }
 
@@ -462,7 +462,6 @@ export class GamesSocketService {
       client.data.roomId = roomId;
       client.join(roomId);
       client.emit("RELOAD", { room: game.room, isLeft: isLeft });
-      this.resumeGame(client);
     }
     else {
       client.emit("RELOAD", { room: null, isLeft: null });
