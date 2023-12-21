@@ -20,7 +20,7 @@ export class GamesController {
   @ApiOkResponse({ description: 'Ok', type: GameHistory, isArray: true})
   @Get('historys/me')
   async readMeHistory(@Req() req): Promise<GameHistory[]> {
-    const id = req.user.uesrId;
+    const id = req.user.userId;
     const history = await this.gamesService.readOneGameHistory(id);
     if (!history) {
       throw new NotFoundException('History does not exist!');
