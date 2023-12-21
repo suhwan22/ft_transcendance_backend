@@ -100,14 +100,14 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         this.gamesSocketService.existGameRoom(client);
       }
       else {
-        if (client.data.intervalId !== null) {
+        if (!!client.data.matchInterval) {
           this.gamesSocketService.cancelGame(client);
         }
-        this.clients.delete(key);
-        this.usersService.updatePlayerStatus(key, STATUS.OFFLINE as number);
-        this.chatsGateway.sendUpdateToChannelMember(key);
-        this.lobbyGateway.sendUpdateToFriends(key);
       }
+      this.clients.delete(key);
+      this.usersService.updatePlayerStatus(key, STATUS.OFFLINE as number);
+      this.chatsGateway.sendUpdateToChannelMember(key);
+      this.lobbyGateway.sendUpdateToFriends(key);
     }
     catch (e) {
       console.log(e);
@@ -165,7 +165,7 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('CANCEL')
   cancelGame(client: Socket, data: any) {
-    if (client.data.intervalId !== null) {
+    if (!!client.data.matchInterval) {
       this.gamesSocketService.cancelGame(client);
     }
   }

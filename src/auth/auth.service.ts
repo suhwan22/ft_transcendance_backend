@@ -139,8 +139,8 @@ export class AuthService {
     return (authenticator.verify(opts));
   }
 
-  verifyBearToken(token: string) {
-    return (this.jwtService.verify(token, { secret: "accessSecret" }));
+  verifyBearToken(token: string, secret: string) {
+    return (this.jwtService.verify(token, { secret: secret }));
   }
 
   verifyBearTokenWithCookies(cookies: string, key: string) {
@@ -154,7 +154,7 @@ export class AuthService {
     })
     if (token === null)
       throw new WsException('TokenExpiredError');
-    return (this.jwtService.verify(token, { secret: "accessSecret" }));
+    return (this.jwtService.verify(token, { secret: process.env.ACCESS_TOKEN_SECRET }));
   }
 
   updateTokenToSocket(token: string, key: string, user: Player) {
@@ -184,5 +184,16 @@ export class AuthService {
     }
     client.request.headers.cookie = updateCookie;
     client.handshake.headers.cookie = updateCookie;
+  }
+
+  async checkSocketAndTfa(cookies: any) {
+    try {
+      const payload = await this.jwtService.verify(cookies.TwoFactorAuth, { secret: process.env.ACCESS_TOKEN_SECRET });
+      return (await this.usersService.readOnePurePlayer(payload.sub));
+    }
+    catch(e) {
+      const payload = await this.jwtService.verify(cookies.Refresh, { secret: process.env.REFRESH_TOKEN_SECRET })
+      return (await this.usersService.compareRefreshToken(cookies.Refresh, payload.sub));
+    }
   }
 }
