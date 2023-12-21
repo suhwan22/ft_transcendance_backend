@@ -364,6 +364,9 @@ export class GamesSocketService {
       client.data.pauseInterval = null;
       client.to(game.room.roomId).emit("RESUME", "RESUME");
       setTimeout(() => client.to(game.room.roomId).emit("ANNOUNCE", ''), 2000);
+
+      const msg = `${player.player.name}'s remaining pause: ${3 - player.pause}time, ${20 - player.pauseTime}s`;
+      client.to(game.room.roomId).emit('ANNOUNCE', msg);
     }
   }
 
