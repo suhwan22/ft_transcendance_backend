@@ -26,7 +26,6 @@ import { SocketsModule } from './sockets/sockets.module';
       database: process.env.PG_DB,
       entities: [__dirname + '/**/*.entity{.ts,.js}'],
       synchronize: true,
-      logging: true
     }),
   ],
   controllers: [AppController],

@@ -175,10 +175,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const targetId: number = parseInt(message.targetId);
       const userId: number = parseInt(message.userId);
       const isExist = await this.chatsService.readDmUserWithTarget(userId, targetId);
-      if (isExist) {
+      if (isExist.length != 0) {
         console.log(isExist);
-        await this.chatsSocketService.connectChatRoom(client, isExist.id, userId);
-        client.emit('DM', { channelId: isExist.id, title: message.targetName });
+        client.emit('DM', { channelId: isExist[0].id, title: message.targetName });
+        await this.chatsSocketService.connectChatRoom(client, isExist[0].id, userId); 
         return;
       }
 
@@ -204,13 +204,16 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       await this.chatsSocketService.createDMRoom(client, roomId, message);
 
+      console.log("DM channelId:", roomId, " title: ", message.targetName);
+      client.emit("DM", { channelId: roomId, title: message.targetName });
+      this.chatsSocketService.sendChannelMember(client, roomId);
       const targetSocket = await this.clients.get(targetId);
       if (targetSocket) {
         await this.chatsSocketService.sendChannelList(targetSocket, targetId);
       }
-
-      client.emit('DM', { channelId: newChannelConfig.id, title: message.targetName });
+      
     } catch (e) {
+      console.log(e);
       let log;
       if (e.code === '23505')
         log = this.chatsSocketService.getNotice('중복된 이름입니다.', 39, client.data.status);
@@ -254,6 +257,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 맴버 조회 있으면 그냥 접속
     const isMember = await this.chatsService.readMemberInChannel(message.channelId, message.userId);
     if (isMember) {
+      console.log("exist room connect");
       this.chatsSocketService.connectChatRoom(client, message.channelId, message.userId);
       return;
     }
@@ -301,8 +305,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(JwtWsGuard)
   @SubscribeMessage('QUIT')
   async quitChatRoom(client: Socket, message) {
+    console.log("execute QUIT", message);
     const channelMembers = await this.chatsService.readOneChannelMemberWithDm(message.channelId);
+    console.log("channel Member", channelMembers);
     if (channelMembers.length === 1) {
+      console.log("dm quit 1");
       // member가 1명인 상태에서 나가기 때문에 방이 같이 제거되는 경우
       const member = channelMembers.find((member) => member.user.id == message.userId);
       if (!member)
@@ -313,6 +320,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (user.data.userId !== client.data.userId)
           this.chatsSocketService.sendChannelList(user, user.data.userId);
       });
+      console.log("dm quit2");
     }
     else {
       const member = channelMembers.find((member) => member.user.id == message.userId);
@@ -321,11 +329,23 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // dm인 경우
       if (member.channel.dm) {
+        console.log("is Dm");
         const target = await this.chatsService.readDmTargetId(member.channel.id, client.data.userId);
+        
         const targetSocket = await this.clients.get(target.user.id);
-        if (targetSocket.data.roomId === client.data.roomId) {
-          targetSocket.emit('DM_QUIT', target.id);
-          return ;
+
+        if (!(!targetSocket)) {
+          console.log("target location: ", targetSocket.data.roomId);
+          console.log("Me location :", client.data.roomId);
+          if (targetSocket.data.roomId === targetSocket.data.roomId)
+            console.log("equal");
+          if (targetSocket.data.roomId === target.channel.id.toString()) {
+            console.log("in Dm target");
+            targetSocket.emit('DM_QUIT', target.id);
+            await this.chatsService.deleteChannelMember(member.id);
+            await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
+            return ;
+          }
         }
         // 타겟이 오프라인 이거나 온라인인데 그 채팅방을 안보고 있는 경우
         const deleteResult = await this.chatsService.deleteChannelMemberWithUserId(member.channel.id, target.user.id);
@@ -333,6 +353,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           //error 상황
           return null;
         }
+        await this.chatsService.deleteChannelMember(member.id);
         await this.chatsService.deleteChannelConfig(message.channelId);
         if (targetSocket)
           await this.sendChannelList(targetSocket, target.user.id);
@@ -367,6 +388,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(JwtWsGuard)
   @SubscribeMessage('MSG')
   async sendMessage(client: Socket, message) {
+    console.log("MSG", client.data.roomId);
     await this.chatsSocketService.sendMessage(client, message);
   }
 

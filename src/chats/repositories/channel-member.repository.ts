@@ -126,6 +126,7 @@ export class ChannelMemberRepository extends Repository<ChannelMember> {
       .select(['channel_member.id',
         'player.id',
         'player.name',
+        'player.status',
         'channel_member.op',
         'channel_member.date',
         'channel_config.id',
