@@ -78,7 +78,7 @@ export class UserGameRecordRepository extends Repository<UserGameRecord> {
   async updateUserGameRecordLoss(userId: number) {
     const update = await this.createQueryBuilder('win_loss_record')
       .update()
-      .set({ win: () => 'loss + 1' })
+      .set({ loss: () => 'loss + 1' })
       .where('user_id = :userId', { userId: userId })
       .execute()
     return (update);
@@ -101,7 +101,7 @@ export class UserGameRecordRepository extends Repository<UserGameRecord> {
     if (typeof (rating) === 'number') {
       const update = await this.createQueryBuilder('win_loss_record')
         .update()
-        .set({ win: () => 'loss + 1', rating: () => `${rating}` })
+        .set({ loss: () => 'loss + 1', rating: () => `${rating}` })
         .where('user_id = :userId', { userId: userId })
         .execute()
       return (update);
