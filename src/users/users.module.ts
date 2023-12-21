@@ -10,21 +10,19 @@ import { ChatsModule } from 'src/chats/chats.module';
 import { GamesModule } from 'src/games/games.module';
 import { FriendRequest } from './entities/friend-request.entity';
 import { UserAuth } from './entities/user-auth.entity';
-import { UserSocket } from './entities/user-socket.entity';
 import { PlayerRepository } from './repositories/player.repository';
 import { UserFriendRepository } from './repositories/user-friend.repository';
 import { UserBlockRepository } from './repositories/user-block.repository';
 import { UserAuthRepository } from './repositories/user-auth.repository';
 import { UserGameRecordRepository } from './repositories/user-game-record.repository';
+import { FriendRequestRepository } from './repositories/friend-request.repository';
 
 @Module({
   imports: [
     forwardRef(() => ChatsModule),
     forwardRef(() => GamesModule),
-    TypeOrmModule.forFeature([ 
-      FriendRequest,
-      UserSocket
-      ])],
+    TypeOrmModule
+  ],
   controllers: [UsersController],
   providers: [
     UsersService,
@@ -32,7 +30,8 @@ import { UserGameRecordRepository } from './repositories/user-game-record.reposi
     UserFriendRepository,
     UserBlockRepository,
     UserAuthRepository,
-    UserGameRecordRepository
+    UserGameRecordRepository,
+    FriendRequestRepository,
   ],
   exports: [TypeOrmModule, UsersService]
 })

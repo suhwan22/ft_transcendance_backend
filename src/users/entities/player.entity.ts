@@ -5,7 +5,6 @@ import { UserBlock } from "./user-block.entity";
 import { UserGameRecord } from "./user-game-record.entity";
 import { GameHistory } from "src/games/entities/game-history.entity";
 import { ChannelMember } from "src/chats/entities/channel-member.entity";
-import { UserSocket } from "./user-socket.entity";
 
 @Entity({ name: "player" })
 export class Player {
