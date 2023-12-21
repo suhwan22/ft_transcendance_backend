@@ -441,10 +441,14 @@ export class GamesSocketService {
     if (game) {
       const roomId = game.room.roomId;
       const isLeft = game.room.getUserPosition(client.data.userId);
-      if (isLeft)
+      if (isLeft) {
         game.leftSocket = client;
-      else
+        client.data.player = game.room.left;
+      }
+      else {
         game.rightSocket = client;
+        client.data.player = game.room.right;
+      }
       client.data.roomId = roomId;
       client.join(roomId);
       client.emit("RELOAD", { room: game.room, isLeft: isLeft });
