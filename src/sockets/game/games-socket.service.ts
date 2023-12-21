@@ -319,11 +319,13 @@ export class GamesSocketService {
       clearInterval(client.data.pauseInterval);
       client.data.pauseInterval = null;
     }
-    const intervalId = setInterval(() => this.checkTimePause(client, targetClient, game.room, player), 1000);
+    const intervalId = setInterval(() => this.checkTimePause(client, game.room, player), 1000);
     client.data.pauseInterval = intervalId;
   }
 
-  checkTimePause(client: Socket, targetClient: Socket, gameRoom: GameRoom, player: PingPongPlayer) {
+  checkTimePause(client: Socket, gameRoom: GameRoom, player: PingPongPlayer) {
+    const game = this.games.get(client.data.roomId);
+    const targetClient = game.leftSocket.data.userId === client.data.userId ? game.rightSocket : game.leftSocket;
     if (!player.isPause) {
       clearInterval(client.data.pauseInterval);
       client.data.pauseInterval = null;
