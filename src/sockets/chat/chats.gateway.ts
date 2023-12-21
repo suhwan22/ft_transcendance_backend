@@ -28,7 +28,7 @@ import { STATUS } from '../sockets.type';
 import { hash } from 'bcrypt';
 
 @WebSocketGateway(3131, {
-  cors: { credentials: true, origin: process.env.CALLBACK_URL }, 
+  cors: { credentials: true, origin: process.env.CALLBACK_URL },
   namespace: '/chats'
 })
 @UseFilters(SocketExceptionFilter)
@@ -135,7 +135,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (message.title.length > 30) {
         let log = this.chatsSocketService.getNotice('30자 이하의 제목을 입력해주세요', 41, client.data.status);
         client.emit('NOTICE', log);
-        return ;
+        return;
       }
       let isPassword = message.password ? false : true;
       let userLimit = message.limit ? message.limit : 10;
@@ -179,7 +179,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         console.log(isExist);
         await this.chatsSocketService.connectChatRoom(client, isExist.id, userId);
         client.emit('DM', { channelId: isExist.id, title: message.targetName });
-        return ;
+        return;
       }
 
       const isBlock = await this.usersService.readUserBlockWithTargetId(targetId, userId);
@@ -188,7 +188,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (isBlock) {
         let log = this.chatsSocketService.getNotice('상대방에게 차단 되어있습니다.', 43, client.data.status);
         client.emit('NOTICE', log);
-        return ;
+        return;
       }
 
       const newTitle = await hash((message.userName + message.targetName), 10);
@@ -301,7 +301,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @UseGuards(JwtWsGuard)
   @SubscribeMessage('QUIT')
   async quitChatRoom(client: Socket, message) {
-    const channelMembers = await this.chatsService.readOneChannelMember(message.channelId);
+    const channelMembers = await this.chatsService.readOneChannelMemberWithDm(message.channelId);
     if (channelMembers.length === 1) {
       // member가 1명인 상태에서 나가기 때문에 방이 같이 제거되는 경우
       const member = channelMembers.find((member) => member.user.id == message.userId);
@@ -318,6 +318,25 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const member = channelMembers.find((member) => member.user.id == message.userId);
       if (!member)
         return ('채널 맴버가 아닙니다.bug 상황');
+
+      // dm인 경우
+      if (member.channel.dm) {
+        const target = await this.chatsService.readDmTargetId(member.channel.id, client.data.userId);
+        const targetSocket = await this.clients.get(target.user.id);
+        if (targetSocket.data.roomId === client.data.roomId) {
+          targetSocket.emit('DM_QUIT', target.id);
+          return ;
+        }
+        // 타겟이 오프라인 이거나 온라인인데 그 채팅방을 안보고 있는 경우
+        const deleteResult = await this.chatsService.deleteChannelMemberWithUserId(member.channel.id, target.user.id);
+        if (deleteResult.affected === 0) {
+          //error 상황
+          return null;
+        }
+        await this.chatsService.deleteChannelConfig(message.channelId);
+        if (targetSocket)
+          await this.sendChannelList(targetSocket, target.user.id);
+      }
       await this.chatsService.deleteChannelMember(member.id);
     }
     await this.chatsSocketService.exitChatRoom(client, message.channelId, message.userId);
@@ -410,7 +429,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async blockClient(client: Socket, message) {
     const log = await this.chatsSocketService.commandBlock(client, message.channelId, message.userId, message.target);
     if (!log)
-      return ;
+      return;
     client.emit("NOTICE", log);
   }
 
@@ -564,7 +583,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   }
 
   @UseGuards(JwtWsGuard)
-  @SubscribeMessage('GET_FRIEND_REQUEST') 
+  @SubscribeMessage('GET_FRIEND_REQUEST')
   async getFriendRequest(client: Socket) {
     const friendRequest = await this.usersService.readRecvFriendRequest(client.data.userId);
     client.emit('GET_FRIEND_REQUEST', friendRequest);
