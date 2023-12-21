@@ -23,6 +23,9 @@ import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';
 import { STATUS } from '../sockets.type';
 
+import { hash } from 'bcrypt';
+import { ChatsService } from 'src/chats/chats.service';
+
 @WebSocketGateway(3131, {
   cors: { credentials: true, origin: process.env.CALLBACK_URL }, 
   namespace: '/lobby'
