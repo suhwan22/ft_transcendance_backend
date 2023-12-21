@@ -18,4 +18,8 @@ export class GameDodge {
   @ApiProperty()
   @UpdateDateColumn()
   date: Date;
+
+  @ApiProperty({ default: false })
+  @Column()
+  execute: boolean;
 }

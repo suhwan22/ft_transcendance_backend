@@ -23,6 +23,7 @@ import { GameRequest } from 'src/games/entities/game-request';
 import { AuthService } from 'src/auth/auth.service';
 import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';
+import { STATUS } from '../sockets.type';
 
 import { hash } from 'bcrypt';
 
@@ -52,6 +53,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket, data) {
     try {
+      
+      const status = STATUS.CHAT;
+      client.data.status = status;
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
 
       client.leave(client.id);
@@ -61,7 +65,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (this.clients.get(client.data.userId))
         throw new WsException("DuplicatedAccessError");
       this.clients.set(client.data.userId, client);
-      this.usersService.updatePlayerStatus(client.data.userId, 0);
+      this.usersService.updatePlayerStatus(client.data.userId, status);
       this.lobbyGateway.sendUpdateToFriends(client.data.userId);
       this.sendUpdateToChannelMember(client.data.userId);
       console.log('chats connected', client.id);
@@ -69,23 +73,23 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     catch (e) {
       console.log('connection error');
       if (e.name === 'JsonWebTokenError') {
-        const msg = this.chatsSocketService.getNotice("Invaild Token", 201);
+        const msg = this.chatsSocketService.getNotice("Invaild Token", 201, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.name === 'TokenExpiredError') {
-        const msg = this.chatsSocketService.getNotice("Token expired", 202);
+        const msg = this.chatsSocketService.getNotice("Token expired", 202, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.error === 'DuplicatedAccessError') {
-        const msg = this.chatsSocketService.getNotice("Duplicated Access", 203);
+        const msg = this.chatsSocketService.getNotice("Duplicated Access", 203, client.data.status);
         client.emit("NOTICE", msg);
       }
       else if (e.error === 'TokenExpiredError') {
-        const msg = this.chatsSocketService.getNotice("Token expired", 202);
+        const msg = this.chatsSocketService.getNotice("Token expired", 202, client.data.status);
         client.emit("NOTICE", msg);
       }
       else {
-        const msg = this.chatsSocketService.getNotice("DB Error", 200);
+        const msg = this.chatsSocketService.getNotice("DB Error", 200, client.data.status);
         client.emit("NOTICE", msg);
       }
     }
@@ -98,7 +102,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!key)
         return;
       this.clients.delete(key);
-      this.usersService.updatePlayerStatus(key, 3);
+      this.usersService.updatePlayerStatus(key, STATUS.OFFLINE as number);
       this.sendUpdateToChannelMember(key);
       this.lobbyGateway.sendUpdateToFriends(key);
       console.log('chat disonnected', client.id);
@@ -111,12 +115,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   getClientWithStatus(target: Player): Socket {
     switch (target.status) {
-      case 0:
-        return (this.lobbyGateway.clients.get(target.id));
-      case 1:
+      case STATUS.CHAT:
         return (this.clients.get(target.id));
       default:
-        return (null);
+        return (this.lobbyGateway.clients.get(target.id));
     }
   }
 
@@ -153,9 +155,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (e) {
       let log;
       if (e.code === '23505')
-        log = this.chatsSocketService.getNotice('중복된 이름입니다.', 39);
+        log = this.chatsSocketService.getNotice('중복된 이름입니다.', 39, client.data.status);
       else
-        log = this.chatsSocketService.getNotice("DB Error", 200);
+        log = this.chatsSocketService.getNotice("DB Error", 200, client.data.status);
       client.emit('NOTICE', log);
     }
   }
@@ -229,7 +231,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // 혹시 없는 channel에 join하려는 경우, client 에러임
     const channel = await this.chatsService.readOneChannelConfig(message.channelId);
     if (!channel) {
-      const log = this.chatsSocketService.getNotice('존재하지 않는 channel입니다.', 1);
+      const log = this.chatsSocketService.getNotice('존재하지 않는 channel입니다.', 1, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
@@ -249,14 +251,14 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     //ban list 확인
     const banUser = await this.chatsService.readBanUser(message.channelId, message.userId);
     if (banUser) {
-      const log = this.chatsSocketService.getNotice('해당 channel의 ban list에 등록 되어있어 입장이 불가합니다.', 2);
+      const log = this.chatsSocketService.getNotice('해당 channel의 ban list에 등록 되어있어 입장이 불가합니다.', 2, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
 
     // 비번 확인
     if (channel.public === false && !await this.chatsService.comparePassword(message.password, message.channelId)) {
-      const log = this.chatsSocketService.getNotice('비밀번호가 일치하지 않습니다.', 3);
+      const log = this.chatsSocketService.getNotice('비밀번호가 일치하지 않습니다.', 3, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
@@ -264,7 +266,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     //인원 수 확인
     const current = await this.chatsService.readOnePureChannelMember(message.channelId);
     if (channel.limit === current.length) {
-      const log = this.chatsSocketService.getNotice('방이 가득 찼습니다.', 4);
+      const log = this.chatsSocketService.getNotice('방이 가득 찼습니다.', 4, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
@@ -343,13 +345,13 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('KICK')
   async kickClient(@ConnectedSocket() client: Socket, @MessageBody() data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
-      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
+      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
     const targetUser = await this.usersService.readOnePurePlayerWithName(data.target);
     if (!targetUser) {
-      const log = this.chatsSocketService.getNotice("존재하지 않는 유저입니다.", 11);
+      const log = this.chatsSocketService.getNotice("존재하지 않는 유저입니다.", 11, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
@@ -362,7 +364,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('BAN')
   async banClient(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
-      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
+      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
@@ -385,7 +387,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('UNBAN')
   async unbanClient(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
-      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
+      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
@@ -414,19 +416,19 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async muteClient(client: Socket, data) {
     const roomId = data.channelId.toString();
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
-      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
+      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
     try {
       const log = await this.chatsSocketService.commandMute(client, data.channelId, data.target);
-      const msg = this.chatsSocketService.getNotice(`${data.target}의 채팅이 1분간 금지됩니다.`, 21);
+      const msg = this.chatsSocketService.getNotice(`${data.target}의 채팅이 1분간 금지됩니다.`, 21, client.data.status);
       client.emit('NOTICE', log);
       client.join(client.id);
       client.broadcast.to(roomId).emit('NOTICE', msg);
       client.leave(client.id);
     } catch (e) {
-      const log = this.chatsSocketService.getNotice("DB Error", 200);
+      const log = this.chatsSocketService.getNotice("DB Error", 200, client.data.status);
       client.emit("NOTICE", log);
     }
   }
@@ -435,7 +437,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('PASS')
   async updatePasswordWithChannel(client: Socket, data) {
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
-      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
+      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8, client.data.status);
       client.emit('NOTICE', log);
       return;
     }
@@ -448,12 +450,12 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async setOpClient(client: Socket, data) {
     const roomId = data.channelId.toString();
     if (!(await this.chatsSocketService.isOpUser(data.channelId, data.userId))) {
-      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8);
+      const log = this.chatsSocketService.getNotice("OP 권한이 필요합니다.", 8, client.data.status);
       client.emit('NOTICE', 8);
       return;
     }
     const msg = await this.chatsSocketService.commandOp(client, data.channelId, data.target);
-    const log = this.chatsSocketService.getNotice(`${data.target}님이 op권한을 획득했습니다.`, 36);
+    const log = this.chatsSocketService.getNotice(`${data.target}님이 op권한을 획득했습니다.`, 36, client.data.status);
     this.chatsSocketService.sendChannelMember(client, data.channelId);
     client.emit("NOTICE", msg);
     client.join(client.id);
@@ -467,21 +469,21 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let msg;
     const target = await this.usersService.readOnePurePlayerWithName(data.target);
     if (!target) {
-      const log = this.chatsSocketService.getNotice("해당 유저는 존재하지 않습니다.", 11);
+      const log = this.chatsSocketService.getNotice("해당 유저는 존재하지 않습니다.", 11, client.data.status);
       client.emit("NOTICE", log);
       return;
     }
     const targetClient = this.getClientWithStatus(target);
     if (!targetClient) {
-      if (target.status === 2)
-        msg = this.chatsSocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23);
+      if (target.status === STATUS.GAME)
+        msg = this.chatsSocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23, client.data.status);
       else
-        msg = this.chatsSocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24);
+        msg = this.chatsSocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }
-    this.chatsSocketService.inviteGame(targetClient, data.userId, target);
-    msg = this.chatsSocketService.getNotice("게임초대 메시지를 전송하였습니다.", 25);
+    this.chatsSocketService.inviteGame(client, targetClient, data.userId, target);
+    msg = this.chatsSocketService.getNotice("게임초대 메시지를 전송하였습니다.", 25, client.data.status);
     client.emit("NOTICE", msg);
   }
 
@@ -492,10 +494,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     let msg;
     const targetClient = this.getClientWithStatus(target);
     if (!targetClient) {
-      if (target.status === 2)
-        msg = this.chatsSocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23);
+      if (target.status === STATUS.GAME)
+        msg = this.chatsSocketService.getNotice("해당 유저는 이미 게임중 입니다.", 23, client.data.status);
       else
-        msg = this.chatsSocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24);
+        msg = this.chatsSocketService.getNotice("해당 유저는 접속중이 아닙니다.", 24, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }
@@ -521,7 +523,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     try {
       const target = await this.usersService.readOnePurePlayerWithName(data.target);
       if (!target) {
-        msg = this.chatsSocketService.getNotice("해당 유저는 존재하지 않습니다.", 11);
+        msg = this.chatsSocketService.getNotice("해당 유저는 존재하지 않습니다.", 11, client.data.status);
         client.emit("NOTICE", msg);
         return;
       }
@@ -529,7 +531,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       this.chatsSocketService.requestFriend(client, targetClient, data.userId, target);
     }
     catch (e) {
-      msg = this.chatsSocketService.getNotice("DB error", 200);
+      msg = this.chatsSocketService.getNotice("DB error", 200, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }

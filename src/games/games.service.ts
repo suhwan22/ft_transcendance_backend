@@ -109,23 +109,24 @@ export class GamesService {
       .createQueryBuilder('game_dodge')
       .insert()
       .into(GameDodge)
-      .values({ user: () => `${userId}` })
+      .values({ user: () => `${userId}`, execute: false })
       .execute();
+  }
+  
+  async updateGameDodge(id: number, execute: boolean) {
+    await this.gameDodgeRepository.update(id, { execute });
   }
 
   async readGameDodge(userId: number) {
     const gameDodge = await this.gameDodgeRepository
       .createQueryBuilder('game_dodge')
-      .select(['game_dodge.id', 'game_dodge.date'])
+      .select(['game_dodge.id', 'game_dodge.date', 'game_dodge.execute'])
+      .where(`user_id = ${userId}`)
       .getOne();
     return (gameDodge);
   }
 
-  async deleteGameDodge(userId: number) {
-    const deleteResult = await this.gameDodgeRepository
-      .createQueryBuilder('game_dodge')
-      .delete()
-      .where(`user_id = ${userId}`)
-      .execute();
+  async deleteGameDodge(id: number) {
+    await this.gameDodgeRepository.delete(id);
   }
 }

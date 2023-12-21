@@ -12,6 +12,7 @@ import { ChatsGateway } from 'src/sockets/chat/chats.gateway';
 import { GamesGateway } from 'src/sockets/game/games.gateway';
 import { Socket } from 'socket.io';
 import { WsException } from '@nestjs/websockets';
+import { STATUS } from 'src/sockets/sockets.type';
 
 @Injectable()
 export class AuthService {
@@ -28,45 +29,39 @@ export class AuthService {
     private gamesGateway: GamesGateway,
   ) { }
 
-  async getCookieWithAccessToken(username: string, id: number) {
-    const payload = { username: username, sub: id };
-    const token = this.jwtService.sign(payload, {
-      secret: 'accessSecret',
-      expiresIn: '10s'
-    });
-    return {
-      accessToken: token,
-      domain: process.env.ORIGIN_DOMAIN,
-      path: '/',
-      httpOnly: true,
-      maxAge: 10 * 1000
-    };
+  async makeJwtToken(payload: any, secret: string, sec: number) {
+    console.log(secret);
+    if (sec > 0)
+      return (this.jwtService.sign(payload, { secret: secret, expiresIn: `${sec}s` }));
+    else
+      return (this.jwtService.sign(payload, { secret: secret}));
   }
 
-  async getCookieWithRefreshToken(username: string, id: number) {
+  async getCookieWithJwtToken(username: string, id: number, sec: number, secret: string) {
     const payload = { username: username, sub: id };
-    const token = this.jwtService.sign(payload, {
-      secret: 'refreshSecret',
-      expiresIn: '604800s'
-    });
-    return ({
-      refreshToken: token,
-      domain: process.env.ORIGIN_DOMAIN,
-      path: '/',
-      httpOnly: true,
-      maxAge: 604800 * 1000
-    });
+    const token = await this.makeJwtToken(payload, secret, sec);
+    if (sec > 0)
+      return ({ token: token, option: { 
+        domain: process.env.ORIGIN_DOMAIN,
+        path: '/',
+        httpOnly: true,
+        maxAge: sec * 1000 }});
+    else
+      return ({ token: token, option: { 
+        domain: process.env.ORIGIN_DOMAIN,
+        path: '/',
+        httpOnly: true}});
   }
 
   async removeCookieWithTokens() {
     return {
-      accessOption: {
+      removeAccessOption: {
         domain: process.env.ORIGIN_DOMAIN,
         path: '/',
         httpOnly: true,
         maxAge: 0,
       },
-      refreshOption: {
+      removeRefreshOption: {
         domain: process.env.ORIGIN_DOMAIN,
         path: '/',
         httpOnly: true,
@@ -113,7 +108,7 @@ export class AuthService {
         id: data.id,
         name: data.login,
         avatar: data.image.link,
-        status: 3
+        status: STATUS.OFFLINE
       };
       user = await this.usersService.createPlayer(newPlayer);
       await this.usersService.createUserAuth(user.id);
@@ -144,8 +139,8 @@ export class AuthService {
     return (authenticator.verify(opts));
   }
 
-  verifyBearToken(token: string) {
-    return (this.jwtService.verify(token, { secret: "accessSecret" }));
+  verifyBearToken(token: string, secret: string) {
+    return (this.jwtService.verify(token, { secret: secret }));
   }
 
   verifyBearTokenWithCookies(cookies: string, key: string) {
@@ -159,17 +154,17 @@ export class AuthService {
     })
     if (token === null)
       throw new WsException('TokenExpiredError');
-    return (this.jwtService.verify(token, { secret: "accessSecret" }));
+    return (this.jwtService.verify(token, { secret: process.env.ACCESS_TOKEN_SECRET }));
   }
 
   updateTokenToSocket(token: string, key: string, user: Player) {
     let client: Socket = null;
     let updateCookie = "";
-    if (user.status === 0)
+    if (user.status >= STATUS.LOBBY && user.status <= STATUS.RANK)
       client = this.lobbyGateway.clients.get(user.id);
-    else if (user.status === 1) 
+    else if (user.status === STATUS.CHAT) 
       client = this.chatsGateway.clients.get(user.id);
-    else if (user.status === 2) 
+    else if (user.status === STATUS.GAME) 
       client = this.gamesGateway.clients.get(user.id);
     else
       return ;
@@ -189,5 +184,16 @@ export class AuthService {
     }
     client.request.headers.cookie = updateCookie;
     client.handshake.headers.cookie = updateCookie;
+  }
+
+  async checkSocketAndTfa(cookies: any) {
+    try {
+      const payload = await this.jwtService.verify(cookies.TwoFactorAuth, { secret: process.env.ACCESS_TOKEN_SECRET });
+      return (await this.usersService.readOnePurePlayer(payload.sub));
+    }
+    catch(e) {
+      const payload = await this.jwtService.verify(cookies.Refresh, { secret: process.env.REFRESH_TOKEN_SECRET })
+      return (await this.usersService.compareRefreshToken(cookies.Refresh, payload.sub));
+    }
   }
 }

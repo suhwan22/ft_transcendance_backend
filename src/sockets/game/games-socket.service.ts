@@ -6,6 +6,7 @@ import { GamesService } from "../../games/games.service";
 import { Player } from "src/users/entities/player.entity";
 import { GameEngine } from "../../games/entities/game-engine";
 import { GameQueue, Queue } from "../../games/entities/game-queue";
+import { GameDodge } from "src/games/entities/game-dodge.entity";
 
 
 @Injectable()
@@ -20,21 +21,18 @@ export class GamesSocketService {
   games: Map<string, GameEngine>;
   queue: Map<number, Queue<GameQueue>>;
 
-  getNotice(message: string, code: number) {
+  getNotice(message: string, code: number, status: number) {
     return ({
       code: code,
       content: message,
+      status: status,
       date: new Date(),
     });
   }
 
   async matchMaking(client: Socket, penaltyTime: number) {
-    const time = await this.getDodgePenaltyTime(client.data.userId);
-    if (time > 0 && time < penaltyTime)
-      client.emit("PENALTY", { min: Math.floor(time / 60),  sec: time % 60 });
-    else if (time > penaltyTime) {
-      await this.gamesService.deleteGameDodge(client.data.userId);
-    }
+    if (await this.checkDodgePenalty(client, client.data.userId, penaltyTime))
+      return ;
     const rating = client.data.rating;
     const ratingGroup = Math.floor(rating / 100);
     const gameQueue = new GameQueue(client, rating, 0);
@@ -58,9 +56,31 @@ export class GamesSocketService {
     const intervalId = setInterval(() => this.findMath(gameQueue, ratingGroup, intervalId), 1000);
     client.data.matchInterval = intervalId;
   }
-
-  async getDodgePenaltyTime(userId: number) {
+  
+  async checkDodgePenalty(client: Socket, userId: number, penaltyTime: number) {
     const gameDodge = await this.gamesService.readGameDodge(userId);
+    if (!gameDodge)
+      return (false);
+    if (!gameDodge.execute) {
+      await this.gamesService.updateGameDodge(gameDodge.id, true);
+      client.emit("PENALTY", { min: penaltyTime / 60, sec: penaltyTime % 60 });
+      return (true);
+    }
+    else {
+      const time = await this.getDodgePenaltyTime(gameDodge);
+      if (time > 0 && time < penaltyTime) {
+        const remain = 60 - time;
+        client.emit("PENALTY", { min: Math.floor(remain / 60), sec: remain % 60 });
+        return (true);
+      }
+      else if (time > penaltyTime) {
+        await this.gamesService.deleteGameDodge(gameDodge.id);
+      }
+    }
+    return (false);
+  }
+
+  async getDodgePenaltyTime(gameDodge: GameDodge) {
     if (gameDodge === null) {
       return (-1);
     }
@@ -299,16 +319,21 @@ export class GamesSocketService {
       clearInterval(client.data.pauseInterval);
       client.data.pauseInterval = null;
     }
-    const intervalId = setInterval(() => this.checkTimePause(client, targetClient, game.room, player), 1000);
+    const intervalId = setInterval(() => this.checkTimePause(client, game.room, player), 1000);
     client.data.pauseInterval = intervalId;
   }
 
-  checkTimePause(client: Socket, targetClient: Socket, gameRoom: GameRoom, player: PingPongPlayer) {
+  checkTimePause(client: Socket, gameRoom: GameRoom, player: PingPongPlayer) {
     if (!player.isPause) {
       clearInterval(client.data.pauseInterval);
       client.data.pauseInterval = null;
       return;
     }
+
+    const game = this.games.get(client.data.roomId);
+    if (!game)
+      return ;
+    const targetClient = game.leftSocket.data.userId === client.data.userId ? game.rightSocket : game.leftSocket;
 
     player.pauseTime++;
     const msg = `${player.player.name}'s remaining pause: ${3 - player.pause}time, ${20 - player.pauseTime}s`;
@@ -343,23 +368,15 @@ export class GamesSocketService {
   }
 
   // 몰수패 client가 4번째 pause를 건쪽이기 때문에 targetClient 가 무조건 승리
-  async endGameWithExtra(client: Socket, targetClient: Socket, gameRoom: GameRoom): Promise<void> {
-    let winner: Socket, loser: Socket;
+  async endGameWithExtra(loser: Socket, winner: Socket, gameRoom: GameRoom): Promise<void> {
     let win: Player, loss: Player;
     let winScore: number, lossScore: number, winnerIsLeft: boolean;
 
-    //pause를 건 쪽이 left인 경우
-    if (gameRoom.getUserPosition(client.data.userId)) {
-      winner = targetClient.data.player;
-      loser = client.data.player;
-    }
-    else {
-      winner = client.data.player;
-      loser = targetClient.data.player;
-    }
-
     win = winner.data.player.player;
     loss = loser.data.player.player;
+
+    clearInterval(winner.data.pauseInterval);
+    clearInterval(loser.data.pauseInterval);
     winScore = gameRoom.left === winner.data.player ? gameRoom.score.left : gameRoom.score.right;
     lossScore = gameRoom.left === loser.data.player ? gameRoom.score.left : gameRoom.score.right;
     winnerIsLeft = gameRoom.left === winner.data.player ? true : false;
@@ -368,9 +385,9 @@ export class GamesSocketService {
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
     await this.usersService.updateRating(winner, loser, gameRoom);
 
-    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
-    client.leave(gameRoom.roomId);
-    targetClient.leave(gameRoom.roomId);
+    loser.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
+    loser.leave(gameRoom.roomId);
+    winner.leave(gameRoom.roomId);
   }
 
   async endGame(winner: Socket, loser: Socket, gameRoom: GameRoom): Promise<void> {
@@ -408,12 +425,14 @@ export class GamesSocketService {
     this.games.delete(client.data.roomId);
     client.data.roomId = null;
     targetClient.data.roomId = null;
-
+    clearInterval(client.data.readyInterval);
+    clearInterval(targetClient.data.readyInterval);
     try {
-      await this.gamesService.createGameDodge(client.data.userId);
+      if (game.room.rank)
+        await this.gamesService.createGameDodge(client.data.userId);
     }
-    catch(e) {
-      const msg = this.getNotice("DB Error", 200);
+    catch (e) {
+      const msg = this.getNotice("DB Error", 200, client.data.status);
       client.emit("NOTICE", msg);
     }
   }
@@ -425,17 +444,21 @@ export class GamesSocketService {
       if (v.leftSocket !== null && v.rightSocket !== null) {
         if (userId === v.leftSocket.data.userId || userId === v.rightSocket.data.userId) {
           game = v;
-          return ;
+          return;
         }
       }
     });
     if (game) {
       const roomId = game.room.roomId;
       const isLeft = game.room.getUserPosition(client.data.userId);
-      if (isLeft)
+      if (isLeft) {
         game.leftSocket = client;
-      else
+        client.data.player = game.room.left;
+      }
+      else {
         game.rightSocket = client;
+        client.data.player = game.room.right;
+      }
       client.data.roomId = roomId;
       client.join(roomId);
       client.emit("RELOAD", { room: game.room, isLeft: isLeft });
