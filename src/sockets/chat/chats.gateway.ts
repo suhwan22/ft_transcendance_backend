@@ -53,7 +53,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //소켓 연결시 유저목록에 추가
   public handleConnection(client: Socket, data) {
     try {
-      
       const status = STATUS.CHAT;
       client.data.status = status;
       const payload = this.authServeice.verifyBearTokenWithCookies(client.request.headers.cookie, "TwoFactorAuth");
@@ -203,8 +202,10 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       this.chatsSocketService.createDMRoom(client, roomId, message);
 
-      this.chatsSocketService.sendChannelList(client, client.data.userId);
-      this.chatsSocketService.sendChannelList(this.clients.get(message.targetId), message.targetId);
+      const targetSocket = this.clients.get(message.targetId);
+      if (targetSocket) {
+        this.chatsSocketService.sendChannelList(targetSocket, message.targetId);
+      }
 
       client.emit('DM', { channelId: newChannelConfig.id, title: message.targetName });
     } catch (e) {
