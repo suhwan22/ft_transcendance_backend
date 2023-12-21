@@ -59,6 +59,8 @@ export class GamesSocketService {
   
   async checkDodgePenalty(client: Socket, userId: number, penaltyTime: number) {
     const gameDodge = await this.gamesService.readGameDodge(userId);
+    if (!gameDodge)
+      return (false);
     if (!gameDodge.execute) {
       await this.gamesService.updateGameDodge(gameDodge.id, true);
       client.emit("PENALTY", { min: penaltyTime / 60, sec: penaltyTime % 60 });
