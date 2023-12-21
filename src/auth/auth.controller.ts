@@ -36,7 +36,7 @@ export class AuthController {
     else {
       const token = request.cookies.Authentication;
       try {
-        this.authService.verifyBearToken(token);
+        this.authService.verifyBearToken(token, process.env.ACCESS_TOKEN_SECRET);
       }
       catch(e) {
         throw new UnauthorizedException('Invaild AccessToken');
@@ -112,5 +112,22 @@ export class AuthController {
   @Post('check/login')
   async checkLoginAndTfa() {
     return ("login already");
+  }
+
+  @ApiOperation({ summary: '소켓 인증 API' })
+  @ApiOkResponse({ description: 'Ok' })
+  @Get('check/socket') 
+  async checkSocketAndTfa(@Req() request: Request, @Res({ passthrough: true }) response: Response) {
+    try {
+      const user = await this.authService.checkSocketAndTfa(request.cookies);
+      if (!user)
+        throw new UnauthorizedException('Unauthorized');
+      const accessToken = await this.authService.getCookieWithJwtToken(user.name, user.id, 3600, process.env.ACCESS_TOKEN_SECRET);
+      this.authService.updateTokenToSocket(accessToken.token, 'TwoFactorAuth', user);
+      response.cookie('TwoFactorAuth', accessToken.token, accessToken.option);
+    }
+    catch(e) {
+      throw new UnauthorizedException('Unauthorized');
+    }
   }
 }
