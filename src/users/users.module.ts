@@ -14,15 +14,15 @@ import { UserSocket } from './entities/user-socket.entity';
 import { PlayerRepository } from './repositories/player.repository';
 import { UserFriendRepository } from './repositories/user-friend.repository';
 import { UserBlockRepository } from './repositories/user-block.repository';
+import { UserAuthRepository } from './repositories/user-auth.repository';
+import { UserGameRecordRepository } from './repositories/user-game-record.repository';
 
 @Module({
   imports: [
     forwardRef(() => ChatsModule),
     forwardRef(() => GamesModule),
     TypeOrmModule.forFeature([ 
-      UserGameRecord,
       FriendRequest,
-      UserAuth,
       UserSocket
       ])],
   controllers: [UsersController],
@@ -30,7 +30,9 @@ import { UserBlockRepository } from './repositories/user-block.repository';
     UsersService,
     PlayerRepository,
     UserFriendRepository,
-    UserBlockRepository
+    UserBlockRepository,
+    UserAuthRepository,
+    UserGameRecordRepository
   ],
   exports: [TypeOrmModule, UsersService]
 })

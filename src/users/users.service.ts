@@ -1,6 +1,6 @@
 import { Inject, Injectable, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, DeleteResult, Repository, UpdateResult } from 'typeorm';
+import { DataSource, DeleteResult, Repository, UpdateDateColumn, UpdateResult } from 'typeorm';
 import { Player } from './entities/player.entity';
 import { UserGameRecord } from './entities/user-game-record.entity';
 import { UserBlock } from './entities/user-block.entity';
@@ -22,6 +22,9 @@ import { GameRoom } from 'src/games/entities/game.entity';
 import { PlayerRepository } from './repositories/player.repository';
 import { UserFriendRepository } from './repositories/user-friend.repository';
 import { UserBlockRepository } from './repositories/user-block.repository';
+import { UserGameRecordRepository } from './repositories/user-game-record.repository';
+import { UserAuthRepository } from './repositories/user-auth.repository';
+import { FriendRequestRepository } from './repositories/friend-request.repository';
 
 @Injectable()
 export class UsersService {
@@ -29,13 +32,10 @@ export class UsersService {
     private playerRepository: PlayerRepository,
     private userFriendRepository: UserFriendRepository,
     private userBlockRepository: UserBlockRepository,
+    private userGameRecordRepository: UserGameRecordRepository,
+    private userAuthRepository: UserAuthRepository,
+    private friendRequestRepository: FriendRequestRepository,
 
-    @InjectRepository(UserGameRecord)
-    private recordRepository: Repository<UserGameRecord>,
-    @InjectRepository(FriendRequest)
-    private friendRequestRepository: Repository<FriendRequest>,
-    @InjectRepository(UserAuth)
-    private userAuthRepository: Repository<UserAuth>,
     @InjectRepository(UserSocket)
     private userSocketRepository: Repository<UserSocket>,
 
@@ -115,56 +115,40 @@ export class UsersService {
 
   /* [C] UserGameRecord 생성 */
   async createUserGameRecord(record: Partial<UserGameRecordRequestDto>): Promise<UserGameRecord> {
-    const user = await this.readOnePurePlayer(record.user);
-    const temp = {
-      user: user,
-      win: record.win,
-      loss: record.loss,
-      rating: record.rating
-    }
-    const newRecord = this.recordRepository.create(temp);
-    return (this.recordRepository.save(newRecord));
+    const insertResult = await this.userGameRecordRepository.createUserGameRecord(record);
+    if (!insertResult)
+      return null;
+    return (this.userGameRecordRepository.readOneUserGameRecord(record.user));
   }
 
-  async createUserGameRecordWithResult(user: Player, result: boolean): Promise<UserGameRecord> {
-    let record = { win: 0, loss: 1, rating: -1 };
-    if (result) 
-      record = { win: 1, loss: 0, rating: 1 };
-    const newRecord = this.recordRepository.create({ 
-      user: user, 
-      win: record.win, 
-      loss: record.loss, 
-      rating: record.rating });
-    return (this.recordRepository.save(newRecord));
-  }
+  // async createUserGameRecordWithResult(user: Player, result: boolean): Promise<UserGameRecord> {
+  //   let record = { win: 0, loss: 1, rating: -1 };
+  //   if (result) 
+  //     record = { win: 1, loss: 0, rating: 1 };
+  //   const newRecord = this.recordRepository.create({ 
+  //     user: user, 
+  //     win: record.win, 
+  //     loss: record.loss, 
+  //     rating: record.rating });
+  //   return (this.recordRepository.save(newRecord));
+  // }
 
   /* [R] 모든 UserGameRecord 조회 */
   async readAllUserGameRecord(): Promise<UserGameRecord[]> {
-    const recordList = await this.dataSource
-      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
-      .leftJoinAndSelect('win_loss_record.user', 'user')
-      .select(['win_loss_record.id', 'user.id', 'user.name'
-        , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.rating'])
-      .getMany();
+    const recordList = await this.userGameRecordRepository.readAllUserGameRecord();
     return (recordList)
   }
 
   /* [R] 특정 UserGameRecord 조회 */
   async readOneUserGameRecord(user: number): Promise<UserGameRecord> {
-    const recordList = await this.dataSource
-      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
-      .leftJoinAndSelect('win_loss_record.user', 'user')
-      .select(['win_loss_record.id', 'user.id', 'user.name'
-        , 'win_loss_record.win', 'win_loss_record.loss', 'win_loss_record.rating'])
-      .where('win_loss_record.user = :id', { id: user })
-      .getOne();
+    const recordList = await this.userGameRecordRepository.readOneUserGameRecord(user);
     return (recordList)
   }
 
   /* [U] UserGameRecord info 수정 */
   async updateUserGameRecordInfo(id: number, record: Partial<UserGameRecord>): Promise<UserGameRecord> {
-    await this.recordRepository.update(id, record);
-    return (this.recordRepository.findOne({ where: { id } }));
+    const updateRecord = await this.userGameRecordRepository.updateUserGameRecordInfo(id, record);
+    return (updateRecord);
   }
 
   async updateRating(winner: Socket, loser: Socket, gameRoom: GameRoom) {
@@ -175,58 +159,18 @@ export class UsersService {
 
       let winRating = winner.data.rating + k * (1 - winExpect);
       let lossRating = loser.data.rating + k * (0 - lossExpect);
-      await this.updateUserGameRecordRankWin(winner.data.userId, Math.round(winRating));
-      await this.updateUserGameRecordRankLoss(loser.data.userId, Math.round(lossRating));
+      await this.userGameRecordRepository.updateUserGameRecordRankWin(winner.data.userId, Math.round(winRating));
+      await this.userGameRecordRepository.updateUserGameRecordRankLoss(loser.data.userId, Math.round(lossRating));
     }
     else {
-      await this.updateUserGameRecordWin(winner.data.userId);
-      await this.updateUserGameRecordLoss(loser.data.userId);
+      await this.userGameRecordRepository.updateUserGameRecordWin(winner.data.userId);
+      await this.userGameRecordRepository.updateUserGameRecordLoss(loser.data.userId);
     }
-  }
-
-  async updateUserGameRecordWin(userId: number) {
-    const update = await this.dataSource
-      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
-      .update()
-      .set({ win: () => 'win + 1' })
-      .where(`user_id = ${userId}`)
-      .execute()
-    return (update);
-  }
-  
-  async updateUserGameRecordLoss(userId: number) {
-    const update = await this.dataSource
-      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
-      .update()
-      .set({ win: () => 'loss + 1' })
-      .where(`user_id = ${userId}`)
-      .execute()
-    return (update);
-  }
-
-  async updateUserGameRecordRankWin(userId: number, rating: number) {
-    const update = await this.dataSource
-      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
-      .update()
-      .set({ win: () => 'win + 1', rating: () => `${rating}`})
-      .where(`user_id = ${userId}`)
-      .execute()
-    return (update);
-  }
-
-  async updateUserGameRecordRankLoss(userId: number, rating: number) {
-    const update = await this.dataSource
-      .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
-      .update()
-      .set({ win: () => 'loss + 1', rating: () => `${rating}`})
-      .where(`user_id = ${userId}`)
-      .execute()
-    return (update);
   }
 
   /* [D] UserGameRecord 제거 */
   async deleteUserGameRecord(id: number): Promise<void> {
-    await (this.recordRepository.delete(id));
+    await this.userGameRecordRepository.deleteUserGameRecord(id);
   }
 
   /**
@@ -338,17 +282,16 @@ export class UsersService {
 
   /* [C] FriendRequest 생성 */
   async createFriendRequest(request: Partial<FriendRequestDto>): Promise<FriendRequest> {
-    const recv = await this.readOnePurePlayer(request.recv);
-    const send = await this.readOnePurePlayer(request.send);
-    const newRequest = { recv: recv, send: send };
-    const friendRequest = this.friendRequestRepository.create(newRequest);
-    return (this.friendRequestRepository.save(friendRequest));
+    const insertResult = await this.friendRequestRepository.createFriendRequest(request);
+    if (!insertResult)
+      return null;
+    return (this.friendRequestRepository.readOneFriendRequest(insertResult.raw[0].id));
   }
 
+  /* [C] FriendRequest 생성 */
   async createFriendRequestWithPlayer(recv: Player, send: Player): Promise<FriendRequest> {
-    const newRequest = { recv: recv, send: send };
-    const friendRequest = this.friendRequestRepository.create(newRequest);
-    return (this.friendRequestRepository.save(friendRequest));
+    const friendRequest = await this.friendRequestRepository.createFriendRequestWithPlayer(recv, send);
+    return (friendRequest);
   }
 
   /* [R] 모든 FriendRequest 조회 */
@@ -470,37 +413,40 @@ export class UsersService {
     this.userSocketRepository.delete(id);
   }
 
+  /**
+   * 
+   *  UserAuth Table CURD, auth_list
+   * 
+   */
+
   async createUserAuth(userId: number): Promise<UserAuth> {
-    const userAuth = { userId: userId, refreshToken: null, twoFactorAuthSecret: null };
-    const newUserAuth = this.userAuthRepository.create(userAuth);
-    return (this.userAuthRepository.save(newUserAuth));
-  }
-
-  async updateRefreshToken(refreshToken: string, userId: number): Promise<UserAuth> {
-    let hashToken = null;
-    if (refreshToken)
-      hashToken = await hash(refreshToken, 10);
-    this.userAuthRepository.update(userId, { refreshToken: hashToken });
-    return (this.readUserAuth(userId));
-  }
-
-  async updateTwoFactorAuthSecret(secret: string, userId: number): Promise<UserAuth> {
-    this.userAuthRepository.update(userId, { twoFactorAuthSecret: secret });
-    return (this.readUserAuth(userId));
+    const newUserAuth = await this.userAuthRepository.createUserAuth(userId);
+    return (newUserAuth);
   }
 
   async readUserAuth(userId: number): Promise<UserAuth> {
-    return (this.userAuthRepository.findOne({ where: { userId } }));
+    const userAuth = await this.userAuthRepository.readUserAuth(userId);
+    return (userAuth);
   }
 
-  async deleteUserToken(userId: number): Promise<void> {
-    this.userAuthRepository.delete(userId);
+  async updateRefreshToken(refreshToken: string, userId: number): Promise<UserAuth> {
+    const updateToken = await this.userAuthRepository.updateRefreshToken(refreshToken, userId);
+    return (updateToken);
+  }
+
+  async updateTwoFactorAuthSecret(secret: string, userId: number): Promise<UserAuth> {
+    const updateTowfactor = await this.userAuthRepository.updateTwoFactorAuthSecret(secret, userId);
+    return (updateTowfactor);
+  }
+
+  async deleteUserAuth(userId: number): Promise<void> {
+    this.userAuthRepository.deleteUserAuth(userId);
   }
 
   async compareRefreshToken(refreshToken: string, id: number) {
-    const userToken = await this.readUserAuth(id);
+    const userToken = await this.userAuthRepository.readUserAuth(id);
     const isEqure = await compare(refreshToken, userToken.refreshToken);
     if (isEqure)
-      return (this.readOnePurePlayer(id));
+      return (this.playerRepository.readOnePlayer(id));
   }
 }
