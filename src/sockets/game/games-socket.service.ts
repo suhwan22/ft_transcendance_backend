@@ -324,13 +324,16 @@ export class GamesSocketService {
   }
 
   checkTimePause(client: Socket, gameRoom: GameRoom, player: PingPongPlayer) {
-    const game = this.games.get(client.data.roomId);
-    const targetClient = game.leftSocket.data.userId === client.data.userId ? game.rightSocket : game.leftSocket;
     if (!player.isPause) {
       clearInterval(client.data.pauseInterval);
       client.data.pauseInterval = null;
       return;
     }
+
+    const game = this.games.get(client.data.roomId);
+    if (!game)
+      return ;
+    const targetClient = game.leftSocket.data.userId === client.data.userId ? game.rightSocket : game.leftSocket;
 
     player.pauseTime++;
     const msg = `${player.player.name}'s remaining pause: ${3 - player.pause}time, ${20 - player.pauseTime}s`;
