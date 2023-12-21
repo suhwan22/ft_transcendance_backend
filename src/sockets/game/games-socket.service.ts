@@ -6,6 +6,7 @@ import { GamesService } from "../../games/games.service";
 import { Player } from "src/users/entities/player.entity";
 import { GameEngine } from "../../games/entities/game-engine";
 import { GameQueue, Queue } from "../../games/entities/game-queue";
+import { GameDodge } from "src/games/entities/game-dodge.entity";
 
 
 @Injectable()
@@ -30,12 +31,8 @@ export class GamesSocketService {
   }
 
   async matchMaking(client: Socket, penaltyTime: number) {
-    const time = await this.getDodgePenaltyTime(client.data.userId);
-    if (time > 0 && time < penaltyTime)
-      client.emit("PENALTY", { min: Math.floor(time / 60),  sec: time % 60 });
-    else if (time > penaltyTime) {
-      await this.gamesService.deleteGameDodge(client.data.userId);
-    }
+    if (await this.checkDodgePenalty(client, client.data.userId, penaltyTime))
+      return ;
     const rating = client.data.rating;
     const ratingGroup = Math.floor(rating / 100);
     const gameQueue = new GameQueue(client, rating, 0);
@@ -59,9 +56,28 @@ export class GamesSocketService {
     const intervalId = setInterval(() => this.findMath(gameQueue, ratingGroup, intervalId), 1000);
     client.data.matchInterval = intervalId;
   }
-
-  async getDodgePenaltyTime(userId: number) {
+  
+  async checkDodgePenalty(client: Socket, userId: number, penaltyTime: number) {
     const gameDodge = await this.gamesService.readGameDodge(userId);
+    if (!gameDodge.execute) {
+      await this.gamesService.updateGameDodge(gameDodge.id, true);
+      client.emit("PENALTY", { min: penaltyTime / 60, sec: penaltyTime % 60 });
+      return (true);
+    }
+    else {
+      const time = await this.getDodgePenaltyTime(gameDodge);
+      if (time > 0 && time < penaltyTime) {
+        client.emit("PENALTY", { min: Math.floor(time / 60), sec: time % 60 });
+        return (true);
+      }
+      else if (time > penaltyTime) {
+        await this.gamesService.deleteGameDodge(gameDodge.id);
+      }
+    }
+    return (false);
+  }
+
+  async getDodgePenaltyTime(gameDodge: GameDodge) {
     if (gameDodge === null) {
       return (-1);
     }
@@ -351,12 +367,12 @@ export class GamesSocketService {
 
     //pause를 건 쪽이 left인 경우
     if (gameRoom.getUserPosition(client.data.userId)) {
-      winner = targetClient.data.player;
-      loser = client.data.player;
+      winner = targetClient;
+      loser = client;
     }
     else {
-      winner = client.data.player;
-      loser = targetClient.data.player;
+      winner = client;
+      loser = targetClient;
     }
 
     win = winner.data.player.player;
@@ -413,7 +429,7 @@ export class GamesSocketService {
     try {
       await this.gamesService.createGameDodge(client.data.userId);
     }
-    catch(e) {
+    catch (e) {
       const msg = this.getNotice("DB Error", 200, client.data.status);
       client.emit("NOTICE", msg);
     }
@@ -426,7 +442,7 @@ export class GamesSocketService {
       if (v.leftSocket !== null && v.rightSocket !== null) {
         if (userId === v.leftSocket.data.userId || userId === v.rightSocket.data.userId) {
           game = v;
-          return ;
+          return;
         }
       }
     });

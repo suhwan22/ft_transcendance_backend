@@ -112,6 +112,10 @@ export class GamesService {
       .values({ user: () => `${userId}` })
       .execute();
   }
+  
+  async updateGameDodge(id: number, execute: boolean) {
+    await this.gameDodgeRepository.update(id, { execute });
+  }
 
   async readGameDodge(userId: number) {
     const gameDodge = await this.gameDodgeRepository
@@ -121,11 +125,7 @@ export class GamesService {
     return (gameDodge);
   }
 
-  async deleteGameDodge(userId: number) {
-    const deleteResult = await this.gameDodgeRepository
-      .createQueryBuilder('game_dodge')
-      .delete()
-      .where(`user_id = ${userId}`)
-      .execute();
+  async deleteGameDodge(id: number) {
+    await this.gameDodgeRepository.delete(id);
   }
 }

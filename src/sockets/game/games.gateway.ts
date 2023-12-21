@@ -103,11 +103,11 @@ export class GamesGateway implements OnGatewayConnection, OnGatewayDisconnect {
         if (client.data.intervalId !== null) {
           this.gamesSocketService.cancelGame(client);
         }
-        this.clients.delete(key);
-        this.usersService.updatePlayerStatus(key, STATUS.OFFLINE as number);
-        this.chatsGateway.sendUpdateToChannelMember(key);
-        this.lobbyGateway.sendUpdateToFriends(key);
       }
+      this.clients.delete(key);
+      this.usersService.updatePlayerStatus(key, STATUS.OFFLINE as number);
+      this.chatsGateway.sendUpdateToChannelMember(key);
+      this.lobbyGateway.sendUpdateToFriends(key);
     }
     catch (e) {
       console.log(e);
