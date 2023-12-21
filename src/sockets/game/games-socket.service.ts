@@ -360,20 +360,9 @@ export class GamesSocketService {
   }
 
   // 몰수패 client가 4번째 pause를 건쪽이기 때문에 targetClient 가 무조건 승리
-  async endGameWithExtra(client: Socket, targetClient: Socket, gameRoom: GameRoom): Promise<void> {
-    let winner: Socket, loser: Socket;
+  async endGameWithExtra(loser: Socket, winner: Socket, gameRoom: GameRoom): Promise<void> {
     let win: Player, loss: Player;
     let winScore: number, lossScore: number, winnerIsLeft: boolean;
-
-    //pause를 건 쪽이 left인 경우
-    if (gameRoom.getUserPosition(client.data.userId)) {
-      winner = targetClient;
-      loser = client;
-    }
-    else {
-      winner = client;
-      loser = targetClient;
-    }
 
     win = winner.data.player.player;
     loss = loser.data.player.player;
@@ -385,9 +374,9 @@ export class GamesSocketService {
     await this.gamesService.createGameHistoryWitData(loss.id, win, false, lossScore, winScore, gameRoom.rank);
     await this.usersService.updateRating(winner, loser, gameRoom);
 
-    client.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
-    client.leave(gameRoom.roomId);
-    targetClient.leave(gameRoom.roomId);
+    loser.to(gameRoom.roomId).emit("END", { score: gameRoom.score, winnerIsLeft: winnerIsLeft });
+    loser.leave(gameRoom.roomId);
+    winner.leave(gameRoom.roomId);
   }
 
   async endGame(winner: Socket, loser: Socket, gameRoom: GameRoom): Promise<void> {
