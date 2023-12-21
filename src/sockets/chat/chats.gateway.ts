@@ -133,7 +133,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('HOST')
   async hostChatRoom(client: Socket, message) {
     try {
-      if (message.title.length() > 30) {
+      if (message.title.length > 30) {
         let log = this.chatsSocketService.getNotice('30자 이하의 제목을 입력해주세요', 41, client.data.status);
         client.emit('NOTICE', log);
         return ;
