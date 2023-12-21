@@ -121,6 +121,7 @@ export class GamesService {
     const gameDodge = await this.gameDodgeRepository
       .createQueryBuilder('game_dodge')
       .select(['game_dodge.id', 'game_dodge.date'])
+      .where(`user_id = '${userId}'`)
       .getOne();
     return (gameDodge);
   }

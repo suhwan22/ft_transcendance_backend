@@ -20,5 +20,6 @@ export class GameDodge {
   date: Date;
 
   @ApiProperty({ default: false })
+  @Column()
   execute: boolean;
 }
