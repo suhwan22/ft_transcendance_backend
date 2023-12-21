@@ -2,7 +2,6 @@
 delete from friend_list;
 delete from game_history;
 delete from win_loss_record;
-delete from user_socket;
 delete from mute_list;
 delete from block_list;
 delete from ban_list;
@@ -28,20 +27,6 @@ insert into player (id, name, avatar, status, date)
           values (5, 'eavan', './src/assets/img_Profile.png', 3, now());
 insert into player (id, name, avatar, status, date) 
           values (6, 'frank', './src/assets/img_Profile.png', 3, now());
-
--- init user_socket
-insert into user_socket (id, date, user_id) 
-          values (100001, now(), 1);
-insert into user_socket (id, date, user_id) 
-          values (100002, now(), 2);
-insert into user_socket (id, date, user_id) 
-          values (100003, now(), 3);
-insert into user_socket (id, date, user_id) 
-          values (100004, now(), 4);
-insert into user_socket (id, date, user_id) 
-          values (100005, now(), 5);
-insert into user_socket (id, date, user_id) 
-          values (100006, now(), 6);
 
 -- init friend_list data
 insert into friend_list (id, "user", friend_id) values (100001, 1, 2);
