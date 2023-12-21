@@ -69,7 +69,8 @@ export class GamesSocketService {
     else {
       const time = await this.getDodgePenaltyTime(gameDodge);
       if (time > 0 && time < penaltyTime) {
-        client.emit("PENALTY", { min: Math.floor(time / 60), sec: time % 60 });
+        const remain = 60 - time;
+        client.emit("PENALTY", { min: Math.floor(remain / 60), sec: remain % 60 });
         return (true);
       }
       else if (time > penaltyTime) {

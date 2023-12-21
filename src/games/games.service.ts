@@ -109,7 +109,7 @@ export class GamesService {
       .createQueryBuilder('game_dodge')
       .insert()
       .into(GameDodge)
-      .values({ user: () => `${userId}` })
+      .values({ user: () => `${userId}`, execute: false })
       .execute();
   }
   
@@ -120,7 +120,7 @@ export class GamesService {
   async readGameDodge(userId: number) {
     const gameDodge = await this.gameDodgeRepository
       .createQueryBuilder('game_dodge')
-      .select(['game_dodge.id', 'game_dodge.date'])
+      .select(['game_dodge.id', 'game_dodge.date', 'game_dodge.execute'])
       .where(`user_id = ${userId}`)
       .getOne();
     return (gameDodge);
