@@ -86,7 +86,7 @@ export class GamesService {
 
   /** [R] GameDodge 읽기 */
   async readGameDodge(userId: number) {
-    const gameDodge = await this.readGameDodge(userId);
+    const gameDodge = await this.gameDodgeRepository.readGameDodge(userId);
     return (gameDodge);
   }
 
