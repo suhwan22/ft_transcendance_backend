@@ -202,7 +202,7 @@ export class UsersService {
     const update = await this.dataSource
       .getRepository(UserGameRecord).createQueryBuilder('win_loss_record')
       .update()
-      .set({ win: () => 'loss + 1' })
+      .set({ loss: () => 'loss + 1' })
       .where(`user_id = ${userId}`)
       .execute()
     return (update);
