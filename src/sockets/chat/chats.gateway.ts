@@ -70,7 +70,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('chats connected', client.id);
     }
     catch (e) {
-      console.log('connection error');
       if (e.name === 'JsonWebTokenError') {
         const msg = this.chatsSocketService.getNotice("Invaild Token", 201, client.data.status);
         client.emit("NOTICE", msg);
@@ -613,7 +612,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('RECALL_FRIEND_REQUEST')
   async recallFriendRequest(client: Socket, data: FriendRequest) {
-    console.log(data);
     client.emit('REQUEST_FRIEND', data);
   }
 }

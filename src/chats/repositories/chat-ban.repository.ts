@@ -48,7 +48,6 @@ export class ChatBanRepository extends Repository<ChatBan> {
     .into(ChatBan)
     .values({ channel: () => `${channelId}`, user: () => `${userId}` })
     .execute();
-    console.log(insertResult);
     return (insertResult);
   }
 
