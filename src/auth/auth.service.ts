@@ -30,7 +30,6 @@ export class AuthService {
   ) { }
 
   async makeJwtToken(payload: any, secret: string, sec: number) {
-    console.log(secret);
     if (sec > 0)
       return (this.jwtService.sign(payload, { secret: secret, expiresIn: `${sec}s` }));
     else

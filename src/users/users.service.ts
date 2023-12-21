@@ -64,10 +64,10 @@ export class UsersService {
     player.gameRecord = await this.readOneUserGameRecord(id);
     player.gameHistory = await this.gamesService.readOneGameHistory(id);
     player.channelList = await this.readChannelList(id);
-    // if (player.gameRecord !== null) {
-    //   delete player.gameRecord.user;
-    //   player.gameRecord.rank = await this.gamesService.getMyRank(id);
-    // }
+    if (player.gameRecord !== null) {
+      delete player.gameRecord.user;
+      player.gameRecord.rank = await this.gamesService.getMyRank(id);
+    }
     return (player);
   }
 

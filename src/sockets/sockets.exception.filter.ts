@@ -5,7 +5,6 @@ import { BaseWsExceptionFilter, WsException } from "@nestjs/websockets";
 export class SocketExceptionFilter extends BaseWsExceptionFilter {
   catch(exception: any, host: ArgumentsHost): void {
     const client = host.switchToWs().getClient();
-    console.log(exception);
     if (exception.name === 'JsonWebTokenError') {
       const msg = this.getNotice("Invaild Token", 201, client.data.status);
       client.emit("NOTICE", msg);
@@ -21,8 +20,6 @@ export class SocketExceptionFilter extends BaseWsExceptionFilter {
     else if (exception.error === 'TokenExpiredError') {
       const msg = this.getNotice("Token expired", 202, client.data.status);
       client.emit("NOTICE", msg);
-      console.log("here");
-      console.log(msg);
     }
     else {
       const msg = this.getNotice("DB Error", 200, client.data.status);

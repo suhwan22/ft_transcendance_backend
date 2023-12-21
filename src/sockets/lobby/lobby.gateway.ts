@@ -61,7 +61,6 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('lobby connected', client.id);
     }
     catch (e: any) {
-      console.log('connection error');
       if (e.name === 'JsonWebTokenError') {
         const msg = this.lobbySocketService.getNotice("Invaild Token", 201, client.data.status);
         client.emit("NOTICE", msg);
@@ -77,8 +76,6 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
       else if (e.error === 'TokenExpiredError') {
         const msg = this.lobbySocketService.getNotice("Token expired", 202, client.data.status);
         client.emit("NOTICE", msg);
-        console.log("here");
-        console.log(msg);
       }
       else {
         const msg = this.lobbySocketService.getNotice("DB Error", 200, client.data.status);
@@ -245,7 +242,6 @@ export class LobbyGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('RECALL_FRIEND_REQUEST')
   async recallFriendRequest(client: Socket, data: FriendRequest) {
-    console.log(data);
     client.emit('REQUEST_FRIEND', data);
   }
 }

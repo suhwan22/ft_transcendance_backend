@@ -31,8 +31,8 @@ export class GamesController {
   @ApiOperation({ summary: '특정 유저 게임 기록 조회 API' })
   @ApiOkResponse({ description: 'Ok', type: GameHistory, isArray: true})
   @Get('historys/:userId')
-  async readOneHistory(@Param('userId') id: number): Promise<GameHistory[]> {
-    const history = await this.gamesService.readOneGameHistory(id);
+  async readOneHistory(@Param('userId') id): Promise<GameHistory[]> {
+    const history = await this.gamesService.readOneGameHistory(parseInt(id));
     if (!history) {
       throw new NotFoundException('History does not exist!');
     }

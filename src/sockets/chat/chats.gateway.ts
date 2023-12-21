@@ -71,7 +71,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log('chats connected', client.id);
     }
     catch (e) {
-      console.log('connection error');
       if (e.name === 'JsonWebTokenError') {
         const msg = this.chatsSocketService.getNotice("Invaild Token", 201, client.data.status);
         client.emit("NOTICE", msg);
@@ -174,7 +173,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async makeDMRoom(client: Socket, message) {
     try {
       const isBlock = await this.usersService.readUserBlockWithTargetId(message.targetId, message.userId);
-      console.log(isBlock);
 
       // block 되어 있는지 확인
       if (isBlock) {
@@ -562,7 +560,6 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   @SubscribeMessage('RECALL_FRIEND_REQUEST')
   async recallFriendRequest(client: Socket, data: FriendRequest) {
-    console.log(data);
     client.emit('REQUEST_FRIEND', data);
   }
 }

@@ -340,7 +340,6 @@ export class ChatsService {
   async createChatLogInfo(chatLogRequest: Partial<ChatLogRequestDto>): Promise<ChatLog> {
     const result = await this.chatLogRepository.createChatLogInfo(chatLogRequest);
     const aa = await this.readChatLog(result.raw[0].id);
-    console.log(aa);
     return (aa);
   }
 

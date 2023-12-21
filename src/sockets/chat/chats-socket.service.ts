@@ -94,8 +94,6 @@ export class ChatsSocketService {
     const roomId = channelId.toString();
     const player = await this.usersService.readOnePurePlayer(userId);
 
-    console.log(userId, channelId);
-    console.log(player);
     const channelMemberRequest = {
       channelId: channelId,
       userId: userId,
@@ -237,7 +235,6 @@ export class ChatsSocketService {
       }
       return (this.getNotice(`"${target}"님에게 OP 권한을 부여 하였습니다.`, 200, client.data.status));
     } catch (e) {
-      console.log(e);
       return (this.getNotice("DB error", 200, client.data.status));
     }
   }
@@ -263,7 +260,6 @@ export class ChatsSocketService {
         await this.sendChannelList(targetClient, targetId);
       return (this.getNotice("성공적으로 강퇴하였습니다.", 10, client.data.status));
     } catch (e) {
-      console.log(e);
       return (this.getNotice("DB Error", 200, client.data.status));
     }
   }
