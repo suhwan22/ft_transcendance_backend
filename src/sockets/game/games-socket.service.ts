@@ -369,6 +369,9 @@ export class GamesSocketService {
 
     win = winner.data.player.player;
     loss = loser.data.player.player;
+
+    clearInterval(winner.data.pauseInterval);
+    clearInterval(loser.data.pauseInterval);
     winScore = gameRoom.left === winner.data.player ? gameRoom.score.left : gameRoom.score.right;
     lossScore = gameRoom.left === loser.data.player ? gameRoom.score.left : gameRoom.score.right;
     winnerIsLeft = gameRoom.left === winner.data.player ? true : false;
@@ -417,7 +420,8 @@ export class GamesSocketService {
     this.games.delete(client.data.roomId);
     client.data.roomId = null;
     targetClient.data.roomId = null;
-
+    clearInterval(client.data.readyInterval);
+    clearInterval(targetClient.data.readyInterval);
     try {
       await this.gamesService.createGameDodge(client.data.userId);
     }
