@@ -147,6 +147,7 @@ export class ChatsSocketService {
   }
 
   async connectChatRoom(client: Socket, channelId: number, userId: number) {
+    console.log("join channel id: ", channelId);
     const roomId = channelId.toString();
     client.leave(client.data.roomId);
     client.data.roomId = roomId;

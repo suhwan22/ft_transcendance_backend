@@ -60,7 +60,7 @@ export class UserBlockRepository extends Repository<UserBlock> {
       .leftJoinAndSelect('block_list.target', 'target')
       .select(['block_list.id', 'target.id', 'target.name'])
       .where('block_list.user = :id', { id: user })
-      .andWhere('target.id = : target', { target: target })
+      .andWhere('target.id = :target', { target: target })
       .getOne();
     return (userBlock)
   }

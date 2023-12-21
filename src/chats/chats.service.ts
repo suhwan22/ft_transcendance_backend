@@ -92,8 +92,15 @@ export class ChatsService {
 
     for (const dm of dmList) {
       let channelMember = await this.channelMemberRepository.readOneChannelMember(dm.id);
-      dm.title = channelMember[0].id === userId ? channelMember[1].user.name : channelMember[0].user.name;
+      dm.title = channelMember[0].user.id === userId ? channelMember[1].user.name : channelMember[0].user.name;
     };
+
+    return (dmList);
+  }
+
+  /* [R] 내 DM ChannelConfig 조회 */
+  async readDmUserWithTarget(userId: number, targetId: number) {
+    const dmList = await this.channelConfigRepository.readDmUserTarget(userId, targetId);
 
     return (dmList);
   }
@@ -147,6 +154,11 @@ export class ChatsService {
     return (await this.channelMemberRepository.readOneChannelMember(channelId));
   }
 
+  /** [R] 특정 Channel{id}에 속한 Member + dm 조회 */
+  async readOneChannelMemberWithDm(channelId: number): Promise<ChannelMember[]> {
+    return (await this.channelMemberRepository.readOneChannelMemberWithDm(channelId));
+  }
+
   /** [R] 특정 channel에 몇명 있는지 조사하기 위해 만든 pureChannelMember */
   async readOnePureChannelMember(channelId: number): Promise<ChannelMember[]> {
     return (await this.channelMemberRepository.readOnePureChannelMember(channelId));
@@ -170,6 +182,11 @@ export class ChatsService {
   /** [R] 특정 User{id}에 속한 Member 조회 */
   async readMemberInChannel(channelId: number, userId: number): Promise<ChannelMember> {
     return (await this.channelMemberRepository.readMemberInChannel(channelId, userId));
+  }
+
+  /** [R] Dm방 상대방 id 가져오기 */
+  async readDmTargetId(channelId: number, userId: number): Promise<ChannelMember> {
+    return (await this.channelMemberRepository.readDmTargetId(channelId, userId));
   }
 
   /** [U] ChannelMember{id} info 수정 */

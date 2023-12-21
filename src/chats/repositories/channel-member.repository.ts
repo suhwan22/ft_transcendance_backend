@@ -53,6 +53,25 @@ export class ChannelMemberRepository extends Repository<ChannelMember> {
     return (channelMembers);
   }
 
+ async readOneChannelMemberWithDm(channelId: number): Promise<ChannelMember[]> {
+    const channelMembers = await this.createQueryBuilder('channel_member')
+      .leftJoinAndSelect('channel_member.user', 'player')
+      .leftJoinAndSelect('channel_member.channel', 'channel_config')
+      .select(['channel_member.id',
+        'channel_member.op',
+        'player.id',
+        'player.name',
+        'player.avatar',
+        'player.status',
+        'channel_member.date',
+        'channel_config.id',
+        'channel_config.title',
+        'channel_config.dm'])
+      .where('channel_config.id = :id', { id: channelId })
+      .getMany();
+    return (channelMembers);
+  }
+
   /* 특정 channel에 몇명 있는지 조사하기 위해 만든 pureChannelMember */
   async readOnePureChannelMember(channelId: number): Promise<ChannelMember[]> {
     const channelMembers = await this.createQueryBuilder('channel_member')
@@ -95,6 +114,24 @@ export class ChannelMemberRepository extends Repository<ChannelMember> {
         'channel_config.id',
         'channel_config.title'])
       .where('player.id = :userId', { userId: userId })
+      .andWhere('channel_config.id = :channelId', { channelId: channelId })
+      .getOne();
+    return (channelMember);
+  }
+
+  async readDmTargetId(channelId: number, userId: number): Promise<ChannelMember> {
+    const channelMember = await this.createQueryBuilder('channel_member')
+      .leftJoinAndSelect('channel_member.user', 'player')
+      .leftJoinAndSelect('channel_member.channel', 'channel_config')
+      .select(['channel_member.id',
+        'player.id',
+        'player.name',
+        'player.status',
+        'channel_member.op',
+        'channel_member.date',
+        'channel_config.id',
+        'channel_config.title'])
+      .where('player.id != :userId', { userId: userId })
       .andWhere('channel_config.id = :channelId', { channelId: channelId })
       .getOne();
     return (channelMember);
