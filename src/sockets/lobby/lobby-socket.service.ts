@@ -4,6 +4,7 @@ import { GameRequest } from 'src/games/entities/game-request';
 import { FriendRequest } from 'src/users/entities/friend-request.entity';
 import { Player } from 'src/users/entities/player.entity';
 import { UsersService } from 'src/users/users.service';
+import { STATUS } from '../sockets.type';
 
 @Injectable()
 export class LobbySocketService {
@@ -11,10 +12,11 @@ export class LobbySocketService {
     private readonly usersService: UsersService,) { }
 
 
-  getNotice(message: string, code: number) {
+  getNotice(message: string, code: number, status: number) {
     return ({
       code: code,
       content: message,
+      status: status,
       date: new Date(),
     });
   }
@@ -26,7 +28,7 @@ export class LobbySocketService {
   }
 
   async acceptGame(client: Socket, targetClient: Socket, data) {
-    const msg = this.getNotice("게임이 성사되었습니다.", 26);
+    const msg = this.getNotice("게임이 성사되었습니다.", 26, client.data.status);
 
     client.emit("NOTICE", msg);
     targetClient.emit("NOTICE", msg);
@@ -38,9 +40,9 @@ export class LobbySocketService {
   }
 
   async refuseGame(client: Socket, targetClient: Socket, gameRequest: Partial<GameRequest>, target: Player) {
-    client.emit("NOTICE", this.getNotice("요청을 거절 하였습니다.", 27));
-    if (target.status === 0 || target.status === 1)
-      targetClient.emit("NOTICE", this.getNotice(gameRequest.recv.name + " 님이 게임초대를 거절 하였습니다.", 28));
+    client.emit("NOTICE", this.getNotice("요청을 거절 하였습니다.", 27, client.data.status));
+    if (target.status !== STATUS.GAME && target.status !== STATUS.OFFLINE)
+      targetClient.emit("NOTICE", this.getNotice(gameRequest.recv.name + " 님이 게임초대를 거절 하였습니다.", 28, client.data.status));
   }
 
   async sendFriendList(client: Socket, userId: number) {
@@ -61,19 +63,19 @@ export class LobbySocketService {
   async requestFriend(client: Socket, targetClient: Socket, userId: number, target: Player) {
     const request = await this.usersService.readRecvAndSendFriendRequest(target.id, userId);
     if (request) {
-      const msg = this.getNotice("이미 친구 요청한 유저입니다.", 29);
+      const msg = this.getNotice("이미 친구 요청한 유저입니다.", 29, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }
     const frined = await this.usersService.readFriendWithFriendId(userId, target.id);
     if (frined) {
-      const msg = this.getNotice("이미 친구 관계입니다.", 30);
+      const msg = this.getNotice("이미 친구 관계입니다.", 30, client.data.status);
       client.emit("NOTICE", msg);
       return;
     }
     const user = await this.usersService.readOnePurePlayer(userId);
     const friendRequest = await this.usersService.createFriendRequestWithPlayer(target, user);
-    const msg = this.getNotice(target.name + " 님에게 친구 요청하였습니다.", 31);
+    const msg = this.getNotice(target.name + " 님에게 친구 요청하였습니다.", 31, client.data.status);
     client.emit("NOTICE", msg);
     if (targetClient) {
       const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
@@ -92,18 +94,18 @@ export class LobbySocketService {
         this.sendFriendList(targetClient, target.id);
       if (user.status === 0)
         this.sendFriendList(client, user.id);
-      const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32);
+      const msg = this.getNotice(target.name + " 님과 친구가 되었습니다.", 32, client.data.status);
       client.emit("NOTICE", msg);
 
       const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
       client.emit("GET_FRIEND_REQUEST", friendRequests);
-      if (target.status === 0 || target.status === 1) {
-        const msg = this.getNotice(user.name + " 님과 친구가 되었습니다.", 32);
+      if (target.status !== STATUS.GAME && target.status !== STATUS.OFFLINE) {
+        const msg = this.getNotice(user.name + " 님과 친구가 되었습니다.", 32, client.data.status);
         targetClient.emit("NOTICE", msg);
       }
     }
     catch (e) {
-      const msg = this.getNotice("DB error", 200);
+      const msg = this.getNotice("DB error", 200, client.data.status);
       client.emit("NOTICE", msg);
     }
   }
@@ -111,15 +113,15 @@ export class LobbySocketService {
   async refuseFriend(client: Socket, targetClient: Socket, friendRequest: Partial<FriendRequest>, target: Player) {
     try {
       await this.usersService.deleteFriendRequest(friendRequest.id);
-      const msg = this.getNotice("요청을 거절 하였습니다.", 33);
+      const msg = this.getNotice("요청을 거절 하였습니다.", 33, client.data.status);
       client.emit("NOTICE", msg);
       const friendRequests = await this.usersService.readRecvFriendRequest(client.data.userId);
       client.emit("GET_FRIEND_REQUEST", friendRequests);
-      if (target.status === 0 || target.status === 1)
-        targetClient.emit("NOTICE", this.getNotice(friendRequest.recv.name + " 님이 친구요청을 거절 하였습니다.", 34));
+      if (target.status !== STATUS.GAME && target.status !== STATUS.OFFLINE)
+        targetClient.emit("NOTICE", this.getNotice(friendRequest.recv.name + " 님이 친구요청을 거절 하였습니다.", 34, client.data.status));
     }
     catch (e) {
-      const msg = this.getNotice("DB error", 200);
+      const msg = this.getNotice("DB error", 200, client.data.status);
       client.emit("NOTICE", msg);
     }
   }
@@ -128,12 +130,12 @@ export class LobbySocketService {
     try {
       const userId = client.data.userId;
       await this.usersService.updatePlayer(userId, data.name, data.avatar);
-      return (this.getNotice("성공적으로 변경 되었습니다.", 38));
+      return (this.getNotice("성공적으로 변경 되었습니다.", 38, client.data.status));
     }
     catch(e) {
       if (e.code === '23505')
-        return (this.getNotice('중복된 이름입니다.', 39));
-      return (this.getNotice("DB Error", 200));
+        return (this.getNotice('중복된 이름입니다.', 39, client.data.status));
+      return (this.getNotice("DB Error", 200, client.data.status));
     }
   }
 }

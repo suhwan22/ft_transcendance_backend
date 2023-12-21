@@ -9,17 +9,17 @@ import { SocketsModule } from 'src/sockets/sockets.module';
 import { GamesSocketService } from '../sockets/game/games-socket.service';
 import { AuthModule } from 'src/auth/auth.module';
 import { GameDodge } from './entities/game-dodge.entity';
+import { GameHistoryRepository } from './repositories/game-history.entity';
+import { GameDodgeRepository } from './repositories/game-dodge.repository';
 @Module({
   imports: [
     forwardRef(() => AuthModule),
     forwardRef(() => (UsersModule)),
     forwardRef(() => (ChatsModule)),
     forwardRef(() => (SocketsModule)),
-    TypeOrmModule.forFeature([
-    GameHistory,
-    GameDodge])],
+    TypeOrmModule],
   controllers: [GamesController],
-  providers: [GamesService, GamesSocketService],
+  providers: [GamesService, GamesSocketService, GameHistoryRepository, GameDodgeRepository],
   exports: [TypeOrmModule, GamesService]
 })
 export class GamesModule {}
