@@ -10,7 +10,7 @@ import { PlayerRequestDto } from './dtos/player.request.dto';
 import { JwtTwoFactorAuthGuard } from 'src/auth/guards/jwt-2fa.guard';
 import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
 
-//@UseGuards(JwtTwoFactorAuthGuard)
+@UseGuards(JwtTwoFactorAuthGuard)
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
