@@ -92,7 +92,7 @@ export class ChatsService {
 
     for (const dm of dmList) {
       let channelMember = await this.channelMemberRepository.readOneChannelMember(dm.id);
-      dm.title = channelMember[0].id === userId ? channelMember[1].user.name : channelMember[0].user.name;
+      dm.title = channelMember[0].user.id === userId ? channelMember[1].user.name : channelMember[0].user.name;
     };
 
     return (dmList);

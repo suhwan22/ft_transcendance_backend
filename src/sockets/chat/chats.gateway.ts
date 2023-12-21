@@ -172,15 +172,17 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('DM')
   async makeDMRoom(client: Socket, message) {
     try {
-      const isExist = await this.chatsService.readDmUserWithTarget(message.userId, message.targetId);
+      const targetId: number = parseInt(message.targetId);
+      const userId: number = parseInt(message.userId);
+      const isExist = await this.chatsService.readDmUserWithTarget(userId, targetId);
       if (isExist) {
         console.log(isExist);
-        this.chatsSocketService.connectChatRoom(client, isExist.id, message.userId);
+        await this.chatsSocketService.connectChatRoom(client, isExist.id, userId);
         client.emit('DM', { channelId: isExist.id, title: message.targetName });
         return ;
       }
 
-      const isBlock = await this.usersService.readUserBlockWithTargetId(message.targetId, message.userId);
+      const isBlock = await this.usersService.readUserBlockWithTargetId(targetId, userId);
       console.log(isBlock);
       // block 되어 있는지 확인
       if (isBlock) {
@@ -200,11 +202,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const newChannelConfig = await this.chatsService.createChannelConfig(channelConfigDto);
       const roomId = newChannelConfig.id;
 
-      this.chatsSocketService.createDMRoom(client, roomId, message);
+      await this.chatsSocketService.createDMRoom(client, roomId, message);
 
-      const targetSocket = this.clients.get(message.targetId);
+      const targetSocket = await this.clients.get(targetId);
       if (targetSocket) {
-        this.chatsSocketService.sendChannelList(targetSocket, message.targetId);
+        await this.chatsSocketService.sendChannelList(targetSocket, targetId);
       }
 
       client.emit('DM', { channelId: newChannelConfig.id, title: message.targetName });
