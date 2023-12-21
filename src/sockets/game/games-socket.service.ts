@@ -425,7 +425,8 @@ export class GamesSocketService {
     clearInterval(client.data.readyInterval);
     clearInterval(targetClient.data.readyInterval);
     try {
-      await this.gamesService.createGameDodge(client.data.userId);
+      if (game.room.rank)
+        await this.gamesService.createGameDodge(client.data.userId);
     }
     catch (e) {
       const msg = this.getNotice("DB Error", 200, client.data.status);
