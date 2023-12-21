@@ -188,7 +188,8 @@ export class AuthService {
 
   async checkSocketAndTfa(cookies: any) {
     try {
-      return (await this.jwtService.verify(cookies.TwoFactorAuth, { secret: process.env.ACCESS_TOKEN_SECRET }));
+      const payload = await this.jwtService.verify(cookies.TwoFactorAuth, { secret: process.env.ACCESS_TOKEN_SECRET });
+      return (await this.usersService.readOnePurePlayer(payload.sub));
     }
     catch(e) {
       const payload = await this.jwtService.verify(cookies.Refresh, { secret: process.env.REFRESH_TOKEN_SECRET })
