@@ -10,7 +10,7 @@ import { PlayerRequestDto } from './dtos/player.request.dto';
 import { JwtTwoFactorAuthGuard } from 'src/auth/guards/jwt-2fa.guard';
 import { ChannelConfig } from 'src/chats/entities/channel-config.entity';
 
-@UseGuards(JwtTwoFactorAuthGuard)
+//@UseGuards(JwtTwoFactorAuthGuard)
 @ApiTags('Users')
 @Controller('users')
 export class UsersController {
@@ -45,14 +45,14 @@ export class UsersController {
   }
 
   //update player
-  @ApiOperation({ summary: '내 정보 수정 API' })
-  @ApiBody({ type: PlayerRequestDto })
-  @ApiCreatedResponse({ description: 'success', type: Player })
-  @Put('players/me')
-  async updatePlayerInfo(@Req() req, @Body() user: PlayerRequestDto): Promise<any> {
-    const id = req.user.userId;
-    return (this.usersService.updatePlayerInfo(id, user));
-  }
+  // @ApiOperation({ summary: '내 정보 수정 API' })
+  // @ApiBody({ type: PlayerRequestDto })
+  // @ApiCreatedResponse({ description: 'success', type: Player })
+  // @Put('players/me')
+  // async updatePlayerInfo(@Req() req, @Body() user: PlayerRequestDto): Promise<any> {
+  //   const id = req.user.userId;
+  //   return (this.usersService.updatePlayerInfo(id, user));
+  // }
 
   //delete player
   @ApiOperation({ summary: '내 유저 정보 삭제 API' })

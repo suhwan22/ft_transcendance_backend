@@ -10,7 +10,7 @@ import { ChatLog } from './entities/chat-log.entity';
 
 import { JwtTwoFactorAuthGuard } from 'src/auth/guards/jwt-2fa.guard';
 
-@UseGuards(JwtTwoFactorAuthGuard)
+//@UseGuards(JwtTwoFactorAuthGuard)
 @ApiTags('Chats')
 @Controller('chats')
 export class ChatsController {

@@ -10,23 +10,29 @@ import { ChatsModule } from 'src/chats/chats.module';
 import { GamesModule } from 'src/games/games.module';
 import { FriendRequest } from './entities/friend-request.entity';
 import { UserAuth } from './entities/user-auth.entity';
-import { UserSocket } from './entities/user-socket.entity';
+import { PlayerRepository } from './repositories/player.repository';
+import { UserFriendRepository } from './repositories/user-friend.repository';
+import { UserBlockRepository } from './repositories/user-block.repository';
+import { UserAuthRepository } from './repositories/user-auth.repository';
+import { UserGameRecordRepository } from './repositories/user-game-record.repository';
+import { FriendRequestRepository } from './repositories/friend-request.repository';
 
 @Module({
   imports: [
     forwardRef(() => ChatsModule),
     forwardRef(() => GamesModule),
-    TypeOrmModule.forFeature([ 
-      UserFriend,
-      UserBlock,
-      Player,
-      UserGameRecord,
-      FriendRequest,
-      UserAuth,
-      UserSocket
-      ])],
+    TypeOrmModule
+  ],
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [
+    UsersService,
+    PlayerRepository,
+    UserFriendRepository,
+    UserBlockRepository,
+    UserAuthRepository,
+    UserGameRecordRepository,
+    FriendRequestRepository,
+  ],
   exports: [TypeOrmModule, UsersService]
 })
 export class UsersModule {}
