@@ -24,6 +24,8 @@ import { AuthService } from 'src/auth/auth.service';
 import { JwtWsGuard } from 'src/auth/guards/jwt-ws.guard';
 import { SocketExceptionFilter } from '../sockets.exception.filter';
 
+import { hash } from 'bcrypt';
+
 @WebSocketGateway(3131, {
   cors: { credentials: true, origin: process.env.CALLBACK_URL }, 
   namespace: '/chats'
@@ -129,6 +131,11 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('HOST')
   async hostChatRoom(client: Socket, message) {
     try {
+      if (message.title.length() > 30) {
+        let log = this.chatsSocketService.getNotice('30자 이하의 제목을 입력해주세요', 41);
+        client.emit('NOTICE', log);
+        return ;
+      }
       let isPassword = message.password ? false : true;
       let userLimit = message.limit ? message.limit : 10;
       const channelConfigDto = {
@@ -141,9 +148,56 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       const newChannelConfig = await this.chatsService.createChannelConfig(channelConfigDto);
       const roomId = newChannelConfig.id;
       this.clients.forEach((v, k, m) => this.chatsSocketService.sendChannelList(v, v.data.userId));
-      this.chatsSocketService.sendChannelMember(client, newChannelConfig.id);
       this.chatsSocketService.createAndEnterChatRoom(client, roomId, message.userId);
       client.emit('HOST', { channelId: newChannelConfig.id, title: newChannelConfig.title });
+    } catch (e) {
+      let log;
+      if (e.code === '23505')
+        log = this.chatsSocketService.getNotice('중복된 이름입니다.', 39);
+      else
+        log = this.chatsSocketService.getNotice("DB Error", 200);
+      client.emit('NOTICE', log);
+    }
+  }
+
+  //DM 만들면서 들어가기
+  // DM + data : {
+  //   userId: number,
+  //   userName: string,
+  //   targetId: number,
+  //   targetName: string
+  // }
+  @UseGuards(JwtWsGuard)
+  @SubscribeMessage('DM')
+  async makeDMRoom(client: Socket, message) {
+    try {
+      const isBlock = await this.usersService.readUserBlockWithTargetId(message.targetId, message.userId);
+      console.log(isBlock);
+
+      // block 되어 있는지 확인
+      if (isBlock) {
+        let log = this.chatsSocketService.getNotice('상대방에게 차단 되어있습니다.', 43);
+        client.emit('NOTICE', log);
+        return ;
+      }
+
+      const newTitle = await hash((message.userName + message.targetName), 10);
+      const channelConfigDto = {
+        title: newTitle,
+        password: null,
+        public: true,
+        limit: 2,
+        dm: true,
+      }
+      const newChannelConfig = await this.chatsService.createChannelConfig(channelConfigDto);
+      const roomId = newChannelConfig.id;
+
+      this.chatsSocketService.createDMRoom(client, roomId, message);
+
+      this.chatsSocketService.sendChannelList(client, client.data.userId);
+      this.chatsSocketService.sendChannelList(this.clients.get(message.targetId), message.targetId);
+
+      client.emit('DM', { channelId: newChannelConfig.id, title: message.targetName });
     } catch (e) {
       let log;
       if (e.code === '23505')
@@ -343,6 +397,8 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('BLOCK')
   async blockClient(client: Socket, message) {
     const log = await this.chatsSocketService.commandBlock(client, message.channelId, message.userId, message.target);
+    if (!log)
+      return ;
     client.emit("NOTICE", log);
   }
 

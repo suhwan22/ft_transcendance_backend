@@ -112,6 +112,32 @@ export class ChatsSocketService {
     client.to(roomId).emit('NOTICE', log);
   }
 
+  async createDMRoom(client: Socket, channelId: number, message) {
+    const roomId = channelId.toString();
+
+    const channelMemberRequest1 = {
+      channelId: channelId,
+      userId: message.userId,
+      op: false
+    }
+
+    const channelMemberRequest2 = {
+      channelId: channelId,
+      userId: message.targetId,
+      op: false
+    }
+
+    await this.chatsService.createChannelMember(channelMemberRequest1);
+    await this.chatsService.createChannelMember(channelMemberRequest2);
+
+    await this.createChatRoom(client, channelId, message.userId);
+
+    await this.connectChatRoom(client, channelId, message.userId);
+
+    const log = this.getNotice(`DM with ${message.targetName}`, 42);
+    client.to(roomId).emit('NOTICE', log);
+  }
+
   async connectLobby(client: Socket, userId: number) {
     client.leave(client.data.roomId);
     client.data.roomId = 'room:lobby';
@@ -143,14 +169,14 @@ export class ChatsSocketService {
     const player = await this.usersService.readOnePurePlayer(userId);
     const roomId = channelId.toString();
 
-    const log = this.getNotice(`${player.name}님이 퇴장하셨습니다.`, 6);
-    client.to(roomId).emit('NOTICE', log);
-
     client.data.roomId = 'room:lobby';
     client.leave(roomId);
     client.rooms.clear();
     client.rooms.add('room:lobby');
     client.join('room:lobby');
+
+    const log = this.getNotice(`${player.name}님이 퇴장하셨습니다.`, 6);
+    client.broadcast.to(roomId).emit('NOTICE', log);
 
     // 채널 리스트 다시 전달
     await this.sendChannelList(client, userId);
