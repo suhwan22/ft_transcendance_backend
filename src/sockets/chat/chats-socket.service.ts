@@ -136,7 +136,7 @@ export class ChatsSocketService {
 
     await this.connectChatRoom(client, channelId, message.userId);
 
-    const log = this.getNotice(`DM with ${message.targetName}`, 42);
+    const log = this.getNotice(`DM with ${message.targetName}`, 42, client.data.status);
     client.to(roomId).emit('NOTICE', log);
   }
 

@@ -134,7 +134,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   async hostChatRoom(client: Socket, message) {
     try {
       if (message.title.length() > 30) {
-        let log = this.chatsSocketService.getNotice('30자 이하의 제목을 입력해주세요', 41);
+        let log = this.chatsSocketService.getNotice('30자 이하의 제목을 입력해주세요', 41, client.data.status);
         client.emit('NOTICE', log);
         return ;
       }
@@ -178,7 +178,7 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
       // block 되어 있는지 확인
       if (isBlock) {
-        let log = this.chatsSocketService.getNotice('상대방에게 차단 되어있습니다.', 43);
+        let log = this.chatsSocketService.getNotice('상대방에게 차단 되어있습니다.', 43, client.data.status);
         client.emit('NOTICE', log);
         return ;
       }
@@ -203,9 +203,9 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     } catch (e) {
       let log;
       if (e.code === '23505')
-        log = this.chatsSocketService.getNotice('중복된 이름입니다.', 39);
+        log = this.chatsSocketService.getNotice('중복된 이름입니다.', 39, client.data.status);
       else
-        log = this.chatsSocketService.getNotice("DB Error", 200);
+        log = this.chatsSocketService.getNotice("DB Error", 200, client.data.status);
       client.emit('NOTICE', log);
     }
   }
