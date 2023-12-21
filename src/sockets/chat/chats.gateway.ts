@@ -173,9 +173,16 @@ export class ChatsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @SubscribeMessage('DM')
   async makeDMRoom(client: Socket, message) {
     try {
+      const isExist = await this.chatsService.readDmUserWithTarget(message.userId, message.targetId);
+      if (isExist) {
+        console.log(isExist);
+        this.chatsSocketService.connectChatRoom(client, isExist.id, message.userId);
+        client.emit('DM', { channelId: isExist.id, title: message.targetName });
+        return ;
+      }
+
       const isBlock = await this.usersService.readUserBlockWithTargetId(message.targetId, message.userId);
       console.log(isBlock);
-
       // block 되어 있는지 확인
       if (isBlock) {
         let log = this.chatsSocketService.getNotice('상대방에게 차단 되어있습니다.', 43, client.data.status);

@@ -98,6 +98,13 @@ export class ChatsService {
     return (dmList);
   }
 
+  /* [R] 내 DM ChannelConfig 조회 */
+  async readDmUserWithTarget(userId: number, targetId: number) {
+    const dmList = await this.channelConfigRepository.readDmUserTarget(userId, targetId);
+
+    return (dmList);
+  }
+
   /** [R] 내가 속한 ChannelConfig 조회 */
   async readChannelConfigMyChannel(userId: number): Promise<ChannelConfig[]> {
     return (await this.channelConfigRepository.readChannelConfigMyChannel(userId));

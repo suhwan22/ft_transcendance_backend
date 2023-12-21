@@ -75,6 +75,35 @@ export class ChannelConfigRepository extends Repository<ChannelConfig> {
     return (configList);
   }
 
+  async readDmUserTarget(userId: number, targetId: number) {
+    const MyDmQr = await this.dataSource
+      .getRepository(ChannelMember)
+      .createQueryBuilder('channel_member')
+      .subQuery()
+      .from(ChannelMember, 'channel_member')
+      .leftJoinAndSelect('channel_member.channel', 'channel_config')
+      .select(['channel_config.id AS id'])
+      .where('channel_member.user_id = :userId', { userId: userId })
+      .andWhere('channel_config.dm = true')
+      .getQuery();
+
+      const dm = await this.dataSource
+      .getRepository(ChannelMember)
+      .createQueryBuilder('channel_member')
+      .subQuery()
+      .from(ChannelMember, 'channel_member')
+      .leftJoinAndSelect('channel_member.channel', 'channel_config')
+      .select(['channel_config.id AS id'])
+      .where(`channel_member.channel_id IN ${MyDmQr}`)
+      .andWhere('channel_member.user_id = :targetId', { targetId: targetId })
+      .getQuery();
+
+      const qureyRunner = await this.dataSource.createQueryRunner();
+      const ret = await qureyRunner.manager.query(dm);
+
+    return (ret);
+  }
+
   async readChannelConfigNotMember(userId: number): Promise<ChannelConfig[]> {
     const MyDmQr = await this.dataSource
       .getRepository(ChannelMember)
