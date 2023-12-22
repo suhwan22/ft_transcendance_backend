@@ -141,6 +141,11 @@ export class ChannelConfigRepository extends Repository<ChannelConfig> {
     return (this.findOne({ where: { id } }));
   }
 
+  async updateChannelConfigWithPublic(id: number, pub: boolean): Promise<ChannelConfig> {
+    await this.update(id, { public: pub });
+    return (this.findOne({ where: { id } }));
+  }
+
   /* [D] ChannelConfig 제거 
           channel_member 관계는 없는 경우 */
   async deleteChannelConfig(id: number): Promise<void> {

@@ -373,6 +373,10 @@ export class ChatsSocketService {
       if (target !== undefined)
         password = target;
       await this.chatsService.updateChannelPassword(channelId, password);
+      if (password)
+        await this.chatsService.updateChannelConfigWithPublic(channelId, true);
+      else
+        await this.chatsService.updateChannelConfigWithPublic(channelId, false);
       return (this.getNotice("비밀번호가 성공적으로 변경되었습니다.", 22, client.data.status));
     } catch (e) {
       return (this.getNotice("DB Error", 200, client.data.status));
