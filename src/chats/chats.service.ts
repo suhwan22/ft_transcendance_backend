@@ -125,6 +125,11 @@ export class ChatsService {
     return (this.channelConfigRepository.updateChannelConfigWithTitle(id, title));
   }
 
+  /** [U] ChannelConfig title 수정 */
+  async updateChannelConfigWithPublic(id: number, pub: boolean): Promise<ChannelConfig> {
+    return (this.channelConfigRepository.updateChannelConfigWithPublic(id, pub));
+  }
+
   /** [D] ChannelConfig 제거 
           channel_member 관계는 없는 경우 */
   async deleteChannelConfig(id: number): Promise<void> {
